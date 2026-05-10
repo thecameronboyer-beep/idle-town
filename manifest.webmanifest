@@ -1,0 +1,25 @@
+{
+  "name": "Idle Town - First Fire",
+  "short_name": "Idle Town",
+  "description": "A browser idle survival RPG about building a first camp from the wilds.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#10110d",
+  "theme_color": "#10110d",
+  "icons": [
+    {
+      "src": "./icons/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
