@@ -11,7 +11,17 @@ export type ResourceId =
   | "cookedSquirrelMeat"
   | "hide"
   | "bone"
-  | "leather";
+  | "leather"
+  | "minnow"
+  | "stoneLoach"
+  | "mudskipper"
+  | "brookStickleback"
+  | "pebblePerch"
+  | "minnowFilet"
+  | "stoneLoachFilet"
+  | "mudskipperFilet"
+  | "brookSticklebackFilet"
+  | "pebblePerchFilet";
 
 export type ToolId = "stoneAxe" | "stoneSpear" | "stoneKnife";
 
@@ -21,8 +31,13 @@ export type ActionId =
   | "gatherSticks"
   | "gatherStones"
   | "gatherFlaxFibers"
+  | "fishRiver"
+  | "craftStoneKnife"
+  | "craftStoneAxe"
+  | "craftStoneSpear"
   | "chopTrees"
   | "huntSmallAnimals"
+  | "butcherFish"
   | "butcherRabbit"
   | "butcherSquirrel"
   | "cookRabbitMeat"
@@ -33,7 +48,7 @@ export type Inventory = Record<ResourceId, number>;
 
 export type LocationId = "meadow" | "river" | "forest";
 
-export type RunningActionPhase = "travelingTo" | "working" | "travelingBack";
+export type RunningActionPhase = "travelingTo" | "working" | "followUp" | "travelingBack";
 
 export interface ToolState {
   owned: boolean;
@@ -59,6 +74,11 @@ export interface RunningAction {
   characterId: string;
   phase: RunningActionPhase;
   locationId?: LocationId;
+  loopActionIds?: ActionId[];
+  loopLocationIds?: Array<LocationId | null>;
+  loopIndex?: number;
+  nextLoopIndex?: number;
+  followUpActionId?: ActionId;
   startedAt: number;
   endsAt: number;
   repeat: boolean;
@@ -76,7 +96,7 @@ export interface LogEntry {
 }
 
 export interface GameState {
-  version: 1;
+  version: 2;
   createdAt: number;
   updatedAt: number;
   lastSimulatedAt: number;
@@ -94,7 +114,7 @@ export interface GameState {
 export interface ResourceDefinition {
   id: ResourceId;
   label: string;
-  group: "resources" | "animals" | "hunted" | "crafted";
+  group: "resources" | "animals" | "fish" | "hunted" | "crafted";
   blurb: string;
 }
 

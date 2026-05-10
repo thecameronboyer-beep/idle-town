@@ -23,6 +23,34 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Thin stalks stripped by hand for future craft."
   },
   {
+    id: "fishRiver",
+    label: "Fishing River",
+    verb: "fishing the river",
+    durationMs: 15000,
+    blurb: "Cast into the shallows for small river fish."
+  },
+  {
+    id: "craftStoneKnife",
+    label: "Craft Stone Knife",
+    verb: "crafting a stone knife",
+    durationMs: 15000,
+    blurb: "Shape a small edge and bind it to a handle."
+  },
+  {
+    id: "craftStoneAxe",
+    label: "Craft Stone Axe",
+    verb: "crafting a stone axe",
+    durationMs: 15000,
+    blurb: "Bind a chopping head to a short haft."
+  },
+  {
+    id: "craftStoneSpear",
+    label: "Craft Stone Spear",
+    verb: "crafting a stone spear",
+    durationMs: 15000,
+    blurb: "Lash a stone point to a balanced shaft."
+  },
+  {
     id: "chopTrees",
     label: "Chop Trees",
     verb: "chopping trees",
@@ -35,6 +63,13 @@ export const actionDefinitions: ActionDefinition[] = [
     verb: "hunting small animals",
     durationMs: 28000,
     blurb: "Bring back whole rabbits or squirrels for later work."
+  },
+  {
+    id: "butcherFish",
+    label: "Butcher Fish",
+    verb: "butchering fish",
+    durationMs: 15000,
+    blurb: "Clean carried fish into matching filets at half weight."
   },
   {
     id: "butcherRabbit",

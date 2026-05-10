@@ -8,21 +8,21 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     id: "stoneKnife",
     label: "Stone Knife",
-    recipe: { stick: 1, stone: 2 },
+    recipe: { stick: 1, stone: 1, flaxFiber: 1 },
     blurb: "Unlocks hide and bone recovery while butchering.",
     maxDurability: 18
   },
   {
     id: "stoneAxe",
     label: "Stone Axe",
-    recipe: { stick: 3, stone: 4 },
+    recipe: { stick: 1, stone: 1, flaxFiber: 1 },
     blurb: "Heavy enough to bite into small trees.",
     maxDurability: 12
   },
   {
     id: "stoneSpear",
     label: "Stone Spear",
-    recipe: { stick: 4, stone: 3 },
+    recipe: { stick: 1, stone: 1, flaxFiber: 1 },
     blurb: "A reach weapon for rabbits and squirrels.",
     maxDurability: 10
   }

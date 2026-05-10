@@ -4,6 +4,11 @@ import type { GameState, OwnedTools, ToolId, ToolState } from "../types";
 import { normalizeInventory } from "./inventory";
 
 const SAVE_KEY = "idle-town:first-survival-slice:v1";
+const CURRENT_SAVE_VERSION = 2;
+const LEGACY_AVERAGE_WEIGHTS = {
+  rabbit: 3.5,
+  squirrel: 1.25
+} as const;
 
 export function loadGame(): GameState {
   const saved = window.localStorage.getItem(SAVE_KEY);
@@ -33,13 +38,25 @@ export function loadGame(): GameState {
       characters: parsed.characters?.length ? parsed.characters : fallback.characters,
       seenResources: parsed.seenResources?.length ? parsed.seenResources : fallback.seenResources,
       log: parsed.log?.length ? parsed.log : fallback.log,
-      version: 1
+      version: CURRENT_SAVE_VERSION
     };
+    migrateLegacyAnimalCounts(state, parsed.version);
     normalizeInventory(state);
     return state;
   } catch {
     return createInitialState();
   }
+}
+
+function migrateLegacyAnimalCounts(state: GameState, savedVersion: unknown): void {
+  if (savedVersion === CURRENT_SAVE_VERSION) {
+    return;
+  }
+
+  state.inventory.rabbit *= LEGACY_AVERAGE_WEIGHTS.rabbit;
+  state.characterInventory.rabbit *= LEGACY_AVERAGE_WEIGHTS.rabbit;
+  state.inventory.squirrel *= LEGACY_AVERAGE_WEIGHTS.squirrel;
+  state.characterInventory.squirrel *= LEGACY_AVERAGE_WEIGHTS.squirrel;
 }
 
 function normalizeTools(savedTools: unknown): OwnedTools {

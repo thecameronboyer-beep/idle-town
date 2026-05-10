@@ -14,7 +14,7 @@ export function createEmptyTools(): OwnedTools {
 
 export function createInitialState(now = Date.now()): GameState {
   return {
-    version: 1,
+    version: 2,
     createdAt: now,
     updatedAt: now,
     lastSimulatedAt: now,

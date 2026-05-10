@@ -1,3 +1,4 @@
+import { fishResourceIds } from "../data/resources";
 import type { ActionId, BuildingId, GameState } from "../types";
 import { hasUsableTool } from "./tools";
 
@@ -5,16 +6,28 @@ function hasSeenMeat(state: GameState): boolean {
   return state.seenResources.includes("rabbitMeat") || state.seenResources.includes("squirrelMeat");
 }
 
+function hasSeenFish(state: GameState): boolean {
+  return fishResourceIds.some((fishId) => {
+    return state.seenResources.includes(fishId) || state.characterInventory[fishId] > 0 || state.inventory[fishId] > 0;
+  });
+}
+
 export function isActionUnlocked(state: GameState, actionId: ActionId): boolean {
   switch (actionId) {
     case "gatherSticks":
     case "gatherStones":
     case "gatherFlaxFibers":
+    case "fishRiver":
+    case "craftStoneKnife":
+    case "craftStoneAxe":
+    case "craftStoneSpear":
       return true;
     case "chopTrees":
       return hasUsableTool(state, "stoneAxe");
     case "huntSmallAnimals":
       return hasUsableTool(state, "stoneSpear");
+    case "butcherFish":
+      return hasSeenFish(state);
     case "butcherRabbit":
       return state.seenResources.includes("rabbit");
     case "butcherSquirrel":
@@ -34,6 +47,8 @@ export function getActionLockReason(state: GameState, actionId: ActionId): strin
       return "Needs Stone Axe";
     case "huntSmallAnimals":
       return "Needs Stone Spear";
+    case "butcherFish":
+      return "Needs Carried Fish";
     case "butcherRabbit":
       return "Needs Rabbit";
     case "butcherSquirrel":

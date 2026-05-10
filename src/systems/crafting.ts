@@ -1,32 +1,8 @@
-import { buildingDefinitions, toolDefinitions } from "../data/craftables";
-import type { BuildingId, Cost, GameState, ResourceId, ToolId } from "../types";
+import { buildingDefinitions } from "../data/craftables";
+import type { BuildingId, Cost, GameState, ResourceId } from "../types";
 import { describeCost, hasCost, payCost } from "./inventory";
-import { addLog, addStackedLog } from "./log";
+import { addLog } from "./log";
 import { isBuildingVisible } from "./progression";
-import { equipFreshTool, hasUsableTool } from "./tools";
-
-export function craftTool(state: GameState, toolId: ToolId, now = Date.now()): boolean {
-  const definition = toolDefinitions.find((tool) => tool.id === toolId);
-  if (!definition || !hasCost(state, definition.recipe)) {
-    return false;
-  }
-
-  payCost(state, definition.recipe);
-  state.tools[toolId].quantity += 1;
-  if (!hasUsableTool(state, toolId)) {
-    equipFreshTool(state, toolId);
-  }
-  addStackedLog(state, {
-    aggregateKey: `craft:${toolId}`,
-    text: `Cameron crafted ${pluralTool(definition.label)}`,
-    amount: 1,
-    unit: pluralTool(definition.label),
-    tone: "craft",
-    now
-  });
-  touch(state, now);
-  return true;
-}
 
 export function buildStructure(state: GameState, buildingId: BuildingId, now = Date.now()): boolean {
   const definition = buildingDefinitions.find((building) => building.id === buildingId);
@@ -62,8 +38,4 @@ export function getMissingCostText(state: GameState, cost: Cost): string {
 function touch(state: GameState, now: number): void {
   state.updatedAt = now;
   state.lastSimulatedAt = now;
-}
-
-function pluralTool(label: string): string {
-  return label.endsWith("s") ? label : `${label}s`;
 }

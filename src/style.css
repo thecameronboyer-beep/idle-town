@@ -232,11 +232,23 @@ h3 {
   font-weight: 900;
 }
 
+.skill-button small {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--amber);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .skill-button.active {
   border-color: rgba(214, 164, 81, 0.66);
   background:
     linear-gradient(90deg, rgba(124, 155, 99, 0.34), rgba(214, 164, 81, 0.16)),
     rgba(24, 25, 19, 0.88);
+}
+
+.skill-button.current:not(.active) {
+  border-color: rgba(115, 168, 160, 0.5);
 }
 
 .sidebar-footer {
@@ -281,11 +293,30 @@ h3 {
   background: #141610;
 }
 
+.world-panel::after {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  height: 42%;
+  content: "";
+  background: linear-gradient(180deg, transparent, rgba(7, 8, 6, 0.58));
+  pointer-events: none;
+}
+
 .wilderness-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.current-action-panel {
+  position: absolute;
+  inset: 1rem 1rem 0.55rem;
+  z-index: 2;
+  padding: 0;
+  background: transparent;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.88);
 }
 
 .world-copy {
@@ -317,7 +348,6 @@ h3 {
 }
 
 .action-panel,
-.current-action-panel,
 .location-panel,
 .skill-panel,
 .camp-panel {
@@ -336,19 +366,19 @@ h3 {
   letter-spacing: 0.08em;
 }
 
-.current-action-panel .section-heading {
-  margin-bottom: 0.65rem;
-}
-
 .current-action-content {
   display: grid;
+  height: 100%;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  align-items: center;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.35rem 0.75rem;
+  align-items: start;
 }
 
 .current-action-content.idle {
-  display: block;
+  display: grid;
+  align-content: start;
+  gap: 0.15rem;
 }
 
 .current-action-content strong,
@@ -357,14 +387,107 @@ h3 {
 }
 
 .progress-track {
+  position: relative;
   grid-column: 1 / -1;
-  height: 10px;
+  grid-row: 3;
+  align-self: end;
+  display: grid;
+  height: 20px;
+  width: 100%;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(236, 229, 213, 0.12);
+  background: rgba(7, 8, 6, 0.46);
+  box-shadow: inset 0 0 0 1px rgba(236, 229, 213, 0.18);
+}
+
+.action-loop-stack {
+  grid-column: 1;
+  grid-row: 3;
+  align-self: end;
+  justify-self: start;
+  display: flex;
+  width: min(170px, 42vw);
+  flex-direction: column;
+  gap: 0.22rem;
+  margin-bottom: 1.55rem;
+  z-index: 1;
+}
+
+.action-loop-controls {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.22rem;
+}
+
+.action-loop-label {
+  color: #efe1c1;
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.action-loop-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem;
+  align-items: center;
+}
+
+.action-loop-step,
+.action-loop-icon {
+  min-height: 20px;
+  padding: 0.18rem 0.42rem;
+  border-color: rgba(236, 229, 213, 0.16);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(244, 230, 200, 0.9);
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.action-loop-step {
+  width: 100%;
+  text-align: left;
+}
+
+.action-loop-icon {
+  width: 22px;
+  padding: 0;
+  text-align: center;
+}
+
+.action-loop-row-tools {
+  display: flex;
+  gap: 0.16rem;
+}
+
+.action-loop-step.selected,
+.action-loop-icon {
+  border-color: rgba(236, 229, 213, 0.18);
+  background: rgba(0, 0, 0, 0.32);
+  color: rgba(244, 230, 200, 0.92);
+}
+
+.action-loop-step.assigning {
+  border-color: rgba(214, 164, 81, 0.7);
+  background: rgba(75, 62, 36, 0.66);
+  color: #ffe3a6;
+  box-shadow: 0 0 0 1px rgba(214, 164, 81, 0.26);
+}
+
+.action-card.assignable {
+  border-color: rgba(214, 164, 81, 0.72);
+}
+
+.current-action-copy {
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .progress-track span {
+  position: absolute;
+  inset: 0;
   display: block;
   height: 100%;
   border-radius: inherit;
@@ -373,8 +496,29 @@ h3 {
   will-change: transform;
 }
 
+.progress-track em {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  justify-self: center;
+  color: #f8ebcf;
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 1000;
+  line-height: 1;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.88);
+}
+
 .icon-button {
   min-width: 72px;
+}
+
+.current-action-panel .icon-button {
+  grid-column: 2;
+  grid-row: 1;
+  border-color: rgba(236, 229, 213, 0.28);
+  color: #f4e6c8;
+  background: rgba(7, 8, 6, 0.32);
 }
 
 .skill-grid {
@@ -539,9 +683,29 @@ h3 {
   color: var(--muted);
 }
 
+.camp-log-toggle {
+  flex: 0 0 auto;
+  width: 100%;
+  border-color: rgba(214, 164, 81, 0.58);
+  background:
+    linear-gradient(90deg, rgba(115, 168, 160, 0.22), rgba(214, 164, 81, 0.18)),
+    rgba(17, 18, 14, 0.94);
+}
+
+.camp-log-toggle:not(.active) {
+  color: var(--muted);
+  border-color: var(--line-strong);
+  background: rgba(17, 18, 14, 0.9);
+}
+
 .inventory-panel {
   z-index: 5;
   overflow: visible;
+}
+
+.inventory-panel.log-hidden .side-panel-content {
+  flex: 1;
+  max-height: none;
 }
 
 .panel-tabs {
@@ -593,6 +757,14 @@ h3 {
   color: var(--amber);
   font-size: 0.82rem;
   font-weight: 900;
+}
+
+.deposit-button {
+  width: 100%;
+  padding: 0.48rem 0.65rem;
+  background:
+    linear-gradient(90deg, rgba(115, 168, 160, 0.22), rgba(214, 164, 81, 0.14)),
+    rgba(17, 18, 14, 0.72);
 }
 
 .tool-inventory {
@@ -992,6 +1164,24 @@ h3 {
 
   .current-action-content {
     grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .current-action-panel .icon-button {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .action-loop-stack {
+    grid-column: 1;
+    grid-row: 4;
+    width: min(170px, 100%);
+  }
+
+  .progress-track {
+    grid-column: 1;
+    grid-row: 4;
   }
 
   .world-copy {
@@ -999,6 +1189,7 @@ h3 {
     flex-direction: column;
     justify-content: flex-end;
   }
+
 }
 
 @media (prefers-reduced-motion: reduce) {

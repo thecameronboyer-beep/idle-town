@@ -1,6 +1,13 @@
 import { actionDefinitions, getActionDefinition } from "../data/actions";
-import { getResourceLabel } from "../data/resources";
-import type { ActionId, Cost, GameState, LocationId, ResourceId, RunningAction } from "../types";
+import { toolDefinitions } from "../data/craftables";
+import {
+  fishFiletByFishId,
+  fishResourceIds,
+  formatResourceAmount,
+  getResourceLabel,
+  normalizeResourceAmount
+} from "../data/resources";
+import type { ActionId, Cost, GameState, LocationId, ResourceId, RunningAction, ToolId } from "../types";
 import {
   CHARACTER_MAX_WEIGHT,
   addCharacterResources,
@@ -11,9 +18,9 @@ import {
   payCost
 } from "./inventory";
 import { addLog, addStackedLog } from "./log";
-import { randomInt } from "./math";
+import { randomFloat, randomInt } from "./math";
 import { isActionUnlocked } from "./progression";
-import { damageTool, hasUsableTool } from "./tools";
+import { damageTool, equipFreshTool, hasUsableTool } from "./tools";
 
 const MAX_OFFLINE_MS = 2 * 60 * 60 * 1000;
 const LOCATION_TRAVEL_MS: Record<LocationId, number> = {
@@ -21,6 +28,18 @@ const LOCATION_TRAVEL_MS: Record<LocationId, number> = {
   river: 15000,
   forest: 30000
 };
+
+const RIVER_FISH: Array<{ id: ResourceId; minWeight: number; maxWeight: number }> = [
+  { id: "minnow", minWeight: 0.5, maxWeight: 1.5 },
+  { id: "stoneLoach", minWeight: 1, maxWeight: 3 },
+  { id: "mudskipper", minWeight: 1.5, maxWeight: 4.5 },
+  { id: "brookStickleback", minWeight: 0.5, maxWeight: 2 },
+  { id: "pebblePerch", minWeight: 2, maxWeight: 7.5 }
+];
+const SMALL_GAME: Array<{ id: "rabbit" | "squirrel"; minWeight: number; maxWeight: number }> = [
+  { id: "rabbit", minWeight: 2, maxWeight: 5 },
+  { id: "squirrel", minWeight: 0.5, maxWeight: 2 }
+];
 
 type StartActionOptions = {
   locationId?: LocationId;
@@ -34,17 +53,111 @@ export function getActionCost(actionId: ActionId): Cost {
       return { squirrelMeat: 1 };
     case "tanHide":
       return { hide: 1 };
+    case "craftStoneKnife":
+      return getToolRecipe("stoneKnife");
+    case "craftStoneAxe":
+      return getToolRecipe("stoneAxe");
+    case "craftStoneSpear":
+      return getToolRecipe("stoneSpear");
     case "butcherRabbit":
-      return { rabbit: 1 };
+      return { rabbit: 2 };
     case "butcherSquirrel":
-      return { squirrel: 1 };
+      return { squirrel: 0.5 };
     default:
       return {};
   }
 }
 
 export function canStartAction(state: GameState, actionId: ActionId): boolean {
+  if (actionId === "butcherFish") {
+    return isActionUnlocked(state, actionId) && hasCarriedWholeFish(state);
+  }
+
   return isActionUnlocked(state, actionId) && hasCost(state, getActionCost(actionId));
+}
+
+export function getRunningActionLoop(running: RunningAction): ActionId[] {
+  if (running.loopActionIds?.length) {
+    return [...running.loopActionIds];
+  }
+
+  return running.followUpActionId ? [running.actionId, running.followUpActionId] : [running.actionId];
+}
+
+export function canInsertActionInLoop(running: RunningAction, afterIndex: number, actionId: ActionId): boolean {
+  const loop = getRunningActionLoop(running);
+  const safeAfterIndex = clampLoopIndex(afterIndex, loop);
+  if (actionId === "butcherFish") {
+    return loop[safeAfterIndex] === "fishRiver";
+  }
+
+  return true;
+}
+
+export function insertActionInLoop(
+  state: GameState,
+  afterIndex: number,
+  actionId: ActionId,
+  options: StartActionOptions = {},
+  now = Date.now()
+): boolean {
+  const running = state.currentAction;
+  if (!running) {
+    return false;
+  }
+
+  if (!canInsertActionInLoop(running, afterIndex, actionId)) {
+    return false;
+  }
+
+  const loop = getRunningActionLoop(running);
+  const locations = getRunningActionLoopLocations(running, loop);
+  const safeAfterIndex = clampLoopIndex(afterIndex, loop);
+  const insertIndex = safeAfterIndex + 1;
+  loop.splice(insertIndex, 0, actionId);
+  locations.splice(insertIndex, 0, getLoopLocation(actionId, options.locationId));
+
+  const currentIndex = clampLoopIndex(running.loopIndex ?? 0, loop);
+  running.loopActionIds = loop;
+  running.loopLocationIds = locations;
+  running.loopIndex = insertIndex <= currentIndex ? currentIndex + 1 : currentIndex;
+  delete running.followUpActionId;
+  state.updatedAt = now;
+  state.lastSimulatedAt = now;
+  return true;
+}
+
+export function removeActionFromLoop(state: GameState, index: number, now = Date.now()): number {
+  const running = state.currentAction;
+  if (!running) {
+    return 0;
+  }
+
+  const loop = getRunningActionLoop(running);
+  if (loop.length <= 1) {
+    return clampLoopIndex(index, loop);
+  }
+
+  const currentIndex = clampLoopIndex(running.loopIndex ?? 0, loop);
+  const safeIndex = clampLoopIndex(index, loop);
+  if (safeIndex === currentIndex) {
+    return safeIndex;
+  }
+
+  const locations = getRunningActionLoopLocations(running, loop);
+  loop.splice(safeIndex, 1);
+  locations.splice(safeIndex, 1);
+  running.loopActionIds = loop;
+  running.loopLocationIds = locations;
+  running.loopIndex = safeIndex < currentIndex ? currentIndex - 1 : currentIndex;
+  if (typeof running.nextLoopIndex === "number") {
+    running.nextLoopIndex = clampLoopIndex(running.nextLoopIndex, loop);
+  }
+
+  delete running.followUpActionId;
+  state.updatedAt = now;
+  state.lastSimulatedAt = now;
+  return Math.max(0, safeIndex - 1);
 }
 
 export function startAction(
@@ -65,6 +178,9 @@ export function startAction(
     characterId: state.selectedCharacterId,
     phase: locationId ? "travelingTo" : "working",
     locationId,
+    loopActionIds: [actionId],
+    loopLocationIds: [locationId ?? null],
+    loopIndex: 0,
     startedAt: now,
     endsAt: now + (travelDuration || definition.durationMs),
     repeat: true
@@ -81,11 +197,37 @@ export function stopAction(state: GameState, now = Date.now()): void {
   }
 
   const definition = getActionDefinition(state.currentAction.actionId);
+  const returnedToCamp = depositCarriedResources(state, now);
   state.currentAction = null;
   setCharacterWorking(state, false);
   state.updatedAt = now;
   state.lastSimulatedAt = now;
-  addLog(state, `Cameron stops ${definition?.verb ?? "working"}.`, "muted", now);
+  addLog(
+    state,
+    returnedToCamp
+      ? `Cameron stops ${definition?.verb ?? "working"} and returns to camp.`
+      : `Cameron stops ${definition?.verb ?? "working"}.`,
+    "muted",
+    now
+  );
+}
+
+export function depositCarriedResources(state: GameState, now = Date.now()): boolean {
+  const deposited = depositCharacterResources(state);
+  if (Object.keys(deposited).length <= 0) {
+    return false;
+  }
+
+  addStackedLog(state, {
+    aggregateKey: "deposit:camp",
+    text: "Cameron returned resources to camp",
+    resources: deposited,
+    tone: "gain",
+    now
+  });
+  state.updatedAt = now;
+  state.lastSimulatedAt = now;
+  return true;
 }
 
 export function simulateUntil(state: GameState, targetTime = Date.now()): void {
@@ -101,7 +243,7 @@ export function simulateUntil(state: GameState, targetTime = Date.now()): void {
   while (state.currentAction && state.currentAction.endsAt <= cappedTarget && completedCycles < 500) {
     const running = state.currentAction;
     const completedAt: number = running.endsAt;
-    completeRunningAction(state, running, completedAt);
+    completeRunningAction(state, running, completedAt, cappedTarget);
     completedCycles += 1;
   }
 
@@ -122,22 +264,20 @@ export function getActionProgress(state: GameState, now = Date.now()): number {
   return total <= 0 ? 1 : (now - state.currentAction.startedAt) / total;
 }
 
-function completeRunningAction(state: GameState, running: RunningAction, now: number): void {
+function completeRunningAction(state: GameState, running: RunningAction, now: number, targetTime: number): void {
   if (running.phase === "travelingTo") {
     startWorkingCycle(state, running, now);
     return;
   }
 
   if (running.phase === "travelingBack") {
-    const deposited = depositCharacterResources(state);
-    if (Object.keys(deposited).length > 0) {
-      addStackedLog(state, {
-        aggregateKey: "deposit:camp",
-        text: "Cameron returned resources to camp",
-        resources: deposited,
-        tone: "gain",
-        now
-      });
+    depositCarriedResources(state, now);
+
+    if (running.repeat) {
+      const nextIndex = getTravelBackNextLoopIndex(running);
+      if (startLoopActionAtIndex(state, running, nextIndex, now)) {
+        return;
+      }
     }
 
     if (running.repeat && canStartAction(state, running.actionId)) {
@@ -150,7 +290,23 @@ function completeRunningAction(state: GameState, running: RunningAction, now: nu
     return;
   }
 
+  if (running.phase === "followUp") {
+    completeFollowUpCycle(state, running, now, targetTime);
+    return;
+  }
+
   completeWorkCycle(state, running, now);
+}
+
+function completeFollowUpCycle(state: GameState, running: RunningAction, now: number, targetTime: number): void {
+  const activeActionId = getActiveActionId(running);
+  if (activeActionId !== "butcherFish") {
+    startTravelingBackToCamp(state, running, targetTime, getNextLoopIndexAfterCompletedAction(running));
+    return;
+  }
+
+  completeFishButchering(state, now);
+  startTravelingBackToCamp(state, running, targetTime, getNextLoopIndexAfterCompletedAction(running));
 }
 
 function completeWorkCycle(state: GameState, running: RunningAction, now: number): void {
@@ -164,6 +320,32 @@ function completeWorkCycle(state: GameState, running: RunningAction, now: number
   }
 
   payCost(state, cost);
+  if (actionId === "butcherFish") {
+    completeFishButchering(state, now);
+
+    if (running.repeat && canStartAction(state, actionId)) {
+      startWorkingCycle(state, running, now);
+      return;
+    }
+
+    state.currentAction = null;
+    setCharacterWorking(state, false);
+    return;
+  }
+
+  const craftedToolId = getCraftedToolId(actionId);
+  if (craftedToolId) {
+    completeToolCraft(state, craftedToolId, now);
+    if (running.repeat && canStartAction(state, actionId)) {
+      startWorkingCycle(state, running, now);
+      return;
+    }
+
+    state.currentAction = null;
+    setCharacterWorking(state, false);
+    return;
+  }
+
   const rewards = rollRewards(state, actionId);
   const gatheredResources = isCarryAction(actionId) ? addCharacterResources(state, rewards.resources) : rewards.resources;
   if (isCarryAction(actionId)) {
@@ -181,7 +363,18 @@ function completeWorkCycle(state: GameState, running: RunningAction, now: number
   applyToolWear(state, actionId, now);
 
   if (isCarryAction(actionId) && shouldReturnToCamp(rewards.resources, gatheredResources, state)) {
-    startTravelingBackToCamp(state, running, now);
+    const nextIndex = getNextLoopIndex(running);
+    if (actionId === "fishRiver" && getLoopActionId(running, nextIndex) === "butcherFish" && hasCarriedWholeFish(state)) {
+      startFollowUpAction(state, running, nextIndex, now);
+      return;
+    }
+
+    startTravelingBackToCamp(state, running, now, getNextLoopIndexAfterCompletedAction(running));
+    return;
+  }
+
+  if (!isCarryAction(actionId) && getRunningActionLoop(running).length > 1) {
+    startLoopActionAtIndex(state, running, getNextLoopIndexAfterCompletedAction(running), now);
     return;
   }
 
@@ -211,7 +404,7 @@ function startWorkingCycle(state: GameState, running: RunningAction, now: number
 }
 
 function startTravelingToLocation(state: GameState, running: RunningAction, now: number): void {
-  const locationId = running.locationId ?? "meadow";
+  const locationId = running.locationId ?? getLoopLocationId(running, running.loopIndex ?? 0) ?? "meadow";
   state.currentAction = {
     ...running,
     phase: "travelingTo",
@@ -221,15 +414,75 @@ function startTravelingToLocation(state: GameState, running: RunningAction, now:
   };
 }
 
-function startTravelingBackToCamp(state: GameState, running: RunningAction, now: number): void {
+function startTravelingBackToCamp(
+  state: GameState,
+  running: RunningAction,
+  now: number,
+  nextLoopIndex = getNextLoopIndexAfterCompletedAction(running)
+): void {
   const locationId = running.locationId ?? "meadow";
   state.currentAction = {
     ...running,
     phase: "travelingBack",
     locationId,
+    nextLoopIndex,
     startedAt: now,
     endsAt: now + getLocationTravelMs(locationId)
   };
+}
+
+function startFollowUpAction(state: GameState, running: RunningAction, loopIndex: number, now: number): void {
+  const actionId = getLoopActionId(running, loopIndex);
+  const definition = getActionDefinition(actionId);
+  if (!definition) {
+    startTravelingBackToCamp(state, running, now, getNextLoopIndexAfterCompletedAction(running));
+    return;
+  }
+
+  state.currentAction = {
+    ...running,
+    actionId,
+    phase: "followUp",
+    loopIndex,
+    startedAt: now,
+    endsAt: now + definition.durationMs
+  };
+}
+
+function startLoopActionAtIndex(state: GameState, running: RunningAction, index: number, now: number): boolean {
+  const loop = getRunningActionLoop(running);
+  if (!loop.length) {
+    return false;
+  }
+
+  const loopIndex = clampLoopIndex(index, loop);
+  const actionId = loop[loopIndex];
+  if (actionId === "butcherFish" || !canStartAction(state, actionId)) {
+    const nextIndex = getNextLoopIndexAfterIndex(running, loopIndex);
+    return nextIndex !== loopIndex ? startLoopActionAtIndex(state, running, nextIndex, now) : false;
+  }
+
+  const definition = getActionDefinition(actionId);
+  if (!definition) {
+    return false;
+  }
+
+  const locationId = getLoopLocationId(running, loopIndex) ?? (isCarryAction(actionId) ? "meadow" : undefined);
+  const travelDuration = locationId ? getLocationTravelMs(locationId) : 0;
+  state.currentAction = {
+    ...running,
+    actionId,
+    phase: locationId ? "travelingTo" : "working",
+    locationId,
+    loopActionIds: loop,
+    loopLocationIds: getRunningActionLoopLocations(running, loop),
+    loopIndex,
+    nextLoopIndex: undefined,
+    followUpActionId: undefined,
+    startedAt: now,
+    endsAt: now + (travelDuration || definition.durationMs)
+  };
+  return true;
 }
 
 function addCarryLog(state: GameState, actionId: ActionId, resources: Cost, now: number): void {
@@ -246,12 +499,88 @@ function addCarryLog(state: GameState, actionId: ActionId, resources: Cost, now:
   });
 }
 
-function isForageAction(actionId: ActionId): boolean {
-  return actionId === "gatherSticks" || actionId === "gatherStones" || actionId === "gatherFlaxFibers";
+function isGatherAction(actionId: ActionId): boolean {
+  return (
+    actionId === "gatherSticks" ||
+    actionId === "gatherStones" ||
+    actionId === "gatherFlaxFibers" ||
+    actionId === "fishRiver"
+  );
 }
 
 function isCarryAction(actionId: ActionId): boolean {
-  return isForageAction(actionId) || actionId === "huntSmallAnimals" || actionId === "chopTrees";
+  return isGatherAction(actionId) || actionId === "huntSmallAnimals" || actionId === "chopTrees";
+}
+
+function getLoopLocation(actionId: ActionId, locationId: LocationId | undefined): LocationId | null {
+  return isCarryAction(actionId) ? (locationId ?? "meadow") : null;
+}
+
+function getRunningActionLoopLocations(
+  running: RunningAction,
+  loop = getRunningActionLoop(running)
+): Array<LocationId | null> {
+  if (running.loopLocationIds?.length) {
+    return loop.map((actionId, index) => getLoopLocation(actionId, running.loopLocationIds?.[index] ?? undefined));
+  }
+
+  return loop.map((actionId, index) => {
+    if (index === 0 && isCarryAction(actionId)) {
+      return running.locationId ?? "meadow";
+    }
+
+    return getLoopLocation(actionId, undefined);
+  });
+}
+
+function getLoopLocationId(running: RunningAction, index: number): LocationId | undefined {
+  const loop = getRunningActionLoop(running);
+  const actionId = loop[clampLoopIndex(index, loop)];
+  return getRunningActionLoopLocations(running, loop)[clampLoopIndex(index, loop)] ?? (isCarryAction(actionId) ? "meadow" : undefined);
+}
+
+function getActiveActionId(running: RunningAction): ActionId {
+  return running.phase === "followUp" && running.followUpActionId ? running.followUpActionId : running.actionId;
+}
+
+function getLoopActionId(running: RunningAction, index: number): ActionId {
+  const loop = getRunningActionLoop(running);
+  return loop[clampLoopIndex(index, loop)] ?? running.actionId;
+}
+
+function getTravelBackNextLoopIndex(running: RunningAction): number {
+  const loop = getRunningActionLoop(running);
+  return clampLoopIndex(running.nextLoopIndex ?? running.loopIndex ?? 0, loop);
+}
+
+function getNextLoopIndex(running: RunningAction): number {
+  return getNextLoopIndexAfterIndex(running, running.loopIndex ?? 0);
+}
+
+function getNextLoopIndexAfterCompletedAction(running: RunningAction): number {
+  return getNextLoopIndexAfterIndex(running, running.loopIndex ?? 0);
+}
+
+function getNextLoopIndexAfterIndex(running: RunningAction, index: number): number {
+  const loop = getRunningActionLoop(running);
+  if (loop.length <= 1) {
+    return clampLoopIndex(index, loop);
+  }
+
+  let nextIndex = (clampLoopIndex(index, loop) + 1) % loop.length;
+  while (loop[nextIndex] === "butcherFish" && nextIndex !== index) {
+    nextIndex = (nextIndex + 1) % loop.length;
+  }
+
+  return nextIndex;
+}
+
+function clampLoopIndex(index: number, loop: ActionId[]): number {
+  if (!loop.length) {
+    return 0;
+  }
+
+  return Math.min(loop.length - 1, Math.max(0, Math.floor(index)));
 }
 
 function shouldReturnToCamp(rewards: Cost, accepted: Cost, state: GameState): boolean {
@@ -293,6 +622,16 @@ function rollRewards(
         tone: "gain"
       };
     }
+    case "fishRiver":
+      return fishRiver();
+    case "craftStoneKnife":
+    case "craftStoneAxe":
+    case "craftStoneSpear":
+      return {
+        resources: {},
+        message: "Cameron finishes a tool.",
+        tone: "craft"
+      };
     case "chopTrees": {
       const wood = randomInt(2, 4);
       const sticks = Math.random() < 0.35 ? 1 : 0;
@@ -304,6 +643,12 @@ function rollRewards(
     }
     case "huntSmallAnimals":
       return huntSmallAnimal();
+    case "butcherFish":
+      return {
+        resources: {},
+        message: "Cameron butchers carried fish.",
+        tone: "gain"
+      };
     case "butcherRabbit":
       return butcherAnimal(state, "rabbit");
     case "butcherSquirrel":
@@ -329,12 +674,112 @@ function rollRewards(
   }
 }
 
-function huntSmallAnimal(): { resources: Cost; message: string; tone: "gain" } {
-  const animal = Math.random() < 0.58 ? "rabbit" : "squirrel";
+function getToolRecipe(toolId: ToolId): Cost {
+  return toolDefinitions.find((tool) => tool.id === toolId)?.recipe ?? {};
+}
+
+function getCraftedToolId(actionId: ActionId): ToolId | null {
+  switch (actionId) {
+    case "craftStoneKnife":
+      return "stoneKnife";
+    case "craftStoneAxe":
+      return "stoneAxe";
+    case "craftStoneSpear":
+      return "stoneSpear";
+    default:
+      return null;
+  }
+}
+
+function completeToolCraft(state: GameState, toolId: ToolId, now: number): void {
+  const definition = toolDefinitions.find((tool) => tool.id === toolId);
+  if (!definition) {
+    return;
+  }
+
+  state.tools[toolId].quantity += 1;
+  if (!hasUsableTool(state, toolId)) {
+    equipFreshTool(state, toolId);
+  }
+
+  addStackedLog(state, {
+    aggregateKey: `craft:${toolId}`,
+    text: `Cameron crafted ${pluralTool(definition.label)}`,
+    amount: 1,
+    unit: pluralTool(definition.label),
+    tone: "craft",
+    now
+  });
+}
+
+function completeFishButchering(state: GameState, now: number): void {
+  const filets = butcherCarriedFish(state);
+  if (!Object.values(filets).some((amount) => (amount ?? 0) > 0)) {
+    return;
+  }
+
+  addStackedLog(state, {
+    aggregateKey: "action:butcherFish",
+    text: "Cameron butchered fish",
+    resources: filets,
+    tone: "gain",
+    now
+  });
+}
+
+function butcherCarriedFish(state: GameState): Cost {
+  const filets: Cost = {};
+
+  for (const fishId of fishResourceIds) {
+    const amount = normalizeResourceAmount(fishId, state.characterInventory[fishId] ?? 0);
+    const filetId = fishFiletByFishId[fishId];
+    if (amount <= 0 || !filetId) {
+      continue;
+    }
+
+    const filetAmount = normalizeResourceAmount(filetId, amount * 0.5);
+    state.characterInventory[fishId] = 0;
+    if (filetAmount <= 0) {
+      continue;
+    }
+
+    state.characterInventory[filetId] = normalizeResourceAmount(
+      filetId,
+      state.characterInventory[filetId] + filetAmount
+    );
+    filets[filetId] = normalizeResourceAmount(filetId, (filets[filetId] ?? 0) + filetAmount);
+    if (!state.seenResources.includes(filetId)) {
+      state.seenResources.push(filetId);
+    }
+  }
+
+  return filets;
+}
+
+function hasCarriedWholeFish(state: GameState): boolean {
+  return fishResourceIds.some((fishId) => state.characterInventory[fishId] > 0);
+}
+
+function fishRiver(): { resources: Cost; message: string; tone: "gain" } {
+  const fish = RIVER_FISH[randomInt(0, RIVER_FISH.length - 1)];
+  const weight = randomFloat(fish.minWeight, fish.maxWeight, 1);
+  const label = getResourceLabel(fish.id);
 
   return {
-    resources: { [animal]: 1 },
-    message: `Cameron brings back a ${animal}.`,
+    resources: { [fish.id]: weight },
+    message: `Cameron catches a ${formatResourceAmount(fish.id, weight)} lb ${label}.`,
+    tone: "gain"
+  };
+}
+
+function huntSmallAnimal(): { resources: Cost; message: string; tone: "gain" } {
+  const animal = SMALL_GAME[Math.random() < 0.58 ? 0 : 1];
+  const weight = randomFloat(animal.minWeight, animal.maxWeight, 1);
+  const label = getResourceLabel(animal.id);
+
+  return {
+    resources: { [animal.id]: weight },
+    message: `Cameron brings back a ${formatResourceAmount(animal.id, weight)} lb ${label}.`,
     tone: "gain"
   };
 }
@@ -393,10 +838,20 @@ function getStackedActionText(actionId: ActionId): string {
       return "Cameron gathered stones";
     case "gatherFlaxFibers":
       return "Cameron gathered flax fibers";
+    case "fishRiver":
+      return "Cameron caught river fish";
+    case "craftStoneKnife":
+      return "Cameron crafted stone knives";
+    case "craftStoneAxe":
+      return "Cameron crafted stone axes";
+    case "craftStoneSpear":
+      return "Cameron crafted stone spears";
     case "chopTrees":
       return "Cameron chopped trees";
     case "huntSmallAnimals":
       return "Cameron hunted small animals";
+    case "butcherFish":
+      return "Cameron butchered fish";
     case "butcherRabbit":
       return "Cameron butchered rabbits";
     case "butcherSquirrel":
@@ -412,6 +867,10 @@ function getStackedActionText(actionId: ActionId): string {
 
 function plural(label: string, amount: number): string {
   return amount === 1 ? label : `${label}s`;
+}
+
+function pluralTool(label: string): string {
+  return label.endsWith("s") ? label : `${label}s`;
 }
 
 function setCharacterWorking(state: GameState, isWorking: boolean): void {

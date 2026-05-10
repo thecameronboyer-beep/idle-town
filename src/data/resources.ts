@@ -26,6 +26,66 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "Usable lengths from felled trees."
   },
   {
+    id: "minnow",
+    label: "Minnow",
+    group: "fish",
+    blurb: "Tiny river fish, quick to smoke or stew."
+  },
+  {
+    id: "stoneLoach",
+    label: "Stone Loach",
+    group: "fish",
+    blurb: "Bottom-feeding fish from cold stones."
+  },
+  {
+    id: "mudskipper",
+    label: "Mudskipper",
+    group: "fish",
+    blurb: "A stubborn shore fish pulled from muddy shallows."
+  },
+  {
+    id: "brookStickleback",
+    label: "Brook Stickleback",
+    group: "fish",
+    blurb: "Small, sharp-backed fish from fast water."
+  },
+  {
+    id: "pebblePerch",
+    label: "Pebble Perch",
+    group: "fish",
+    blurb: "A broad little perch hiding under river stones."
+  },
+  {
+    id: "minnowFilet",
+    label: "Minnow Filet",
+    group: "fish",
+    blurb: "Cleaned minnow meat, lighter after butchering."
+  },
+  {
+    id: "stoneLoachFilet",
+    label: "Stone Loach Filet",
+    group: "fish",
+    blurb: "Cleaned stone loach meat, lighter after butchering."
+  },
+  {
+    id: "mudskipperFilet",
+    label: "Mudskipper Filet",
+    group: "fish",
+    blurb: "Cleaned mudskipper meat, lighter after butchering."
+  },
+  {
+    id: "brookSticklebackFilet",
+    label: "Brook Stickleback Filet",
+    group: "fish",
+    blurb: "Cleaned brook stickleback meat, lighter after butchering."
+  },
+  {
+    id: "pebblePerchFilet",
+    label: "Pebble Perch Filet",
+    group: "fish",
+    blurb: "Cleaned pebble perch meat, lighter after butchering."
+  },
+  {
     id: "rabbit",
     label: "Rabbit",
     group: "animals",
@@ -85,6 +145,56 @@ export const resourceOrder = resourceDefinitions.map((resource) => resource.id);
 
 export const baseVisibleResources: ResourceId[] = ["stick", "stone"];
 
+export const fishResourceIds: ResourceId[] = [
+  "minnow",
+  "stoneLoach",
+  "mudskipper",
+  "brookStickleback",
+  "pebblePerch"
+];
+export const fishFiletResourceIds: ResourceId[] = [
+  "minnowFilet",
+  "stoneLoachFilet",
+  "mudskipperFilet",
+  "brookSticklebackFilet",
+  "pebblePerchFilet"
+];
+export const fishFiletByFishId: Partial<Record<ResourceId, ResourceId>> = {
+  minnow: "minnowFilet",
+  stoneLoach: "stoneLoachFilet",
+  mudskipper: "mudskipperFilet",
+  brookStickleback: "brookSticklebackFilet",
+  pebblePerch: "pebblePerchFilet"
+};
+export const weightedResourceIds: ResourceId[] = [...fishResourceIds, ...fishFiletResourceIds, "rabbit", "squirrel"];
+
+export function isFishResource(id: ResourceId): boolean {
+  return fishResourceIds.includes(id);
+}
+
+export function isWeightedResource(id: ResourceId): boolean {
+  return weightedResourceIds.includes(id);
+}
+
+export function normalizeResourceAmount(id: ResourceId, amount: number): number {
+  const safeAmount = Math.max(0, Number.isFinite(amount) ? amount : 0);
+  if (!isWeightedResource(id)) {
+    return Math.floor(safeAmount);
+  }
+
+  return Math.round(safeAmount * 10) / 10;
+}
+
+export function formatResourceAmount(id: ResourceId, amount: number): string {
+  const normalized = normalizeResourceAmount(id, amount);
+  return isWeightedResource(id) ? formatTenths(normalized) : `${normalized}`;
+}
+
 export function getResourceLabel(id: ResourceId): string {
   return resourceDefinitions.find((resource) => resource.id === id)?.label ?? id;
+}
+
+function formatTenths(amount: number): string {
+  const rounded = Math.round(amount * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
 }

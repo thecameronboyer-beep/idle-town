@@ -1,11 +1,22 @@
 import { getActionDefinition } from "../data/actions";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
-import { getResourceLabel, resourceDefinitions, resourceOrder } from "../data/resources";
+import {
+  formatResourceAmount,
+  getResourceLabel,
+  isWeightedResource,
+  resourceDefinitions,
+  resourceOrder
+} from "../data/resources";
 import boneIconUrl from "../assets/items/bone-icon.png";
+import brookSticklebackIconUrl from "../assets/items/brook-stickleback-icon.png";
+import fishFiletIconUrl from "../assets/items/fish-filet-icon.png";
 import flaxFiberIconUrl from "../assets/items/flax-fiber-icon.png";
 import forestLocationIconUrl from "../assets/locations/forest-location-icon.png";
 import hideIconUrl from "../assets/items/hide-icon.png";
 import meadowLocationIconUrl from "../assets/locations/meadow-location-icon-v2.png";
+import minnowIconUrl from "../assets/items/minnow-icon.png";
+import mudskipperIconUrl from "../assets/items/mudskipper-icon.png";
+import pebblePerchIconUrl from "../assets/items/pebble-perch-icon.png";
 import rabbitIconUrl from "../assets/items/rabbit-icon.png";
 import riverLocationIconUrl from "../assets/locations/river-location-icon-v2.png";
 import squirrelIconUrl from "../assets/items/squirrel-icon.png";
@@ -17,8 +28,9 @@ import stoneKnifeEmptySlotUrl from "../assets/items/stone-knife-empty-slot.png";
 import stoneSpearEmptySlotUrl from "../assets/items/stone-spear-empty-slot.png";
 import stoneSpearEquippedSlotUrl from "../assets/items/stone-spear-equipped-slot.png";
 import stoneIconUrl from "../assets/items/stone-icon.png";
+import stoneLoachIconUrl from "../assets/items/stone-loach-icon.png";
 import woodIconUrl from "../assets/items/wood-icon.png";
-import { buildStructure, craftTool, getMissingCostText } from "../systems/crafting";
+import { buildStructure, getMissingCostText } from "../systems/crafting";
 import {
   CHARACTER_MAX_WEIGHT,
   describeCost,
@@ -26,7 +38,18 @@ import {
   hasCost
 } from "../systems/inventory";
 import { clamp, formatDuration } from "../systems/math";
-import { getActionCost, getActionProgress, startAction, stopAction } from "../systems/actions";
+import {
+  canInsertActionInLoop,
+  canStartAction,
+  depositCarriedResources,
+  getActionCost,
+  getActionProgress,
+  getRunningActionLoop,
+  insertActionInLoop,
+  removeActionFromLoop,
+  startAction,
+  stopAction
+} from "../systems/actions";
 import { getActionLockReason, isActionUnlocked, isBuildingVisible } from "../systems/progression";
 import { getMaxToolDurability } from "../systems/tools";
 import type { ActionId, BuildingId, GameState, Inventory, LocationId, LogEntry, ResourceId, ToolId } from "../types";
@@ -34,6 +57,7 @@ import type { ActionId, BuildingId, GameState, Inventory, LocationId, LogEntry, 
 type ActionFilterId =
   | "crafting"
   | "foraging"
+  | "fishing"
   | "woodcutting"
   | "hunting"
   | "butchering"
@@ -55,6 +79,7 @@ type ActionCategory = {
 };
 
 type SidePanelId = "inventory" | "equipment";
+type ActionLoopTarget = { afterIndex: number } | null;
 
 type EquipmentStat = {
   label: string;
@@ -75,6 +100,11 @@ const actionFilters: ActionFilter[] = [
     actionIds: ["gatherSticks", "gatherStones", "gatherFlaxFibers"]
   },
   {
+    id: "fishing",
+    label: "Fishing",
+    actionIds: ["fishRiver"]
+  },
+  {
     id: "hunting",
     label: "Hunting",
     actionIds: ["huntSmallAnimals"]
@@ -86,12 +116,13 @@ const actionFilters: ActionFilter[] = [
   },
   {
     id: "crafting",
-    label: "Crafting"
+    label: "Crafting",
+    actionIds: ["craftStoneKnife", "craftStoneAxe", "craftStoneSpear"]
   },
   {
     id: "butchering",
     label: "Butchering",
-    actionIds: ["butcherRabbit", "butcherSquirrel"]
+    actionIds: ["butcherFish", "butcherRabbit", "butcherSquirrel"]
   },
   {
     id: "cooking",
@@ -109,7 +140,7 @@ const actionCategories: ActionCategory[] = [
   {
     id: "gather",
     label: "Gather",
-    filterIds: ["foraging", "hunting", "woodcutting"]
+    filterIds: ["foraging", "fishing", "hunting", "woodcutting"]
   },
   {
     id: "processing",
@@ -164,12 +195,22 @@ const emptySlotLabels: Partial<Record<ToolId, string>> = {
 
 const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   bone: boneIconUrl,
+  brookStickleback: brookSticklebackIconUrl,
+  brookSticklebackFilet: fishFiletIconUrl,
+  minnowFilet: fishFiletIconUrl,
+  mudskipperFilet: fishFiletIconUrl,
+  pebblePerchFilet: fishFiletIconUrl,
+  stoneLoachFilet: fishFiletIconUrl,
   flaxFiber: flaxFiberIconUrl,
   hide: hideIconUrl,
+  minnow: minnowIconUrl,
+  mudskipper: mudskipperIconUrl,
+  pebblePerch: pebblePerchIconUrl,
   rabbit: rabbitIconUrl,
   squirrel: squirrelIconUrl,
   stick: stickIconUrl,
   stone: stoneIconUrl,
+  stoneLoach: stoneLoachIconUrl,
   wood: woodIconUrl
 };
 
@@ -202,6 +243,9 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
   let activeActionFilter: ActionFilterId = "foraging";
   let activeLocation: LocationId = "meadow";
   let activeSidePanel: SidePanelId = "inventory";
+  let campLogVisible = true;
+  let actionLoopTarget: ActionLoopTarget = null;
+  let selectedLoopIndex = 0;
   let currentState: GameState | null = null;
   let activeTooltipSlot: HTMLElement | null = null;
 
@@ -247,17 +291,56 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       return;
     }
 
+    if (command === "toggle-camp-log") {
+      campLogVisible = !campLogVisible;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "select-loop-step") {
+      selectedLoopIndex = getLoopIndex(id, selectedLoopIndex);
+      actionLoopTarget = null;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "insert-loop-after") {
+      selectedLoopIndex = getLoopIndex(id, selectedLoopIndex);
+      actionLoopTarget = { afterIndex: selectedLoopIndex };
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "remove-loop-step") {
+      selectedLoopIndex = removeActionFromLoop(state, getLoopIndex(id, selectedLoopIndex));
+      actionLoopTarget = null;
+    }
+
     if (command === "start-action" && id) {
       const actionId = id as ActionId;
+      if (actionLoopTarget) {
+        if (insertActionInLoop(state, actionLoopTarget.afterIndex, actionId, { locationId: getActionStartLocation(actionId, activeLocation) })) {
+          selectedLoopIndex = actionLoopTarget.afterIndex + 1;
+          actionLoopTarget = null;
+        }
+        handlers.persist();
+        handlers.requestRender();
+        return;
+      }
+
+      actionLoopTarget = null;
       startAction(state, actionId, Date.now(), { locationId: getActionStartLocation(actionId, activeLocation) });
     }
 
     if (command === "stop-action") {
+      actionLoopTarget = null;
       stopAction(state);
     }
 
-    if (command === "craft-tool" && id) {
-      craftTool(state, id as ToolId);
+    if (command === "deposit-carried") {
+      if (!state.currentAction) {
+        depositCarriedResources(state);
+      }
     }
 
     if (command === "build-structure" && id) {
@@ -333,7 +416,16 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     currentState = state;
     const scrollPositions = captureScrollPositions(root);
     const wildernessCanvas = root.querySelector<HTMLCanvasElement>("#wilderness-canvas");
-    root.innerHTML = renderApp(state, activeActionFilter, activeActionCategory, activeSidePanel, activeLocation);
+    root.innerHTML = renderApp(
+      state,
+      activeActionFilter,
+      activeActionCategory,
+      activeSidePanel,
+      activeLocation,
+      campLogVisible,
+      actionLoopTarget,
+      selectedLoopIndex
+    );
     restoreWildernessCanvas(root, wildernessCanvas);
     activeTooltipSlot = null;
     restoreScrollPositions(root, scrollPositions);
@@ -354,17 +446,19 @@ function renderApp(
   activeActionFilter: ActionFilterId,
   activeActionCategory: ActionCategoryId,
   activeSidePanel: SidePanelId,
-  activeLocation: LocationId
+  activeLocation: LocationId,
+  campLogVisible: boolean,
+  actionLoopTarget: ActionLoopTarget,
+  selectedLoopIndex: number
 ): string {
   return `
     <div class="game-shell">
       ${renderCharacterSidebar(state, activeActionCategory)}
       <main class="main-panel">
-        ${renderWorldPanel()}
-        ${renderCurrentActionPanel(state)}
-        ${renderWorkArea(state, activeActionCategory, activeActionFilter, activeLocation)}
+        ${renderWorldPanel(state, actionLoopTarget, selectedLoopIndex)}
+        ${renderWorkArea(state, activeActionCategory, activeActionFilter, activeLocation, actionLoopTarget)}
       </main>
-      ${renderSidePanel(state, activeSidePanel)}
+      ${renderSidePanel(state, activeSidePanel, campLogVisible)}
     </div>
     <div class="tooltip-layer" aria-hidden="true"></div>
   `;
@@ -424,7 +518,8 @@ function renderWorkArea(
   state: GameState,
   activeActionCategory: ActionCategoryId,
   activeActionFilter: ActionFilterId,
-  activeLocation: LocationId
+  activeLocation: LocationId,
+  actionLoopTarget: ActionLoopTarget
 ): string {
   if (activeActionCategory === "camp") {
     return `
@@ -435,9 +530,9 @@ function renderWorkArea(
   }
 
   return `
-    <div class="work-area">
-      ${renderActionCategoryPanel(activeActionCategory, activeActionFilter)}
-      ${renderActionStack(state, activeActionFilter, activeLocation)}
+      <div class="work-area">
+      ${renderActionCategoryPanel(state, activeActionCategory, activeActionFilter)}
+      ${renderActionStack(state, activeActionFilter, activeLocation, actionLoopTarget)}
     </div>
   `;
 }
@@ -445,19 +540,21 @@ function renderWorkArea(
 function renderActionStack(
   state: GameState,
   activeActionFilter: ActionFilterId,
-  activeLocation: LocationId
+  activeLocation: LocationId,
+  actionLoopTarget: ActionLoopTarget
 ): string {
   const filter = getActionFilter(activeActionFilter);
 
   return `
     <div class="action-stack">
       ${hasLocationPanel(filter.id) ? renderLocationPanel(filter, activeLocation) : ""}
-      ${renderActionPanel(state, activeActionFilter, activeLocation)}
+      ${renderActionPanel(state, activeActionFilter, activeLocation, actionLoopTarget)}
     </div>
   `;
 }
 
 function renderActionCategoryPanel(
+  state: GameState,
   activeActionCategory: ActionCategoryId,
   activeActionFilter: ActionFilterId
 ): string {
@@ -471,32 +568,35 @@ function renderActionCategoryPanel(
         <span class="quiet">Skills</span>
       </div>
       <div class="skill-grid">
-        ${filters.map((filter) => renderSkillButton(filter, activeActionFilter)).join("")}
+        ${filters.map((filter) => renderSkillButton(state, filter, activeActionFilter)).join("")}
       </div>
     </section>
   `;
 }
 
-function renderSkillButton(filter: ActionFilter, activeActionFilter: ActionFilterId): string {
+function renderSkillButton(state: GameState, filter: ActionFilter, activeActionFilter: ActionFilterId): string {
   const active = filter.id === activeActionFilter;
+  const currentActionLabel = getCurrentActionLabel(state, filter.actionIds ?? []);
 
   return `
     <button
-      class="skill-button ${active ? "active" : ""}"
+      class="skill-button ${active ? "active" : ""} ${currentActionLabel ? "current" : ""}"
       type="button"
       data-command="set-action-filter"
       data-id="${filter.id}"
       aria-pressed="${active}"
     >
       <span>${filter.label}</span>
+      ${currentActionLabel ? `<small>${currentActionLabel}</small>` : ""}
     </button>
   `;
 }
 
-function renderWorldPanel(): string {
+function renderWorldPanel(state: GameState, actionLoopTarget: ActionLoopTarget, selectedLoopIndex: number): string {
   return `
     <section class="world-panel panel">
       <canvas id="wilderness-canvas" class="wilderness-canvas" aria-label="A primitive forest camp"></canvas>
+      ${renderCurrentActionPanel(state, actionLoopTarget, selectedLoopIndex)}
     </section>
   `;
 }
@@ -504,47 +604,33 @@ function renderWorldPanel(): string {
 function renderActionPanel(
   state: GameState,
   activeActionFilter: ActionFilterId,
-  activeLocation: LocationId
+  activeLocation: LocationId,
+  actionLoopTarget: ActionLoopTarget
 ): string {
   const filter = getActionFilter(activeActionFilter);
-  if (filter.id === "crafting") {
-    return `
-      <section class="panel action-panel">
-        <div class="section-heading">
-          <span>Crafting</span>
-          <span class="quiet">Handmade</span>
-        </div>
-        ${renderPrimitiveTools(state)}
-      </section>
-    `;
-  }
-
   const actionIds =
     filter.id === "foraging" || filter.id === "woodcutting"
       ? getLocation(activeLocation, filter.id).actionIds
       : (filter.actionIds ?? []);
+  const activeActionLabel = getCurrentActionLabel(state, actionIds);
 
   return `
       <section class="panel action-panel">
         <div class="section-heading">
           <span>${filter.label}</span>
-          <span class="quiet">Actions</span>
+          <span class="quiet">${activeActionLabel ? `Current: ${activeActionLabel}` : "Actions"}</span>
         </div>
         <div class="action-grid">
-          ${actionIds.map((actionId) => renderActionCard(state, actionId)).join("")}
+          ${actionIds.map((actionId) => renderActionCard(state, actionId, actionLoopTarget)).join("")}
         </div>
     </section>
   `;
 }
 
-function renderCurrentActionPanel(state: GameState): string {
+function renderCurrentActionPanel(state: GameState, actionLoopTarget: ActionLoopTarget, selectedLoopIndex: number): string {
   if (!state.currentAction) {
     return `
-      <section class="panel current-action-panel idle">
-        <div class="section-heading">
-          <span>Current Action</span>
-          <span class="quiet">Idle</span>
-        </div>
+      <section class="current-action-panel idle">
         <div class="current-action-content idle">
           <strong>No active work</strong>
           <span>Choose a task for Cameron.</span>
@@ -557,23 +643,84 @@ function renderCurrentActionPanel(state: GameState): string {
   const remaining = formatDuration(state.currentAction.endsAt - Date.now());
 
   return `
-    <section class="panel current-action-panel">
-      <div class="section-heading">
-        <span>Current Action</span>
-        <span class="quiet">Auto-repeat on</span>
-      </div>
+    <section class="current-action-panel">
       <div class="current-action-content">
         <div class="current-action-copy">
           <strong>${getRunningActionTitle(state)}</strong>
-          <span data-action-remaining>${remaining} remaining</span>
         </div>
         <button class="icon-button" type="button" data-command="stop-action" title="Stop action">Stop</button>
-        <div class="progress-track" aria-hidden="true">
+        <div class="action-loop-stack">
+          ${renderActionLoopControls(state, actionLoopTarget, selectedLoopIndex)}
+        </div>
+        <div class="progress-track">
           <span data-action-progress style="transform: scaleX(${progress.toFixed(4)})"></span>
+          <em data-action-remaining>${remaining}</em>
         </div>
       </div>
     </section>
   `;
+}
+
+function renderActionLoopControls(
+  state: GameState,
+  actionLoopTarget: ActionLoopTarget,
+  selectedLoopIndex: number
+): string {
+  const running = state.currentAction;
+  if (!running) {
+    return "";
+  }
+
+  const loop = getRunningActionLoop(running);
+  const safeSelectedIndex = Math.min(loop.length - 1, Math.max(0, selectedLoopIndex));
+
+  return `
+    <div class="action-loop-controls" aria-label="Action loop">
+      <span class="action-loop-label">action loop</span>
+      ${loop.map((actionId, index) => renderActionLoopStep(actionId, index, safeSelectedIndex, actionLoopTarget, loop.length)).join("")}
+    </div>
+  `;
+}
+
+function renderActionLoopStep(
+  actionId: ActionId,
+  index: number,
+  selectedLoopIndex: number,
+  actionLoopTarget: ActionLoopTarget,
+  loopLength: number
+): string {
+  const selected = index === selectedLoopIndex;
+  const assigning = actionLoopTarget?.afterIndex === index;
+
+  return `
+    <div class="action-loop-row ${selected ? "selected" : ""}">
+      <button
+        class="action-loop-step ${selected ? "selected" : ""} ${assigning ? "assigning" : ""}"
+        type="button"
+        data-command="select-loop-step"
+        data-id="${index}"
+        aria-pressed="${selected}"
+      >
+        ${getActionLoopLabel(actionId)}
+      </button>
+      ${
+        selected
+          ? `<span class="action-loop-row-tools">
+              <button class="action-loop-icon" type="button" data-command="insert-loop-after" data-id="${index}" title="Add action after ${getActionLoopLabel(actionId)}">+</button>
+              <button class="action-loop-icon" type="button" data-command="remove-loop-step" data-id="${index}" title="Remove ${getActionLoopLabel(actionId)}" ${index === 0 || loopLength <= 1 ? "disabled" : ""}>-</button>
+            </span>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function getActionLoopLabel(actionId: ActionId): string {
+  if (actionId === "fishRiver") {
+    return "Fish River";
+  }
+
+  return getActionDefinition(actionId)?.label ?? "Action";
 }
 
 function getRunningActionTitle(state: GameState): string {
@@ -591,7 +738,29 @@ function getRunningActionTitle(state: GameState): string {
     return `Returning from ${location}`;
   }
 
+  if (running.phase === "followUp") {
+    if (getActiveActionId(running) === "butcherFish") {
+      return "Butchering Fish";
+    }
+
+    return getActionDefinition(getActiveActionId(running))?.label ?? "Working";
+  }
+
   return getActionDefinition(running.actionId)?.label ?? "Working";
+}
+
+function getCurrentActionLabel(state: GameState, actionIds: ActionId[]): string | null {
+  const running = state.currentAction;
+  if (!running) {
+    return null;
+  }
+
+  const activeActionId = getActiveActionId(running);
+  if (!actionIds.includes(activeActionId)) {
+    return null;
+  }
+
+  return getActionDefinition(activeActionId)?.label ?? "Working";
 }
 
 function getRunningActionStatus(state: GameState): string {
@@ -609,7 +778,15 @@ function getRunningActionStatus(state: GameState): string {
     return `returning from ${location}`;
   }
 
+  if (running.phase === "followUp") {
+    return getActionDefinition(getActiveActionId(running))?.verb ?? "working";
+  }
+
   return getActionDefinition(running.actionId)?.verb ?? "working";
+}
+
+function getActiveActionId(running: NonNullable<GameState["currentAction"]>): ActionId {
+  return running.phase === "followUp" && running.followUpActionId ? running.followUpActionId : running.actionId;
 }
 
 function getActionFilter(id: ActionFilterId): ActionFilter {
@@ -629,6 +806,11 @@ function isActionFilterId(id: string | undefined): id is ActionFilterId {
   return actionFilters.some((filter) => filter.id === id);
 }
 
+function getLoopIndex(id: string | undefined, fallback: number): number {
+  const parsed = Number(id);
+  return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : fallback;
+}
+
 function isLocationId(id: string | undefined): id is LocationId {
   return locationDefinitions.some((location) => location.id === id);
 }
@@ -638,7 +820,7 @@ function isSidePanelId(id: string | undefined): id is SidePanelId {
 }
 
 function hasLocationPanel(filterId: ActionFilterId): boolean {
-  return filterId === "foraging" || filterId === "hunting" || filterId === "woodcutting";
+  return filterId === "foraging" || filterId === "fishing" || filterId === "hunting" || filterId === "woodcutting";
 }
 
 function getLocation(id: LocationId, filterId?: ActionFilterId): (typeof locationDefinitions)[number] {
@@ -648,6 +830,8 @@ function getLocation(id: LocationId, filterId?: ActionFilterId): (typeof locatio
 
 function getLocationsForFilter(filterId: ActionFilterId): typeof locationDefinitions {
   switch (filterId) {
+    case "fishing":
+      return locationDefinitions.filter((location) => location.id === "river");
     case "hunting":
       return locationDefinitions.filter((location) => location.id === "meadow");
     case "woodcutting":
@@ -662,6 +846,10 @@ function getActiveLocationForFilter(filterId: ActionFilterId, activeLocation: Lo
     return "meadow";
   }
 
+  if (filterId === "fishing") {
+    return "river";
+  }
+
   if (filterId === "woodcutting") {
     return "forest";
   }
@@ -672,6 +860,10 @@ function getActiveLocationForFilter(filterId: ActionFilterId, activeLocation: Lo
 function getActionStartLocation(actionId: ActionId, activeLocation: LocationId): LocationId {
   if (actionId === "huntSmallAnimals") {
     return "meadow";
+  }
+
+  if (actionId === "fishRiver") {
+    return "river";
   }
 
   if (actionId === "chopTrees") {
@@ -723,7 +915,7 @@ function renderLocationTabs(
   `;
 }
 
-function renderActionCard(state: GameState, actionId: ActionId): string {
+function renderActionCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
   const definition = getActionDefinition(actionId);
   if (!definition) {
     return "";
@@ -731,56 +923,43 @@ function renderActionCard(state: GameState, actionId: ActionId): string {
 
   const unlocked = isActionUnlocked(state, actionId);
   const cost = getActionCost(actionId);
-  const affordable = hasCost(state, cost);
-  const active = state.currentAction?.actionId === actionId;
-  const disabled = !unlocked || !affordable || active;
+  const canStart = canStartAction(state, actionId);
+  const assigningLoopAction = Boolean(actionLoopTarget && state.currentAction);
+  const canAssignFollowUp = Boolean(
+    assigningLoopAction &&
+      state.currentAction &&
+      actionLoopTarget &&
+      canInsertActionInLoop(state.currentAction, actionLoopTarget.afterIndex, actionId)
+  );
+  const active = state.currentAction ? getActiveActionId(state.currentAction) === actionId : false;
+  const disabled = assigningLoopAction ? !canAssignFollowUp : !canStart || active;
   const missingCostText =
-    actionId === "cookRabbitMeat" || actionId === "cookSquirrelMeat"
+    actionId === "butcherFish" || actionId === "cookRabbitMeat" || actionId === "cookSquirrelMeat"
       ? getActionLockReason(state, actionId)
       : getMissingCostText(state, cost);
-  const lockReason = unlocked ? missingCostText : getActionLockReason(state, actionId);
-  const subtext = Object.keys(cost).length ? `Uses ${describeCost(cost)}` : definition.blurb;
+  const lockReason = canStart ? "" : unlocked ? missingCostText : getActionLockReason(state, actionId);
+  const subtext = assigningLoopAction
+    ? canAssignFollowUp
+      ? "Set as action loop step"
+      : "Not valid for this loop"
+    : Object.keys(cost).length
+      ? `Uses ${describeCost(cost)}`
+      : definition.blurb;
+  const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : "Start";
 
   return `
-    <article class="action-card ${active ? "active" : ""} ${!unlocked ? "locked" : ""}">
+    <article class="action-card ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}">
       <div>
         <span class="card-label">${definition.label}</span>
-        <small>${unlocked ? subtext : lockReason}</small>
+        <small>${canStart || assigningLoopAction ? subtext : lockReason}</small>
       </div>
       <div class="card-footer">
         <span>${formatDuration(definition.durationMs)}</span>
         <button type="button" data-command="start-action" data-id="${actionId}" ${disabled ? "disabled" : ""}>
-          ${active ? "Running" : "Start"}
+          ${buttonLabel}
         </button>
       </div>
     </article>
-  `;
-}
-
-function renderPrimitiveTools(state: GameState): string {
-  return `
-      <div class="crafting-tab">
-        <div class="section-heading">
-          <span>Primitive Tools</span>
-          <span class="quiet">Make spares</span>
-        </div>
-        <div class="craft-list">
-          ${toolDefinitions.map((tool) => {
-            const affordable = hasCost(state, tool.recipe);
-            return `
-              <article class="craft-item primitive-tool">
-                <div>
-                  <strong>${tool.label}</strong>
-                  <small>${describeCost(tool.recipe)}</small>
-                </div>
-                <button type="button" data-command="craft-tool" data-id="${tool.id}" ${!affordable ? "disabled" : ""}>
-                  Craft
-                </button>
-              </article>
-            `;
-        }).join("")}
-      </div>
-    </div>
   `;
 }
 
@@ -818,16 +997,30 @@ function renderBuildingPanel(state: GameState): string {
   `;
 }
 
-function renderSidePanel(state: GameState, activeSidePanel: SidePanelId): string {
+function renderSidePanel(state: GameState, activeSidePanel: SidePanelId, campLogVisible: boolean): string {
   return `
-    <aside class="inventory-panel panel">
+    <aside class="inventory-panel panel ${campLogVisible ? "" : "log-hidden"}">
       <div class="panel-tabs" role="tablist" aria-label="Character panel">
         ${renderSidePanelButton("inventory", "Inventory", activeSidePanel)}
         ${renderSidePanelButton("equipment", "Equipment", activeSidePanel)}
       </div>
       ${activeSidePanel === "inventory" ? renderInventory(state) : renderEquipment(state)}
-      ${renderLog(state)}
+      ${campLogVisible ? renderLog(state) : ""}
+      ${renderCampLogToggle(campLogVisible)}
     </aside>
+  `;
+}
+
+function renderCampLogToggle(campLogVisible: boolean): string {
+  return `
+    <button
+      class="camp-log-toggle ${campLogVisible ? "active" : ""}"
+      type="button"
+      data-command="toggle-camp-log"
+      aria-pressed="${campLogVisible}"
+    >
+      Camp Log
+    </button>
   `;
 }
 
@@ -879,8 +1072,13 @@ function renderCharacterInventory(state: GameState): string {
     <div class="resource-group character-inventory-group">
       <div class="inventory-summary-heading">
         <h3>Camerons Inventory</h3>
-        <span>${carriedWeight}/${CHARACTER_MAX_WEIGHT}</span>
+        <span>${formatWeightAmount(carriedWeight)}/${CHARACTER_MAX_WEIGHT}</span>
       </div>
+      ${
+        carriedIds.length
+          ? `<button class="deposit-button" type="button" data-command="deposit-carried" ${state.currentAction ? "disabled" : ""}>Store at Camp</button>`
+          : ""
+      }
       ${
         carriedIds.length
           ? `
@@ -927,7 +1125,7 @@ function renderResourceRow(resourceId: ResourceId, inventory: Inventory): string
         <strong>${getResourceLabel(resourceId)}</strong>
         <small>${resourceDefinitions.find((resource) => resource.id === resourceId)?.blurb ?? ""}</small>
       </span>
-      <b>${inventory[resourceId]}</b>
+      <b>${formatInventoryAmount(resourceId, inventory[resourceId])}</b>
     </div>
   `;
 }
@@ -944,9 +1142,9 @@ function renderInventoryResourceSlot(
   }
 
   return `
-    <article class="equipment-slot inventory-resource-slot icon-only" tabindex="0" data-tooltip-source aria-label="${definition.label}, ${inventory[resourceId]}">
+    <article class="equipment-slot inventory-resource-slot icon-only" tabindex="0" data-tooltip-source aria-label="${definition.label}, ${formatInventoryAmount(resourceId, inventory[resourceId])}">
       <img class="slot-item-icon" src="${imageUrl}" alt="" aria-hidden="true" />
-      <span class="item-quantity" aria-hidden="true">${inventory[resourceId]}</span>
+      <span class="item-quantity" aria-hidden="true">${formatResourceAmount(resourceId, inventory[resourceId])}</span>
       <div class="slot-tooltip" role="tooltip">
         <div class="tooltip-title">
           <strong>${definition.label}</strong>
@@ -956,6 +1154,14 @@ function renderInventoryResourceSlot(
             <dt>Type</dt>
             <dd>${labelGroup(definition.group)}</dd>
           </div>
+          ${
+            isWeightedResource(resourceId)
+              ? `<div>
+                  <dt>Total</dt>
+                  <dd>${formatInventoryAmount(resourceId, inventory[resourceId])}</dd>
+                </div>`
+              : ""
+          }
           <div>
             <dt>Use</dt>
             <dd>${definition.blurb}</dd>
@@ -1233,7 +1439,7 @@ function renderLogGains(entry: LogEntry): string {
       .filter((resourceId) => (entry.aggregateItems?.[resourceId] ?? 0) > 0)
       .map((resourceId) => {
         const amount = entry.aggregateItems?.[resourceId] ?? 0;
-        return `<b>+${amount} ${formatLogResource(resourceId, amount)}</b>`;
+        return `<b>+${formatResourceAmount(resourceId, amount)} ${formatLogResource(resourceId, amount)}</b>`;
       });
 
     return gains.length ? `<span class="log-gains">${gains.join("")}</span>` : "";
@@ -1242,8 +1448,21 @@ function renderLogGains(entry: LogEntry): string {
   return entry.aggregateTotal ? `<span class="log-gains"><b>+${entry.aggregateTotal} ${entry.aggregateUnit ?? ""}</b></span>` : "";
 }
 
+function formatInventoryAmount(resourceId: ResourceId, amount: number): string {
+  return isWeightedResource(resourceId) ? `${formatResourceAmount(resourceId, amount)} lb` : formatResourceAmount(resourceId, amount);
+}
+
+function formatWeightAmount(amount: number): string {
+  const rounded = Math.round(amount * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
+}
+
 function formatLogResource(resourceId: ResourceId, amount: number): string {
   const label = getResourceLabel(resourceId);
+  if (isWeightedResource(resourceId)) {
+    return `lb ${label}`;
+  }
+
   if (amount === 1) {
     return label;
   }
@@ -1271,6 +1490,8 @@ function labelGroup(group: string): string {
       return "Animals";
     case "hunted":
       return "Hunted";
+    case "fish":
+      return "Fish";
     case "crafted":
       return "Worked";
     default:

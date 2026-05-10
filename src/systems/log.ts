@@ -1,3 +1,4 @@
+import { normalizeResourceAmount } from "../data/resources";
 import type { Cost, GameState, LogEntry, ResourceId } from "../types";
 
 const MAX_LOG_ENTRIES = 48;
@@ -69,9 +70,10 @@ export function addStackedLog(
 function normalizeResourceTotals(resources: Cost | undefined): Partial<Record<ResourceId, number>> {
   const totals: Partial<Record<ResourceId, number>> = {};
   for (const [resourceId, amount] of Object.entries(resources ?? {})) {
-    const gained = Math.floor(amount ?? 0);
+    const id = resourceId as ResourceId;
+    const gained = normalizeResourceAmount(id, amount ?? 0);
     if (gained > 0) {
-      totals[resourceId as ResourceId] = gained;
+      totals[id] = gained;
     }
   }
   return totals;
@@ -84,7 +86,7 @@ function mergeAggregateItems(
   const merged = { ...(current ?? {}) };
   for (const [resourceId, amount] of Object.entries(increments)) {
     const id = resourceId as ResourceId;
-    merged[id] = (merged[id] ?? 0) + (amount ?? 0);
+    merged[id] = normalizeResourceAmount(id, (merged[id] ?? 0) + (amount ?? 0));
   }
   return merged;
 }

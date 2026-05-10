@@ -80,6 +80,11 @@ function getRenderSignature(): string {
           actionId: state.currentAction.actionId,
           phase: state.currentAction.phase,
           locationId: state.currentAction.locationId,
+          loopActionIds: state.currentAction.loopActionIds,
+          loopLocationIds: state.currentAction.loopLocationIds,
+          loopIndex: state.currentAction.loopIndex,
+          nextLoopIndex: state.currentAction.nextLoopIndex,
+          followUpActionId: state.currentAction.followUpActionId,
           startedAt: state.currentAction.startedAt,
           endsAt: state.currentAction.endsAt
         }
@@ -103,7 +108,7 @@ function updateLiveActionIndicators(): void {
   }
 
   if (remainingElement) {
-    remainingElement.textContent = `${formatDuration(state.currentAction.endsAt - Date.now())} remaining`;
+    remainingElement.textContent = formatDuration(state.currentAction.endsAt - Date.now());
   }
 }
 
