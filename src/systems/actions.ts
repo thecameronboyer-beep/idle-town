@@ -7,13 +7,15 @@ import {
   getResourceLabel,
   normalizeResourceAmount
 } from "../data/resources";
-import type { ActionId, Cost, GameState, LocationId, ResourceId, RunningAction, ToolId } from "../types";
+import type { ActionId, Cost, GameState, LocationId, ResourceCountDelta, ResourceId, RunningAction, ToolId } from "../types";
 import {
   CHARACTER_MAX_WEIGHT,
   addCharacterResources,
   addResources,
+  consumeOneWholeResource,
   depositCharacterResources,
   getCharacterInventoryWeight,
+  hasResourceQuantity,
   hasCost,
   payCost
 } from "./inventory";
@@ -26,7 +28,8 @@ const MAX_OFFLINE_MS = 2 * 60 * 60 * 1000;
 const LOCATION_TRAVEL_MS: Record<LocationId, number> = {
   meadow: 10000,
   river: 15000,
-  forest: 30000
+  forest: 30000,
+  mine: 60000
 };
 
 const RIVER_FISH: Array<{ id: ResourceId; minWeight: number; maxWeight: number }> = [
@@ -45,6 +48,13 @@ type StartActionOptions = {
   locationId?: LocationId;
 };
 
+type ActionRewards = {
+  resources: Cost;
+  resourceCounts?: ResourceCountDelta;
+  message: string;
+  tone: "gain" | "craft";
+};
+
 export function getActionCost(actionId: ActionId): Cost {
   switch (actionId) {
     case "cookRabbitMeat":
@@ -53,16 +63,16 @@ export function getActionCost(actionId: ActionId): Cost {
       return { squirrelMeat: 1 };
     case "tanHide":
       return { hide: 1 };
+    case "craftFishingPole":
+      return getToolRecipe("fishingPole");
     case "craftStoneKnife":
       return getToolRecipe("stoneKnife");
     case "craftStoneAxe":
       return getToolRecipe("stoneAxe");
+    case "craftStonePickAxe":
+      return getToolRecipe("stonePickAxe");
     case "craftStoneSpear":
       return getToolRecipe("stoneSpear");
-    case "butcherRabbit":
-      return { rabbit: 2 };
-    case "butcherSquirrel":
-      return { squirrel: 0.5 };
     default:
       return {};
   }
@@ -71,6 +81,12 @@ export function getActionCost(actionId: ActionId): Cost {
 export function canStartAction(state: GameState, actionId: ActionId): boolean {
   if (actionId === "butcherFish") {
     return isActionUnlocked(state, actionId) && hasCarriedWholeFish(state);
+  }
+  if (actionId === "butcherRabbit") {
+    return isActionUnlocked(state, actionId) && hasResourceQuantity(state, "rabbit");
+  }
+  if (actionId === "butcherSquirrel") {
+    return isActionUnlocked(state, actionId) && hasResourceQuantity(state, "squirrel");
   }
 
   return isActionUnlocked(state, actionId) && hasCost(state, getActionCost(actionId));
@@ -306,6 +322,11 @@ function completeFollowUpCycle(state: GameState, running: RunningAction, now: nu
   }
 
   completeFishButchering(state, now);
+  if (hasCarriedWholeFish(state)) {
+    startFollowUpAction(state, running, running.loopIndex ?? 0, now);
+    return;
+  }
+
   startTravelingBackToCamp(state, running, targetTime, getNextLoopIndexAfterCompletedAction(running));
 }
 
@@ -347,11 +368,13 @@ function completeWorkCycle(state: GameState, running: RunningAction, now: number
   }
 
   const rewards = rollRewards(state, actionId);
-  const gatheredResources = isCarryAction(actionId) ? addCharacterResources(state, rewards.resources) : rewards.resources;
+  const gatheredResources = isCarryAction(actionId)
+    ? addCharacterResources(state, rewards.resources, rewards.resourceCounts)
+    : rewards.resources;
   if (isCarryAction(actionId)) {
     addCarryLog(state, actionId, gatheredResources, now);
   } else {
-    addResources(state, rewards.resources);
+    addResources(state, rewards.resources, rewards.resourceCounts);
     addStackedLog(state, {
       aggregateKey: `action:${actionId}`,
       text: getStackedActionText(actionId),
@@ -504,6 +527,11 @@ function isGatherAction(actionId: ActionId): boolean {
     actionId === "gatherSticks" ||
     actionId === "gatherStones" ||
     actionId === "gatherFlaxFibers" ||
+    actionId === "gatherMushrooms" ||
+    actionId === "gatherBerries" ||
+    actionId === "mineCoal" ||
+    actionId === "mineCopper" ||
+    actionId === "mineTin" ||
     actionId === "fishRiver"
   );
 }
@@ -596,7 +624,7 @@ function getLocationTravelMs(locationId: LocationId): number {
 function rollRewards(
   state: GameState,
   actionId: ActionId
-): { resources: Cost; message: string; tone: "gain" | "craft" } {
+): ActionRewards {
   switch (actionId) {
     case "gatherSticks": {
       const amount = randomInt(1, 3);
@@ -622,10 +650,34 @@ function rollRewards(
         tone: "gain"
       };
     }
+    case "gatherMushrooms": {
+      const amount = randomInt(1, 3);
+      return {
+        resources: { mushroom: amount },
+        message: `Cameron gathers ${amount} ${plural("Mushroom", amount)} from the meadow shade.`,
+        tone: "gain"
+      };
+    }
+    case "gatherBerries": {
+      const amount = randomInt(2, 5);
+      return {
+        resources: { berry: amount },
+        message: `Cameron picks ${amount} ${amount === 1 ? "Berry" : "Berries"} from the brambles.`,
+        tone: "gain"
+      };
+    }
+    case "mineCoal":
+      return mineResource("coal");
+    case "mineCopper":
+      return mineResource("copper");
+    case "mineTin":
+      return mineResource("tin");
     case "fishRiver":
       return fishRiver();
+    case "craftFishingPole":
     case "craftStoneKnife":
     case "craftStoneAxe":
+    case "craftStonePickAxe":
     case "craftStoneSpear":
       return {
         resources: {},
@@ -680,10 +732,14 @@ function getToolRecipe(toolId: ToolId): Cost {
 
 function getCraftedToolId(actionId: ActionId): ToolId | null {
   switch (actionId) {
+    case "craftFishingPole":
+      return "fishingPole";
     case "craftStoneKnife":
       return "stoneKnife";
     case "craftStoneAxe":
       return "stoneAxe";
+    case "craftStonePickAxe":
+      return "stonePickAxe";
     case "craftStoneSpear":
       return "stoneSpear";
     default:
@@ -713,7 +769,7 @@ function completeToolCraft(state: GameState, toolId: ToolId, now: number): void 
 }
 
 function completeFishButchering(state: GameState, now: number): void {
-  const filets = butcherCarriedFish(state);
+  const filets = butcherOneCarriedFish(state);
   if (!Object.values(filets).some((amount) => (amount ?? 0) > 0)) {
     return;
   }
@@ -727,20 +783,19 @@ function completeFishButchering(state: GameState, now: number): void {
   });
 }
 
-function butcherCarriedFish(state: GameState): Cost {
+function butcherOneCarriedFish(state: GameState): Cost {
   const filets: Cost = {};
 
   for (const fishId of fishResourceIds) {
-    const amount = normalizeResourceAmount(fishId, state.characterInventory[fishId] ?? 0);
     const filetId = fishFiletByFishId[fishId];
-    if (amount <= 0 || !filetId) {
+    if (!filetId || !hasResourceQuantity(state, fishId, "character")) {
       continue;
     }
 
-    const filetAmount = normalizeResourceAmount(filetId, amount * 0.5);
-    state.characterInventory[fishId] = 0;
+    const consumedWeight = consumeOneWholeResource(state, fishId, "character");
+    const filetAmount = normalizeResourceAmount(filetId, consumedWeight * 0.5);
     if (filetAmount <= 0) {
-      continue;
+      return filets;
     }
 
     state.characterInventory[filetId] = normalizeResourceAmount(
@@ -751,34 +806,47 @@ function butcherCarriedFish(state: GameState): Cost {
     if (!state.seenResources.includes(filetId)) {
       state.seenResources.push(filetId);
     }
+    return filets;
   }
 
   return filets;
 }
 
 function hasCarriedWholeFish(state: GameState): boolean {
-  return fishResourceIds.some((fishId) => state.characterInventory[fishId] > 0);
+  return fishResourceIds.some((fishId) => hasResourceQuantity(state, fishId, "character"));
 }
 
-function fishRiver(): { resources: Cost; message: string; tone: "gain" } {
+function fishRiver(): ActionRewards {
   const fish = RIVER_FISH[randomInt(0, RIVER_FISH.length - 1)];
   const weight = randomFloat(fish.minWeight, fish.maxWeight, 1);
   const label = getResourceLabel(fish.id);
 
   return {
     resources: { [fish.id]: weight },
+    resourceCounts: { [fish.id]: 1 },
     message: `Cameron catches a ${formatResourceAmount(fish.id, weight)} lb ${label}.`,
     tone: "gain"
   };
 }
 
-function huntSmallAnimal(): { resources: Cost; message: string; tone: "gain" } {
+function mineResource(resourceId: "coal" | "copper" | "tin"): ActionRewards {
+  const label = getResourceLabel(resourceId);
+
+  return {
+    resources: { [resourceId]: 1 },
+    message: `Cameron mines 1 ${label}.`,
+    tone: "gain"
+  };
+}
+
+function huntSmallAnimal(): ActionRewards {
   const animal = SMALL_GAME[Math.random() < 0.58 ? 0 : 1];
   const weight = randomFloat(animal.minWeight, animal.maxWeight, 1);
   const label = getResourceLabel(animal.id);
 
   return {
     resources: { [animal.id]: weight },
+    resourceCounts: { [animal.id]: 1 },
     message: `Cameron brings back a ${formatResourceAmount(animal.id, weight)} lb ${label}.`,
     tone: "gain"
   };
@@ -787,7 +855,16 @@ function huntSmallAnimal(): { resources: Cost; message: string; tone: "gain" } {
 function butcherAnimal(
   state: GameState,
   animal: "rabbit" | "squirrel"
-): { resources: Cost; message: string; tone: "gain" } {
+): ActionRewards {
+  const consumedWeight = consumeOneWholeResource(state, animal);
+  if (consumedWeight <= 0) {
+    return {
+      resources: {},
+      message: `Cameron has no ${animal} to butcher.`,
+      tone: "gain"
+    };
+  }
+
   const meatId: ResourceId = animal === "rabbit" ? "rabbitMeat" : "squirrelMeat";
   const meat = animal === "rabbit" ? randomInt(1, 2) : 1;
   const hasKnife = hasUsableTool(state, "stoneKnife");
@@ -815,6 +892,14 @@ function butcherAnimal(
 
 function applyToolWear(state: GameState, actionId: ActionId, now: number): void {
   switch (actionId) {
+    case "fishRiver":
+      damageTool(state, "fishingPole", 1, now);
+      break;
+    case "mineCoal":
+    case "mineCopper":
+    case "mineTin":
+      damageTool(state, "stonePickAxe", 1, now);
+      break;
     case "chopTrees":
       damageTool(state, "stoneAxe", 1, now);
       break;
@@ -838,12 +923,26 @@ function getStackedActionText(actionId: ActionId): string {
       return "Cameron gathered stones";
     case "gatherFlaxFibers":
       return "Cameron gathered flax fibers";
+    case "gatherMushrooms":
+      return "Cameron gathered mushrooms";
+    case "gatherBerries":
+      return "Cameron gathered berries";
+    case "mineCoal":
+      return "Cameron mined coal";
+    case "mineCopper":
+      return "Cameron mined copper";
+    case "mineTin":
+      return "Cameron mined tin";
     case "fishRiver":
       return "Cameron caught river fish";
+    case "craftFishingPole":
+      return "Cameron crafted fishing poles";
     case "craftStoneKnife":
       return "Cameron crafted stone knives";
     case "craftStoneAxe":
       return "Cameron crafted stone axes";
+    case "craftStonePickAxe":
+      return "Cameron crafted stone pick axes";
     case "craftStoneSpear":
       return "Cameron crafted stone spears";
     case "chopTrees":

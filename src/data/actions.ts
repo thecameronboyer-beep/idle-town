@@ -23,11 +23,53 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Thin stalks stripped by hand for future craft."
   },
   {
+    id: "gatherMushrooms",
+    label: "Gather Mushrooms",
+    verb: "gathering mushrooms",
+    durationMs: 10000,
+    blurb: "Search the meadow shade for small edible caps."
+  },
+  {
+    id: "gatherBerries",
+    label: "Gather Berries",
+    verb: "gathering berries",
+    durationMs: 10000,
+    blurb: "Pick careful handfuls from the meadow brambles."
+  },
+  {
+    id: "mineCoal",
+    label: "Mine Coal",
+    verb: "mining coal",
+    durationMs: 30000,
+    blurb: "Chip dark fuel from the mine wall."
+  },
+  {
+    id: "mineCopper",
+    label: "Mine Copper",
+    verb: "mining copper",
+    durationMs: 30000,
+    blurb: "Break reddish ore from stone seams."
+  },
+  {
+    id: "mineTin",
+    label: "Mine Tin",
+    verb: "mining tin",
+    durationMs: 30000,
+    blurb: "Work pale ore from fractured rock."
+  },
+  {
     id: "fishRiver",
     label: "Fishing River",
     verb: "fishing the river",
     durationMs: 15000,
     blurb: "Cast into the shallows for small river fish."
+  },
+  {
+    id: "craftFishingPole",
+    label: "Craft Fishing Pole",
+    verb: "crafting a fishing pole",
+    durationMs: 15000,
+    blurb: "Bind flax line to a flexible stick."
   },
   {
     id: "craftStoneKnife",
@@ -42,6 +84,13 @@ export const actionDefinitions: ActionDefinition[] = [
     verb: "crafting a stone axe",
     durationMs: 15000,
     blurb: "Bind a chopping head to a short haft."
+  },
+  {
+    id: "craftStonePickAxe",
+    label: "Craft Stone Pick Axe",
+    verb: "crafting a stone pick axe",
+    durationMs: 15000,
+    blurb: "Lash a pointed stone head to a sturdy handle."
   },
   {
     id: "craftStoneSpear",
@@ -69,7 +118,7 @@ export const actionDefinitions: ActionDefinition[] = [
     label: "Butcher Fish",
     verb: "butchering fish",
     durationMs: 15000,
-    blurb: "Clean carried fish into matching filets at half weight."
+    blurb: "Clean one carried fish into matching filets at half weight."
   },
   {
     id: "butcherRabbit",

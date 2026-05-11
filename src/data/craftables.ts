@@ -20,11 +20,25 @@ export const toolDefinitions: ToolDefinition[] = [
     maxDurability: 12
   },
   {
+    id: "stonePickAxe",
+    label: "Stone Pick Axe",
+    recipe: { stick: 1, stone: 1, flaxFiber: 1 },
+    blurb: "A pointed stone head for breaking stubborn ground.",
+    maxDurability: 12
+  },
+  {
     id: "stoneSpear",
     label: "Stone Spear",
     recipe: { stick: 1, stone: 1, flaxFiber: 1 },
     blurb: "A reach weapon for rabbits and squirrels.",
     maxDurability: 10
+  },
+  {
+    id: "fishingPole",
+    label: "Fishing Pole",
+    recipe: { stick: 1, flaxFiber: 1 },
+    blurb: "A simple line and hook for working the river.",
+    maxDurability: 16
   }
 ];
 

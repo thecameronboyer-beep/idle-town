@@ -1,9 +1,13 @@
 import { baseVisibleResources, resourceOrder } from "../data/resources";
 import { toolDefinitions } from "../data/craftables";
-import type { GameState, Inventory, OwnedBuildings, OwnedTools } from "../types";
+import type { GameState, Inventory, OwnedBuildings, OwnedTools, ResourceCounts } from "../types";
 
 export function createEmptyInventory(): Inventory {
   return Object.fromEntries(resourceOrder.map((id) => [id, 0])) as Inventory;
+}
+
+export function createEmptyResourceCounts(): ResourceCounts {
+  return Object.fromEntries(resourceOrder.map((id) => [id, 0])) as ResourceCounts;
 }
 
 export function createEmptyTools(): OwnedTools {
@@ -14,7 +18,7 @@ export function createEmptyTools(): OwnedTools {
 
 export function createInitialState(now = Date.now()): GameState {
   return {
-    version: 2,
+    version: 3,
     createdAt: now,
     updatedAt: now,
     lastSimulatedAt: now,
@@ -29,6 +33,8 @@ export function createInitialState(now = Date.now()): GameState {
     ],
     inventory: createEmptyInventory(),
     characterInventory: createEmptyInventory(),
+    resourceCounts: createEmptyResourceCounts(),
+    characterResourceCounts: createEmptyResourceCounts(),
     tools: createEmptyTools(),
     buildings: {
       campfire: false,

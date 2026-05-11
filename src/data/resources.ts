@@ -20,10 +20,40 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "Pale plant fiber for future cordage and cloth."
   },
   {
+    id: "mushroom",
+    label: "Mushroom",
+    group: "resources",
+    blurb: "Soft meadow caps gathered for later meals."
+  },
+  {
+    id: "berry",
+    label: "Berry",
+    group: "resources",
+    blurb: "Bright handfuls from low meadow brambles."
+  },
+  {
     id: "wood",
     label: "Wood",
     group: "resources",
     blurb: "Usable lengths from felled trees."
+  },
+  {
+    id: "coal",
+    label: "Coal",
+    group: "resources",
+    blurb: "Dark fuel chipped from the mine."
+  },
+  {
+    id: "copper",
+    label: "Copper",
+    group: "resources",
+    blurb: "Soft reddish ore for future metalwork."
+  },
+  {
+    id: "tin",
+    label: "Tin",
+    group: "resources",
+    blurb: "Pale ore that will matter once bronze is possible."
   },
   {
     id: "minnow",
@@ -166,6 +196,7 @@ export const fishFiletByFishId: Partial<Record<ResourceId, ResourceId>> = {
   brookStickleback: "brookSticklebackFilet",
   pebblePerch: "pebblePerchFilet"
 };
+export const wholeCountResourceIds: ResourceId[] = [...fishResourceIds, "rabbit", "squirrel"];
 export const weightedResourceIds: ResourceId[] = [...fishResourceIds, ...fishFiletResourceIds, "rabbit", "squirrel"];
 
 export function isFishResource(id: ResourceId): boolean {
@@ -174,6 +205,10 @@ export function isFishResource(id: ResourceId): boolean {
 
 export function isWeightedResource(id: ResourceId): boolean {
   return weightedResourceIds.includes(id);
+}
+
+export function isWholeCountResource(id: ResourceId): boolean {
+  return wholeCountResourceIds.includes(id);
 }
 
 export function normalizeResourceAmount(id: ResourceId, amount: number): number {

@@ -72,6 +72,8 @@ function getRenderSignature(): string {
   return JSON.stringify({
     inventory: state.inventory,
     characterInventory: state.characterInventory,
+    resourceCounts: state.resourceCounts,
+    characterResourceCounts: state.characterResourceCounts,
     tools: state.tools,
     buildings: state.buildings,
     seenResources: state.seenResources,

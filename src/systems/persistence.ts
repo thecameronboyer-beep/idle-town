@@ -1,14 +1,25 @@
 import { toolDefinitions } from "../data/craftables";
-import { createEmptyInventory, createEmptyTools, createInitialState } from "../state/createInitialState";
-import type { GameState, OwnedTools, ToolId, ToolState } from "../types";
+import { wholeCountResourceIds } from "../data/resources";
+import {
+  createEmptyInventory,
+  createEmptyResourceCounts,
+  createEmptyTools,
+  createInitialState
+} from "../state/createInitialState";
+import type { GameState, OwnedTools, ResourceId, ToolId, ToolState } from "../types";
 import { normalizeInventory } from "./inventory";
 
 const SAVE_KEY = "idle-town:first-survival-slice:v1";
-const CURRENT_SAVE_VERSION = 2;
-const LEGACY_AVERAGE_WEIGHTS = {
+const CURRENT_SAVE_VERSION = 3;
+const WHOLE_RESOURCE_AVERAGE_WEIGHTS: Partial<Record<ResourceId, number>> = {
+  minnow: 1,
+  stoneLoach: 2,
+  mudskipper: 3,
+  brookStickleback: 1.25,
+  pebblePerch: 4.75,
   rabbit: 3.5,
   squirrel: 1.25
-} as const;
+};
 
 export function loadGame(): GameState {
   const saved = window.localStorage.getItem(SAVE_KEY);
@@ -30,6 +41,14 @@ export function loadGame(): GameState {
         ...createEmptyInventory(),
         ...(parsed.characterInventory ?? {})
       },
+      resourceCounts: {
+        ...createEmptyResourceCounts(),
+        ...(parsed.resourceCounts ?? {})
+      },
+      characterResourceCounts: {
+        ...createEmptyResourceCounts(),
+        ...(parsed.characterResourceCounts ?? {})
+      },
       tools: normalizeTools(parsed.tools),
       buildings: {
         ...fallback.buildings,
@@ -40,7 +59,9 @@ export function loadGame(): GameState {
       log: parsed.log?.length ? parsed.log : fallback.log,
       version: CURRENT_SAVE_VERSION
     };
-    migrateLegacyAnimalCounts(state, parsed.version);
+    const savedVersion = typeof parsed.version === "number" ? parsed.version : 1;
+    migrateLegacyAnimalCounts(state, savedVersion);
+    migrateWholeResourceCounts(state, savedVersion);
     normalizeInventory(state);
     return state;
   } catch {
@@ -48,15 +69,38 @@ export function loadGame(): GameState {
   }
 }
 
-function migrateLegacyAnimalCounts(state: GameState, savedVersion: unknown): void {
-  if (savedVersion === CURRENT_SAVE_VERSION) {
+function migrateLegacyAnimalCounts(state: GameState, savedVersion: number): void {
+  if (savedVersion >= 2) {
     return;
   }
 
-  state.inventory.rabbit *= LEGACY_AVERAGE_WEIGHTS.rabbit;
-  state.characterInventory.rabbit *= LEGACY_AVERAGE_WEIGHTS.rabbit;
-  state.inventory.squirrel *= LEGACY_AVERAGE_WEIGHTS.squirrel;
-  state.characterInventory.squirrel *= LEGACY_AVERAGE_WEIGHTS.squirrel;
+  state.inventory.rabbit *= WHOLE_RESOURCE_AVERAGE_WEIGHTS.rabbit ?? 1;
+  state.characterInventory.rabbit *= WHOLE_RESOURCE_AVERAGE_WEIGHTS.rabbit ?? 1;
+  state.inventory.squirrel *= WHOLE_RESOURCE_AVERAGE_WEIGHTS.squirrel ?? 1;
+  state.characterInventory.squirrel *= WHOLE_RESOURCE_AVERAGE_WEIGHTS.squirrel ?? 1;
+}
+
+function migrateWholeResourceCounts(state: GameState, savedVersion: number): void {
+  if (savedVersion >= CURRENT_SAVE_VERSION) {
+    return;
+  }
+
+  for (const resourceId of wholeCountResourceIds) {
+    state.resourceCounts[resourceId] = inferWholeResourceCount(resourceId, state.inventory[resourceId]);
+    state.characterResourceCounts[resourceId] = inferWholeResourceCount(
+      resourceId,
+      state.characterInventory[resourceId]
+    );
+  }
+}
+
+function inferWholeResourceCount(resourceId: ResourceId, totalWeight: number): number {
+  if (totalWeight <= 0) {
+    return 0;
+  }
+
+  const averageWeight = WHOLE_RESOURCE_AVERAGE_WEIGHTS[resourceId] ?? 1;
+  return Math.max(1, Math.round(totalWeight / averageWeight));
 }
 
 function normalizeTools(savedTools: unknown): OwnedTools {

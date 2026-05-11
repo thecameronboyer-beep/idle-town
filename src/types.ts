@@ -2,7 +2,12 @@ export type ResourceId =
   | "stick"
   | "stone"
   | "flaxFiber"
+  | "mushroom"
+  | "berry"
   | "wood"
+  | "coal"
+  | "copper"
+  | "tin"
   | "rabbit"
   | "squirrel"
   | "rabbitMeat"
@@ -23,7 +28,7 @@ export type ResourceId =
   | "brookSticklebackFilet"
   | "pebblePerchFilet";
 
-export type ToolId = "stoneAxe" | "stoneSpear" | "stoneKnife";
+export type ToolId = "stoneAxe" | "stoneSpear" | "stoneKnife" | "stonePickAxe" | "fishingPole";
 
 export type BuildingId = "campfire" | "tanningRack";
 
@@ -31,9 +36,16 @@ export type ActionId =
   | "gatherSticks"
   | "gatherStones"
   | "gatherFlaxFibers"
+  | "gatherMushrooms"
+  | "gatherBerries"
+  | "mineCoal"
+  | "mineCopper"
+  | "mineTin"
   | "fishRiver"
+  | "craftFishingPole"
   | "craftStoneKnife"
   | "craftStoneAxe"
+  | "craftStonePickAxe"
   | "craftStoneSpear"
   | "chopTrees"
   | "huntSmallAnimals"
@@ -45,8 +57,10 @@ export type ActionId =
   | "tanHide";
 
 export type Inventory = Record<ResourceId, number>;
+export type ResourceCounts = Record<ResourceId, number>;
+export type ResourceCountDelta = Partial<Record<ResourceId, number>>;
 
-export type LocationId = "meadow" | "river" | "forest";
+export type LocationId = "meadow" | "river" | "forest" | "mine";
 
 export type RunningActionPhase = "travelingTo" | "working" | "followUp" | "travelingBack";
 
@@ -96,7 +110,7 @@ export interface LogEntry {
 }
 
 export interface GameState {
-  version: 2;
+  version: 3;
   createdAt: number;
   updatedAt: number;
   lastSimulatedAt: number;
@@ -104,6 +118,8 @@ export interface GameState {
   characters: Character[];
   inventory: Inventory;
   characterInventory: Inventory;
+  resourceCounts: ResourceCounts;
+  characterResourceCounts: ResourceCounts;
   tools: OwnedTools;
   buildings: OwnedBuildings;
   seenResources: ResourceId[];

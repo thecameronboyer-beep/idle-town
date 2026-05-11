@@ -1,18 +1,26 @@
 import {
   formatResourceAmount,
   getResourceLabel,
+  isWholeCountResource,
   isWeightedResource,
   normalizeResourceAmount,
   resourceOrder
 } from "../data/resources";
-import type { Cost, GameState, ResourceId } from "../types";
+import type { Cost, GameState, ResourceCountDelta, ResourceCounts, ResourceId } from "../types";
 
 export const CHARACTER_MAX_WEIGHT = 10;
+type InventorySource = "camp" | "character";
 
 export function normalizeInventory(state: GameState): void {
   for (const id of resourceOrder) {
     state.inventory[id] = normalizeResourceAmount(id, state.inventory[id] ?? 0);
     state.characterInventory[id] = normalizeResourceAmount(id, state.characterInventory[id] ?? 0);
+    state.resourceCounts[id] = normalizeStoredCount(id, state.inventory[id], state.resourceCounts[id] ?? 0);
+    state.characterResourceCounts[id] = normalizeStoredCount(
+      id,
+      state.characterInventory[id],
+      state.characterResourceCounts[id] ?? 0
+    );
   }
 }
 
@@ -29,7 +37,7 @@ export function payCost(state: GameState, cost: Cost): void {
   }
 }
 
-export function addResources(state: GameState, resources: Cost): void {
+export function addResources(state: GameState, resources: Cost, resourceCounts: ResourceCountDelta = {}): void {
   for (const [resourceId, amount] of Object.entries(resources)) {
     const id = resourceId as ResourceId;
     const gained = amount ?? 0;
@@ -38,6 +46,7 @@ export function addResources(state: GameState, resources: Cost): void {
     }
 
     state.inventory[id] = normalizeResourceAmount(id, state.inventory[id] + gained);
+    addResourceCount(state.resourceCounts, id, resourceCounts[id] ?? 0);
     if (!state.seenResources.includes(id)) {
       state.seenResources.push(id);
     }
@@ -52,6 +61,9 @@ export function getResourceWeight(resourceId: ResourceId): number {
     case "stone":
     case "flaxFiber":
       return 1;
+    case "mushroom":
+    case "berry":
+      return 0.1;
     default:
       return 1;
   }
@@ -69,7 +81,11 @@ export function getCharacterInventoryWeight(state: GameState): number {
   return getInventoryWeight(state.characterInventory);
 }
 
-export function addCharacterResources(state: GameState, resources: Cost): Cost {
+export function addCharacterResources(
+  state: GameState,
+  resources: Cost,
+  resourceCounts: ResourceCountDelta = {}
+): Cost {
   const accepted: Cost = {};
   let carriedWeight = getCharacterInventoryWeight(state);
 
@@ -101,6 +117,11 @@ export function addCharacterResources(state: GameState, resources: Cost): Cost {
       resourceId,
       state.characterInventory[resourceId] + acceptedAmount
     );
+    addResourceCount(
+      state.characterResourceCounts,
+      resourceId,
+      getAcceptedResourceCount(resourceId, amount, acceptedAmount, resourceCounts[resourceId])
+    );
     carriedWeight = Math.round((carriedWeight + acceptedAmount * weight) * 10) / 10;
     if (!state.seenResources.includes(resourceId)) {
       state.seenResources.push(resourceId);
@@ -121,6 +142,7 @@ export function depositCharacterResources(state: GameState): Cost {
 
     deposited[resourceId] = amount;
     state.inventory[resourceId] = normalizeResourceAmount(resourceId, state.inventory[resourceId] + amount);
+    transferResourceCount(state.characterResourceCounts, state.resourceCounts, resourceId);
     state.characterInventory[resourceId] = 0;
     if (!state.seenResources.includes(resourceId)) {
       state.seenResources.push(resourceId);
@@ -128,6 +150,53 @@ export function depositCharacterResources(state: GameState): Cost {
   }
 
   return deposited;
+}
+
+export function getResourceQuantity(
+  state: GameState,
+  resourceId: ResourceId,
+  source: InventorySource = "camp"
+): number {
+  const counts = getCountInventory(state, source);
+  if (!isWholeCountResource(resourceId)) {
+    return Math.floor(getAmountInventory(state, source)[resourceId] ?? 0);
+  }
+
+  return Math.max(0, Math.floor(counts[resourceId] ?? 0));
+}
+
+export function hasResourceQuantity(
+  state: GameState,
+  resourceId: ResourceId,
+  source: InventorySource = "camp"
+): boolean {
+  return getResourceQuantity(state, resourceId, source) > 0;
+}
+
+export function consumeOneWholeResource(
+  state: GameState,
+  resourceId: ResourceId,
+  source: InventorySource = "camp"
+): number {
+  if (!isWholeCountResource(resourceId)) {
+    return 0;
+  }
+
+  const inventory = getAmountInventory(state, source);
+  const counts = getCountInventory(state, source);
+  const quantity = getResourceQuantity(state, resourceId, source);
+  const totalAmount = normalizeResourceAmount(resourceId, inventory[resourceId] ?? 0);
+  if (quantity <= 0 || totalAmount <= 0) {
+    inventory[resourceId] = 0;
+    counts[resourceId] = 0;
+    return 0;
+  }
+
+  const consumedAmount = normalizeResourceAmount(resourceId, quantity <= 1 ? totalAmount : totalAmount / quantity);
+  counts[resourceId] = Math.max(0, quantity - 1);
+  inventory[resourceId] =
+    counts[resourceId] <= 0 ? 0 : normalizeResourceAmount(resourceId, totalAmount - consumedAmount);
+  return consumedAmount;
 }
 
 export function describeCost(cost: Cost): string {
@@ -138,4 +207,55 @@ export function describeCost(cost: Cost): string {
       return `${formattedAmount}${isWeightedResource(id) ? " lb" : ""} ${getResourceLabel(id)}`;
     })
     .join(", ");
+}
+
+function getAmountInventory(state: GameState, source: InventorySource) {
+  return source === "character" ? state.characterInventory : state.inventory;
+}
+
+function getCountInventory(state: GameState, source: InventorySource): ResourceCounts {
+  return source === "character" ? state.characterResourceCounts : state.resourceCounts;
+}
+
+function normalizeStoredCount(resourceId: ResourceId, amount: number, count: number): number {
+  if (!isWholeCountResource(resourceId) || amount <= 0) {
+    return 0;
+  }
+
+  return Math.max(1, Math.floor(Math.max(0, Number.isFinite(count) ? count : 0)));
+}
+
+function addResourceCount(counts: ResourceCounts, resourceId: ResourceId, amount: number): void {
+  if (!isWholeCountResource(resourceId) || amount <= 0) {
+    return;
+  }
+
+  counts[resourceId] = Math.floor((counts[resourceId] ?? 0) + amount);
+}
+
+function transferResourceCount(from: ResourceCounts, to: ResourceCounts, resourceId: ResourceId): void {
+  if (!isWholeCountResource(resourceId)) {
+    return;
+  }
+
+  const quantity = Math.max(0, Math.floor(from[resourceId] ?? 0));
+  if (quantity <= 0) {
+    return;
+  }
+
+  to[resourceId] = Math.floor((to[resourceId] ?? 0) + quantity);
+  from[resourceId] = 0;
+}
+
+function getAcceptedResourceCount(
+  resourceId: ResourceId,
+  requestedAmount: number,
+  acceptedAmount: number,
+  requestedCount = 0
+): number {
+  if (!isWholeCountResource(resourceId) || acceptedAmount <= 0 || acceptedAmount < requestedAmount) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(requestedCount));
 }

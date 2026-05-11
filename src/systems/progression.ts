@@ -8,7 +8,13 @@ function hasSeenMeat(state: GameState): boolean {
 
 function hasSeenFish(state: GameState): boolean {
   return fishResourceIds.some((fishId) => {
-    return state.seenResources.includes(fishId) || state.characterInventory[fishId] > 0 || state.inventory[fishId] > 0;
+    return (
+      state.seenResources.includes(fishId) ||
+      state.characterInventory[fishId] > 0 ||
+      state.inventory[fishId] > 0 ||
+      state.characterResourceCounts[fishId] > 0 ||
+      state.resourceCounts[fishId] > 0
+    );
   });
 }
 
@@ -17,11 +23,20 @@ export function isActionUnlocked(state: GameState, actionId: ActionId): boolean 
     case "gatherSticks":
     case "gatherStones":
     case "gatherFlaxFibers":
-    case "fishRiver":
+    case "gatherMushrooms":
+    case "gatherBerries":
+    case "craftFishingPole":
     case "craftStoneKnife":
     case "craftStoneAxe":
+    case "craftStonePickAxe":
     case "craftStoneSpear":
       return true;
+    case "fishRiver":
+      return hasUsableTool(state, "fishingPole");
+    case "mineCoal":
+    case "mineCopper":
+    case "mineTin":
+      return hasUsableTool(state, "stonePickAxe");
     case "chopTrees":
       return hasUsableTool(state, "stoneAxe");
     case "huntSmallAnimals":
@@ -43,6 +58,12 @@ export function isActionUnlocked(state: GameState, actionId: ActionId): boolean 
 
 export function getActionLockReason(state: GameState, actionId: ActionId): string {
   switch (actionId) {
+    case "fishRiver":
+      return "Needs Fishing Pole";
+    case "mineCoal":
+    case "mineCopper":
+    case "mineTin":
+      return "Needs Stone Pick Axe";
     case "chopTrees":
       return "Needs Stone Axe";
     case "huntSmallAnimals":
