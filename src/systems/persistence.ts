@@ -10,7 +10,8 @@ import type { GameState, OwnedTools, ResourceId, ToolId, ToolState } from "../ty
 import { normalizeInventory } from "./inventory";
 
 const SAVE_KEY = "idle-town:first-survival-slice:v1";
-const CURRENT_SAVE_VERSION = 3;
+const CURRENT_SAVE_VERSION = 4;
+const LEGACY_CAMPFIRE_DURATION_MS = 15 * 60 * 1000;
 const WHOLE_RESOURCE_AVERAGE_WEIGHTS: Partial<Record<ResourceId, number>> = {
   minnow: 1,
   stoneLoach: 2,
@@ -54,6 +55,7 @@ export function loadGame(): GameState {
         ...fallback.buildings,
         ...(parsed.buildings ?? {})
       },
+      campfireExpiresAt: typeof parsed.campfireExpiresAt === "number" ? parsed.campfireExpiresAt : fallback.campfireExpiresAt,
       characters: parsed.characters?.length ? parsed.characters : fallback.characters,
       seenResources: parsed.seenResources?.length ? parsed.seenResources : fallback.seenResources,
       log: parsed.log?.length ? parsed.log : fallback.log,
@@ -62,10 +64,28 @@ export function loadGame(): GameState {
     const savedVersion = typeof parsed.version === "number" ? parsed.version : 1;
     migrateLegacyAnimalCounts(state, savedVersion);
     migrateWholeResourceCounts(state, savedVersion);
+    migrateCampfireTimer(state, savedVersion);
     normalizeInventory(state);
     return state;
   } catch {
     return createInitialState();
+  }
+}
+
+function migrateCampfireTimer(state: GameState, savedVersion: number): void {
+  const now = Date.now();
+  if (!state.buildings.campfire) {
+    state.campfireExpiresAt = null;
+    return;
+  }
+
+  if (savedVersion < 4 && !state.campfireExpiresAt) {
+    state.campfireExpiresAt = now + LEGACY_CAMPFIRE_DURATION_MS;
+  }
+
+  if (typeof state.campfireExpiresAt !== "number" || state.campfireExpiresAt <= now) {
+    state.buildings.campfire = false;
+    state.campfireExpiresAt = null;
   }
 }
 

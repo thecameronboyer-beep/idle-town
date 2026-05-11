@@ -1,5 +1,17 @@
 import { defineConfig } from "vite";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
-  base: "./"
+  base: "./",
+  build: {
+    rollupOptions: {
+      input: {
+        app: resolve(projectRoot, "index.html"),
+        map: resolve(projectRoot, "location-map.html")
+      }
+    }
+  }
 });

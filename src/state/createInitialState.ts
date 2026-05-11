@@ -18,7 +18,7 @@ export function createEmptyTools(): OwnedTools {
 
 export function createInitialState(now = Date.now()): GameState {
   return {
-    version: 3,
+    version: 4,
     createdAt: now,
     updatedAt: now,
     lastSimulatedAt: now,
@@ -38,8 +38,10 @@ export function createInitialState(now = Date.now()): GameState {
     tools: createEmptyTools(),
     buildings: {
       campfire: false,
-      tanningRack: false
+      tanningRack: false,
+      hideTent: false
     } satisfies OwnedBuildings,
+    campfireExpiresAt: null,
     seenResources: [...baseVisibleResources],
     currentAction: null,
     log: [

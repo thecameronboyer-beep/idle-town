@@ -1,4 +1,5 @@
 import type { GameState } from "../types";
+import { isCampfireLit } from "../systems/buildings";
 
 export class WildernessCanvas {
   private readonly canvas: HTMLCanvasElement;
@@ -64,7 +65,7 @@ export class WildernessCanvas {
     this.drawForestLayer(ctx, width, height, 0.78, "#0c100d", 0.8, t + 7);
     this.drawGround(ctx, width, height);
 
-    if (this.state?.buildings.campfire) {
+    if (this.state && isCampfireLit(this.state)) {
       this.drawCampfire(ctx, width, height, t);
     } else {
       this.drawColdAsh(ctx, width, height, t);

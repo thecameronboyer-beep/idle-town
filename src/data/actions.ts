@@ -65,6 +65,20 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Cast into the shallows for small river fish."
   },
   {
+    id: "craftLowestTool",
+    label: "Primitive Tools",
+    verb: "balancing tool stock",
+    durationMs: 15000,
+    blurb: "Craft whichever primitive tool has the lowest current stock."
+  },
+  {
+    id: "craftBasket",
+    label: "Craft Basket",
+    verb: "crafting a basket",
+    durationMs: 15000,
+    blurb: "Weave flax fibers around a simple stick frame."
+  },
+  {
     id: "craftFishingPole",
     label: "Craft Fishing Pole",
     verb: "crafting a fishing pole",

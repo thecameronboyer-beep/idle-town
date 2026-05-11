@@ -9,17 +9,18 @@ import {
 } from "../data/resources";
 import type { ActionId, Cost, GameState, LocationId, ResourceCountDelta, ResourceId, RunningAction, ToolId } from "../types";
 import {
-  CHARACTER_MAX_WEIGHT,
   addCharacterResources,
   addResources,
   consumeOneWholeResource,
   depositCharacterResources,
   getCharacterInventoryWeight,
+  getCharacterMaxWeight,
   hasResourceQuantity,
   hasCost,
   payCost
 } from "./inventory";
 import { addLog, addStackedLog } from "./log";
+import { expireCampfire, getActiveCampfireExpiresAt } from "./buildings";
 import { randomFloat, randomInt } from "./math";
 import { isActionUnlocked } from "./progression";
 import { damageTool, equipFreshTool, hasUsableTool } from "./tools";
@@ -55,6 +56,44 @@ type ActionRewards = {
   tone: "gain" | "craft";
 };
 
+type ToolCraftActionId =
+  | "craftBasket"
+  | "craftFishingPole"
+  | "craftStoneKnife"
+  | "craftStoneAxe"
+  | "craftStonePickAxe"
+  | "craftStoneSpear";
+
+const TOOL_CRAFT_ACTIONS: Array<{ actionId: ToolCraftActionId; toolId: ToolId }> = [
+  { actionId: "craftBasket", toolId: "basket" },
+  { actionId: "craftFishingPole", toolId: "fishingPole" },
+  { actionId: "craftStoneKnife", toolId: "stoneKnife" },
+  { actionId: "craftStoneAxe", toolId: "stoneAxe" },
+  { actionId: "craftStonePickAxe", toolId: "stonePickAxe" },
+  { actionId: "craftStoneSpear", toolId: "stoneSpear" }
+];
+
+export function getLowestQuantityCraftAction(state: GameState, now = Date.now()): ToolCraftActionId | null {
+  const candidates = TOOL_CRAFT_ACTIONS.filter(({ actionId }) => {
+    return isActionUnlocked(state, actionId, now) && hasCost(state, getActionCost(actionId));
+  });
+
+  if (!candidates.length) {
+    return null;
+  }
+
+  return candidates.reduce((lowest, candidate) => {
+    const candidateStock = getToolStockCount(state, candidate.toolId);
+    const lowestStock = getToolStockCount(state, lowest.toolId);
+    return candidateStock < lowestStock ? candidate : lowest;
+  }, candidates[0]).actionId;
+}
+
+function getToolStockCount(state: GameState, toolId: ToolId): number {
+  const tool = state.tools[toolId];
+  return (tool?.quantity ?? 0) + (tool?.owned ? 1 : 0);
+}
+
 export function getActionCost(actionId: ActionId): Cost {
   switch (actionId) {
     case "cookRabbitMeat":
@@ -63,6 +102,10 @@ export function getActionCost(actionId: ActionId): Cost {
       return { squirrelMeat: 1 };
     case "tanHide":
       return { hide: 1 };
+    case "craftLowestTool":
+      return {};
+    case "craftBasket":
+      return getToolRecipe("basket");
     case "craftFishingPole":
       return getToolRecipe("fishingPole");
     case "craftStoneKnife":
@@ -78,18 +121,22 @@ export function getActionCost(actionId: ActionId): Cost {
   }
 }
 
-export function canStartAction(state: GameState, actionId: ActionId): boolean {
-  if (actionId === "butcherFish") {
-    return isActionUnlocked(state, actionId) && hasCarriedWholeFish(state);
-  }
-  if (actionId === "butcherRabbit") {
-    return isActionUnlocked(state, actionId) && hasResourceQuantity(state, "rabbit");
-  }
-  if (actionId === "butcherSquirrel") {
-    return isActionUnlocked(state, actionId) && hasResourceQuantity(state, "squirrel");
+export function canStartAction(state: GameState, actionId: ActionId, now = Date.now()): boolean {
+  if (actionId === "craftLowestTool") {
+    return isActionUnlocked(state, actionId, now) && Boolean(getLowestQuantityCraftAction(state, now));
   }
 
-  return isActionUnlocked(state, actionId) && hasCost(state, getActionCost(actionId));
+  if (actionId === "butcherFish") {
+    return isActionUnlocked(state, actionId, now) && hasCarriedWholeFish(state);
+  }
+  if (actionId === "butcherRabbit") {
+    return isActionUnlocked(state, actionId, now) && hasResourceQuantity(state, "rabbit");
+  }
+  if (actionId === "butcherSquirrel") {
+    return isActionUnlocked(state, actionId, now) && hasResourceQuantity(state, "squirrel");
+  }
+
+  return isActionUnlocked(state, actionId, now) && hasCost(state, getActionCost(actionId));
 }
 
 export function getRunningActionLoop(running: RunningAction): ActionId[] {
@@ -183,7 +230,7 @@ export function startAction(
   options: StartActionOptions = {}
 ): boolean {
   const definition = getActionDefinition(actionId);
-  if (!definition || !canStartAction(state, actionId)) {
+  if (!definition || !canStartAction(state, actionId, now)) {
     return false;
   }
 
@@ -249,18 +296,34 @@ export function depositCarriedResources(state: GameState, now = Date.now()): boo
 export function simulateUntil(state: GameState, targetTime = Date.now()): void {
   const cappedTarget = Math.min(targetTime, state.lastSimulatedAt + MAX_OFFLINE_MS);
 
-  if (!state.currentAction) {
-    state.lastSimulatedAt = targetTime;
-    setCharacterWorking(state, false);
-    return;
-  }
-
   let completedCycles = 0;
-  while (state.currentAction && state.currentAction.endsAt <= cappedTarget && completedCycles < 500) {
-    const running = state.currentAction;
-    const completedAt: number = running.endsAt;
-    completeRunningAction(state, running, completedAt, cappedTarget);
-    completedCycles += 1;
+  while (completedCycles < 500) {
+    const nextCampfireAt = getNextCampfireEventAt(state, cappedTarget);
+    const nextActionAt = state.currentAction?.endsAt ?? Number.POSITIVE_INFINITY;
+
+    if (nextCampfireAt === null && nextActionAt > cappedTarget) {
+      break;
+    }
+
+    if (nextCampfireAt !== null && nextCampfireAt <= nextActionAt) {
+      expireCampfire(state, nextCampfireAt);
+      if (state.currentAction && actionNeedsLitCampfire(getActiveActionId(state.currentAction))) {
+        addLog(state, "Cameron stops cooking as the campfire goes out.", "warning", nextCampfireAt);
+        state.currentAction = null;
+        setCharacterWorking(state, false);
+      }
+      continue;
+    }
+
+    if (state.currentAction && nextActionAt <= cappedTarget) {
+      const running = state.currentAction;
+      const completedAt: number = running.endsAt;
+      completeRunningAction(state, running, completedAt, cappedTarget);
+      completedCycles += 1;
+      continue;
+    }
+
+    break;
   }
 
   if (targetTime > cappedTarget && completedCycles > 0) {
@@ -269,6 +332,9 @@ export function simulateUntil(state: GameState, targetTime = Date.now()): void {
 
   state.lastSimulatedAt = targetTime;
   state.updatedAt = targetTime;
+  if (!state.currentAction) {
+    setCharacterWorking(state, false);
+  }
 }
 
 export function getActionProgress(state: GameState, now = Date.now()): number {
@@ -296,7 +362,7 @@ function completeRunningAction(state: GameState, running: RunningAction, now: nu
       }
     }
 
-    if (running.repeat && canStartAction(state, running.actionId)) {
+    if (running.repeat && canStartAction(state, running.actionId, now)) {
       startTravelingToLocation(state, running, now);
       return;
     }
@@ -331,7 +397,14 @@ function completeFollowUpCycle(state: GameState, running: RunningAction, now: nu
 }
 
 function completeWorkCycle(state: GameState, running: RunningAction, now: number): void {
-  const actionId = running.actionId;
+  const actionId = getWorkActionId(state, running.actionId, now);
+  if (!actionId) {
+    addLog(state, "Cameron lacks the materials to continue.", "warning", now);
+    state.currentAction = null;
+    setCharacterWorking(state, false);
+    return;
+  }
+
   const cost = getActionCost(actionId);
   if (!hasCost(state, cost)) {
     addLog(state, "Cameron lacks the materials to continue.", "warning", now);
@@ -344,7 +417,7 @@ function completeWorkCycle(state: GameState, running: RunningAction, now: number
   if (actionId === "butcherFish") {
     completeFishButchering(state, now);
 
-    if (running.repeat && canStartAction(state, actionId)) {
+    if (running.repeat && canStartAction(state, actionId, now)) {
       startWorkingCycle(state, running, now);
       return;
     }
@@ -357,7 +430,7 @@ function completeWorkCycle(state: GameState, running: RunningAction, now: number
   const craftedToolId = getCraftedToolId(actionId);
   if (craftedToolId) {
     completeToolCraft(state, craftedToolId, now);
-    if (running.repeat && canStartAction(state, actionId)) {
+    if (running.repeat && canStartAction(state, actionId, now)) {
       startWorkingCycle(state, running, now);
       return;
     }
@@ -401,7 +474,7 @@ function completeWorkCycle(state: GameState, running: RunningAction, now: number
     return;
   }
 
-  if (running.repeat && canStartAction(state, actionId)) {
+  if (running.repeat && canStartAction(state, actionId, now)) {
     startWorkingCycle(state, running, now);
     return;
   }
@@ -480,7 +553,7 @@ function startLoopActionAtIndex(state: GameState, running: RunningAction, index:
 
   const loopIndex = clampLoopIndex(index, loop);
   const actionId = loop[loopIndex];
-  if (actionId === "butcherFish" || !canStartAction(state, actionId)) {
+  if (actionId === "butcherFish" || !canStartAction(state, actionId, now)) {
     const nextIndex = getNextLoopIndexAfterIndex(running, loopIndex);
     return nextIndex !== loopIndex ? startLoopActionAtIndex(state, running, nextIndex, now) : false;
   }
@@ -571,6 +644,15 @@ function getActiveActionId(running: RunningAction): ActionId {
   return running.phase === "followUp" && running.followUpActionId ? running.followUpActionId : running.actionId;
 }
 
+function actionNeedsLitCampfire(actionId: ActionId): boolean {
+  return actionId === "cookRabbitMeat" || actionId === "cookSquirrelMeat";
+}
+
+function getNextCampfireEventAt(state: GameState, cappedTarget: number): number | null {
+  const expiresAt = getActiveCampfireExpiresAt(state);
+  return expiresAt && expiresAt <= cappedTarget ? expiresAt : null;
+}
+
 function getLoopActionId(running: RunningAction, index: number): ActionId {
   const loop = getRunningActionLoop(running);
   return loop[clampLoopIndex(index, loop)] ?? running.actionId;
@@ -614,7 +696,7 @@ function clampLoopIndex(index: number, loop: ActionId[]): number {
 function shouldReturnToCamp(rewards: Cost, accepted: Cost, state: GameState): boolean {
   const rewardedAmount = Object.values(rewards).reduce((total, amount) => total + (amount ?? 0), 0);
   const acceptedAmount = Object.values(accepted).reduce((total, amount) => total + (amount ?? 0), 0);
-  return getCharacterInventoryWeight(state) >= CHARACTER_MAX_WEIGHT || (rewardedAmount > 0 && acceptedAmount < rewardedAmount);
+  return getCharacterInventoryWeight(state) >= getCharacterMaxWeight(state) || (rewardedAmount > 0 && acceptedAmount < rewardedAmount);
 }
 
 function getLocationTravelMs(locationId: LocationId): number {
@@ -674,6 +756,8 @@ function rollRewards(
       return mineResource("tin");
     case "fishRiver":
       return fishRiver();
+    case "craftLowestTool":
+    case "craftBasket":
     case "craftFishingPole":
     case "craftStoneKnife":
     case "craftStoneAxe":
@@ -730,8 +814,18 @@ function getToolRecipe(toolId: ToolId): Cost {
   return toolDefinitions.find((tool) => tool.id === toolId)?.recipe ?? {};
 }
 
+function getWorkActionId(state: GameState, actionId: ActionId, now: number): ActionId | null {
+  if (actionId === "craftLowestTool") {
+    return getLowestQuantityCraftAction(state, now);
+  }
+
+  return actionId;
+}
+
 function getCraftedToolId(actionId: ActionId): ToolId | null {
   switch (actionId) {
+    case "craftBasket":
+      return "basket";
     case "craftFishingPole":
       return "fishingPole";
     case "craftStoneKnife":
@@ -935,6 +1029,10 @@ function getStackedActionText(actionId: ActionId): string {
       return "Cameron mined tin";
     case "fishRiver":
       return "Cameron caught river fish";
+    case "craftBasket":
+      return "Cameron crafted baskets";
+    case "craftLowestTool":
+      return "Cameron balanced tool stock";
     case "craftFishingPole":
       return "Cameron crafted fishing poles";
     case "craftStoneKnife":

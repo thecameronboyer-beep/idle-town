@@ -39,6 +39,13 @@ export const toolDefinitions: ToolDefinition[] = [
     recipe: { stick: 1, flaxFiber: 1 },
     blurb: "A simple line and hook for working the river.",
     maxDurability: 16
+  },
+  {
+    id: "basket",
+    label: "Basket",
+    recipe: { stick: 1, flaxFiber: 3 },
+    blurb: "A one-hand woven carrier for hauling more from the wild.",
+    maxDurability: 1
   }
 ];
 
@@ -54,5 +61,11 @@ export const buildingDefinitions: CraftableDefinition<BuildingId>[] = [
     label: "Tanning Rack",
     recipe: { stick: 6, wood: 4, stone: 2 },
     blurb: "A rough frame for turning hide into leather."
+  },
+  {
+    id: "hideTent",
+    label: "Hide Tent",
+    recipe: { wood: 5, hide: 10 },
+    blurb: "A hide shelter for holding warmth at camp."
   }
 ];

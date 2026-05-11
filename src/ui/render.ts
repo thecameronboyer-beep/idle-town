@@ -10,8 +10,13 @@ import {
 } from "../data/resources";
 import boneIconUrl from "../assets/items/bone-icon.png";
 import brookSticklebackIconUrl from "../assets/items/brook-stickleback-icon.png";
+import basketEmptySlotUrl from "../assets/items/basket-empty-slot.png";
+import basketEquippedSlotUrl from "../assets/items/basket-equipped-slot.png";
+import campfireLitUrl from "../assets/buildings/campfire-2x2.png";
+import campfireUnlitUrl from "../assets/buildings/campfire-unlit-2x2.png";
 import coalIconUrl from "../assets/items/coal-icon.png";
 import copperIconUrl from "../assets/items/copper-icon.png";
+import craftMaterialsBundleButtonUrl from "../assets/items/craft-materials-bundle-button.png";
 import fishFiletIconUrl from "../assets/items/fish-filet-icon.png";
 import fishingPoleEmptySlotUrl from "../assets/items/fishing-pole-empty-slot.png";
 import fishingPoleEquippedSlotUrl from "../assets/items/fishing-pole-equipped-slot.png";
@@ -40,18 +45,22 @@ import stoneSpearEquippedSlotUrl from "../assets/items/stone-spear-equipped-slot
 import stoneIconUrl from "../assets/items/stone-icon.png";
 import stoneLoachIconUrl from "../assets/items/stone-loach-icon.png";
 import tinIconUrl from "../assets/items/tin-icon.png";
+import hideTentUrl from "../assets/buildings/hide-tent-2x2.png";
+import tanningRackUrl from "../assets/buildings/tanning-rack-2x2.png";
 import woodIconUrl from "../assets/items/wood-icon.png";
+import { getCampfireRemainingMs, isCampfireLit } from "../systems/buildings";
 import { buildStructure, getMissingCostText } from "../systems/crafting";
 import {
-  CHARACTER_MAX_WEIGHT,
   describeCost,
   getCharacterInventoryWeight,
+  getCharacterMaxWeight,
   getResourceQuantity,
   hasCost
 } from "../systems/inventory";
 import { clamp, formatDuration } from "../systems/math";
 import {
   canInsertActionInLoop,
+  getLowestQuantityCraftAction,
   canStartAction,
   depositCarriedResources,
   getActionCost,
@@ -141,7 +150,15 @@ const actionFilters: ActionFilter[] = [
   {
     id: "crafting",
     label: "Crafting",
-    actionIds: ["craftFishingPole", "craftStoneKnife", "craftStoneAxe", "craftStonePickAxe", "craftStoneSpear"]
+    actionIds: [
+      "craftLowestTool",
+      "craftBasket",
+      "craftFishingPole",
+      "craftStoneKnife",
+      "craftStoneAxe",
+      "craftStonePickAxe",
+      "craftStoneSpear"
+    ]
   },
   {
     id: "butchering",
@@ -212,13 +229,14 @@ const equipmentToolSlots: Array<ToolId | null> = [
   "stoneAxe",
   "stonePickAxe",
   "stoneSpear",
-  null,
+  "basket",
   null,
   null,
   null,
   null
 ];
 const equippedSlotImages: Partial<Record<ToolId, string>> = {
+  basket: basketEquippedSlotUrl,
   fishingPole: fishingPoleEquippedSlotUrl,
   stoneKnife: stoneKnifeEquippedSlotUrl,
   stoneAxe: stoneAxeEquippedSlotUrl,
@@ -226,6 +244,7 @@ const equippedSlotImages: Partial<Record<ToolId, string>> = {
   stoneSpear: stoneSpearEquippedSlotUrl
 };
 const emptySlotImages: Partial<Record<ToolId, string>> = {
+  basket: basketEmptySlotUrl,
   fishingPole: fishingPoleEmptySlotUrl,
   stoneKnife: stoneKnifeEmptySlotUrl,
   stoneAxe: stoneAxeEmptySlotUrl,
@@ -233,6 +252,7 @@ const emptySlotImages: Partial<Record<ToolId, string>> = {
   stoneSpear: stoneSpearEmptySlotUrl
 };
 const emptySlotLabels: Partial<Record<ToolId, string>> = {
+  basket: "Basket",
   fishingPole: "Pole",
   stoneKnife: "Knife",
   stoneAxe: "Axe",
@@ -267,6 +287,11 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
 };
 
 const toolEquipmentStats: Record<ToolId, EquipmentStat[]> = {
+  basket: [
+    { label: "Slot", value: "Carry tool" },
+    { label: "Effect", value: "+5 lb carry capacity" },
+    { label: "Capacity", value: "15 lb equipped" }
+  ],
   fishingPole: [
     { label: "Slot", value: "Fishing tool" },
     { label: "Effect", value: "Fishing River unlocked" },
@@ -298,14 +323,17 @@ type RenderHandlers = {
   requestRender: () => void;
   persist: () => void;
   reset: () => void;
+  getNow: () => number;
+  getTestSpeedMultiplier: () => number;
+  toggleTestSpeed: () => void;
 };
 
-export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (state: GameState) => void {
+export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (state: GameState, now?: number) => void {
   let activeActionCategory: ActionCategoryId = "gather";
   let activeActionFilter: ActionFilterId = "foraging";
   let activeLocation: LocationId = "meadow";
   let activeSidePanel: SidePanelId = "inventory";
-  let campLogVisible = true;
+  let campLogVisible = false;
   let actionLoopTarget: ActionLoopTarget = null;
   let selectedLoopIndex = 0;
   let currentState: GameState | null = null;
@@ -322,6 +350,12 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     const id = button.dataset.id;
     const state = currentState;
     if (!state) {
+      return;
+    }
+
+    if (command === "toggle-test-speed") {
+      handlers.toggleTestSpeed();
+      handlers.requestRender();
       return;
     }
 
@@ -374,14 +408,23 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
 
     if (command === "remove-loop-step") {
-      selectedLoopIndex = removeActionFromLoop(state, getLoopIndex(id, selectedLoopIndex));
+      selectedLoopIndex = removeActionFromLoop(state, getLoopIndex(id, selectedLoopIndex), handlers.getNow());
       actionLoopTarget = null;
     }
 
     if (command === "start-action" && id) {
       const actionId = id as ActionId;
+      const now = handlers.getNow();
       if (actionLoopTarget) {
-        if (insertActionInLoop(state, actionLoopTarget.afterIndex, actionId, { locationId: getActionStartLocation(actionId, activeLocation) })) {
+        if (
+          insertActionInLoop(
+            state,
+            actionLoopTarget.afterIndex,
+            actionId,
+            { locationId: getActionStartLocation(actionId, activeLocation) },
+            now
+          )
+        ) {
           selectedLoopIndex = actionLoopTarget.afterIndex + 1;
           actionLoopTarget = null;
         }
@@ -391,22 +434,22 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       }
 
       actionLoopTarget = null;
-      startAction(state, actionId, Date.now(), { locationId: getActionStartLocation(actionId, activeLocation) });
+      startAction(state, actionId, now, { locationId: getActionStartLocation(actionId, activeLocation) });
     }
 
     if (command === "stop-action") {
       actionLoopTarget = null;
-      stopAction(state);
+      stopAction(state, handlers.getNow());
     }
 
     if (command === "deposit-carried") {
       if (!state.currentAction) {
-        depositCarriedResources(state);
+        depositCarriedResources(state, handlers.getNow());
       }
     }
 
     if (command === "build-structure" && id) {
-      buildStructure(state, id as BuildingId);
+      buildStructure(state, id as BuildingId, handlers.getNow());
     }
 
     if (command === "reset") {
@@ -474,7 +517,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
   });
 
-  return (state: GameState) => {
+  return (state: GameState, now = handlers.getNow()) => {
     currentState = state;
     const scrollPositions = captureScrollPositions(root);
     const wildernessCanvas = root.querySelector<HTMLCanvasElement>("#wilderness-canvas");
@@ -486,7 +529,9 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       activeLocation,
       campLogVisible,
       actionLoopTarget,
-      selectedLoopIndex
+      selectedLoopIndex,
+      now,
+      handlers.getTestSpeedMultiplier()
     );
     restoreWildernessCanvas(root, wildernessCanvas);
     activeTooltipSlot = null;
@@ -511,16 +556,18 @@ function renderApp(
   activeLocation: LocationId,
   campLogVisible: boolean,
   actionLoopTarget: ActionLoopTarget,
-  selectedLoopIndex: number
+  selectedLoopIndex: number,
+  now: number,
+  testSpeedMultiplier: number
 ): string {
   return `
     <div class="game-shell">
-      ${renderCharacterSidebar(state, activeActionCategory)}
+      ${renderCharacterSidebar(state, activeActionCategory, campLogVisible, testSpeedMultiplier)}
       <main class="main-panel">
-        ${renderWorldPanel(state, actionLoopTarget, selectedLoopIndex)}
-        ${renderWorkArea(state, activeActionCategory, activeActionFilter, activeLocation, actionLoopTarget)}
+        ${renderWorldPanel(state, actionLoopTarget, selectedLoopIndex, now)}
+        ${campLogVisible ? renderMainLogPanel(state) : renderWorkArea(state, activeActionCategory, activeActionFilter, activeLocation, actionLoopTarget, now)}
       </main>
-      ${renderSidePanel(state, activeSidePanel, campLogVisible)}
+      ${renderSidePanel(state, activeSidePanel)}
     </div>
     <div class="tooltip-layer" aria-hidden="true"></div>
   `;
@@ -528,7 +575,9 @@ function renderApp(
 
 function renderCharacterSidebar(
   state: GameState,
-  activeActionCategory: ActionCategoryId
+  activeActionCategory: ActionCategoryId,
+  campLogVisible: boolean,
+  testSpeedMultiplier: number
 ): string {
   const cameron = state.characters[0];
   const condition = state.currentAction ? getRunningActionStatus(state) : "keeping still";
@@ -537,7 +586,10 @@ function renderCharacterSidebar(
     <aside class="character-sidebar panel">
       <div class="brand-block">
         <div class="kicker">Idle Town</div>
-        <h1>First Fire</h1>
+        <div class="brand-heading">
+          <h1>First Fire</h1>
+          ${renderTestSpeedButton(testSpeedMultiplier)}
+        </div>
       </div>
       <button class="character-card selected" type="button">
         <span class="portrait" aria-hidden="true">C</span>
@@ -551,12 +603,38 @@ function renderCharacterSidebar(
               ${actionCategories
                 .map((category) => renderCategoryButton(category, activeActionCategory))
                 .join("")}
+              ${renderMapLink()}
             </div>
           </nav>
           <div class="sidebar-footer">
+            ${renderCampLogToggle(campLogVisible)}
             <button class="ghost-button" type="button" data-command="reset">Reset</button>
           </div>
     </aside>
+  `;
+}
+
+function renderTestSpeedButton(testSpeedMultiplier: number): string {
+  const active = testSpeedMultiplier === 10;
+
+  return `
+    <button
+      class="test-speed-button ${active ? "active" : ""}"
+      type="button"
+      data-command="toggle-test-speed"
+      aria-pressed="${active}"
+      title="Toggle 10x test speed"
+    >
+      10x
+    </button>
+  `;
+}
+
+function renderMainLogPanel(state: GameState): string {
+  return `
+    <div class="work-area single-panel">
+      ${renderLog(state, "main-log-panel panel")}
+    </div>
   `;
 }
 
@@ -576,17 +654,26 @@ function renderCategoryButton(category: ActionCategory, activeActionCategory: Ac
   `;
 }
 
+function renderMapLink(): string {
+  return `
+    <a class="category-button map-link" href="${import.meta.env.BASE_URL}location-map.html" aria-label="Open map">
+      <span>Map</span>
+    </a>
+  `;
+}
+
 function renderWorkArea(
   state: GameState,
   activeActionCategory: ActionCategoryId,
   activeActionFilter: ActionFilterId,
   activeLocation: LocationId,
-  actionLoopTarget: ActionLoopTarget
+  actionLoopTarget: ActionLoopTarget,
+  now: number
 ): string {
   if (activeActionCategory === "camp") {
     return `
       <div class="work-area single-panel">
-        ${renderBuildingPanel(state)}
+        ${renderBuildingPanel(state, now)}
       </div>
     `;
   }
@@ -649,11 +736,11 @@ function renderSkillButton(state: GameState, filter: ActionFilter, activeActionF
   `;
 }
 
-function renderWorldPanel(state: GameState, actionLoopTarget: ActionLoopTarget, selectedLoopIndex: number): string {
+function renderWorldPanel(state: GameState, actionLoopTarget: ActionLoopTarget, selectedLoopIndex: number, now: number): string {
   return `
     <section class="world-panel panel">
       <canvas id="wilderness-canvas" class="wilderness-canvas" aria-label="A primitive forest camp"></canvas>
-      ${renderCurrentActionPanel(state, actionLoopTarget, selectedLoopIndex)}
+      ${renderCurrentActionPanel(state, actionLoopTarget, selectedLoopIndex, now)}
     </section>
   `;
 }
@@ -670,6 +757,10 @@ function renderActionPanel(
       ? getLocation(activeLocation, filter.id).actionIds
       : (filter.actionIds ?? []);
 
+  if (filter.id === "crafting") {
+    return renderCraftingActionPanel(state, actionIds, actionLoopTarget);
+  }
+
   return `
       <section class="action-panel">
         <div class="action-grid">
@@ -679,7 +770,32 @@ function renderActionPanel(
   `;
 }
 
-function renderCurrentActionPanel(state: GameState, actionLoopTarget: ActionLoopTarget, selectedLoopIndex: number): string {
+function renderCraftingActionPanel(
+  state: GameState,
+  actionIds: ActionId[],
+  actionLoopTarget: ActionLoopTarget
+): string {
+  const quickCraftActionId: ActionId = "craftLowestTool";
+  const craftActionIds = actionIds.filter((actionId) => actionId !== quickCraftActionId);
+
+  return `
+    <section class="action-panel crafting-action-panel">
+      <div class="crafting-card">
+        ${renderCraftLowestCard(state, quickCraftActionId, actionLoopTarget)}
+        <div class="crafting-action-grid">
+          ${craftActionIds.map((actionId) => renderActionCard(state, actionId, actionLoopTarget)).join("")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderCurrentActionPanel(
+  state: GameState,
+  actionLoopTarget: ActionLoopTarget,
+  selectedLoopIndex: number,
+  now: number
+): string {
   if (!state.currentAction) {
     return `
       <section class="current-action-panel idle">
@@ -691,8 +807,8 @@ function renderCurrentActionPanel(state: GameState, actionLoopTarget: ActionLoop
     `;
   }
 
-  const progress = clamp(getActionProgress(state), 0, 1);
-  const remaining = formatDuration(state.currentAction.endsAt - Date.now());
+  const progress = clamp(getActionProgress(state, now), 0, 1);
+  const remaining = formatDuration(state.currentAction.endsAt - now);
 
   return `
     <section class="current-action-panel">
@@ -983,6 +1099,62 @@ function renderLocationTabs(
   `;
 }
 
+function renderCraftLowestCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
+  const definition = getActionDefinition(actionId);
+  if (!definition) {
+    return "";
+  }
+
+  const targetActionId = getLowestQuantityCraftAction(state);
+  const targetDefinition = targetActionId ? getActionDefinition(targetActionId) : undefined;
+  const unlocked = isActionUnlocked(state, actionId);
+  const canStart = canStartAction(state, actionId);
+  const assigningLoopAction = Boolean(actionLoopTarget && state.currentAction);
+  const canAssignFollowUp = Boolean(
+    assigningLoopAction &&
+      state.currentAction &&
+      actionLoopTarget &&
+      canInsertActionInLoop(state.currentAction, actionLoopTarget.afterIndex, actionId)
+  );
+  const active = state.currentAction ? getActiveActionId(state.currentAction) === actionId : false;
+  const disabled = assigningLoopAction ? !canAssignFollowUp : !canStart || active;
+  const lockReason = canStart ? "" : getActionLockReason(state, actionId);
+  const tooltipRows: ActionTooltipRow[] = [
+    { label: "Speed", value: formatDuration(definition.durationMs) },
+    { label: "Uses", value: targetActionId ? describeCost(getActionCost(targetActionId)) : "Varies by target" },
+    { label: "Keeps", value: "Rechecks after each craft" },
+    { label: "Chooses", value: "Lowest Stock" }
+  ];
+  const statusText = assigningLoopAction
+    ? canAssignFollowUp
+      ? "Set as action loop step"
+      : "Not valid for this loop"
+    : !canStart && lockReason
+      ? lockReason
+      : targetDefinition
+        ? `Next: ${targetDefinition.label}`
+        : "";
+  const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
+
+  return `
+    <button
+      class="craft-priority-button ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}"
+      type="button"
+      data-command="start-action"
+      data-id="${actionId}"
+      data-disabled="${disabled}"
+      data-tooltip-source
+      aria-disabled="${disabled}"
+      aria-label="${buttonLabel} ${definition.label}${targetDefinition ? `, next ${targetDefinition.label}` : ""}"
+    >
+      <span class="craft-priority-main" aria-hidden="true">
+        <img src="${craftMaterialsBundleButtonUrl}" alt="" aria-hidden="true" />
+      </span>
+      ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+    </button>
+  `;
+}
+
 function renderActionCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
   const definition = getActionDefinition(actionId);
   if (!definition) {
@@ -1094,6 +1266,10 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [tinIconUrl];
     case "fishRiver":
       return [minnowIconUrl];
+    case "craftLowestTool":
+      return [craftMaterialsBundleButtonUrl];
+    case "craftBasket":
+      return [basketEquippedSlotUrl];
     case "craftFishingPole":
       return [fishingPoleEquippedSlotUrl];
     case "craftStoneKnife":
@@ -1190,6 +1366,14 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
         { label: "Pickup", value: "1 Rabbit or Squirrel" },
         { label: "Each", value: "Rabbit 2-5 lb, Squirrel 0.5-2 lb" }
       ];
+    case "craftLowestTool":
+      return [
+        ...rows,
+        { label: "Keeps", value: "Rechecks after each craft" },
+        { label: "Chooses", value: "Lowest Stock" }
+      ];
+    case "craftBasket":
+      return [...rows, { label: "Makes", value: "1 Basket" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftFishingPole":
       return [...rows, { label: "Makes", value: "1 Fishing Pole" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftStoneKnife":
@@ -1225,33 +1409,15 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
   }
 }
 
-function renderBuildingPanel(state: GameState): string {
-  const visibleBuildings = buildingDefinitions.filter((building) => isBuildingVisible(state, building.id));
+function renderBuildingPanel(state: GameState, now: number): string {
+  const visibleBuildings = buildingDefinitions.filter((building) => isBuildingVisible(state, building.id, now));
 
   return `
     <section class="panel camp-panel">
-      <div class="section-heading">
-        <span>Camp</span>
-        <span class="quiet">${visibleBuildings.length ? "Rough works" : "Undiscovered"}</span>
-      </div>
       <div class="craft-list">
         ${
           visibleBuildings.length
-            ? visibleBuildings.map((building) => {
-                const owned = state.buildings[building.id];
-                const affordable = hasCost(state, building.recipe);
-                return `
-                  <article class="craft-item ${owned ? "owned" : ""}">
-                    <div>
-                      <strong>${building.label}</strong>
-                      <small>${owned ? building.blurb : describeCost(building.recipe)}</small>
-                    </div>
-                    <button type="button" data-command="build-structure" data-id="${building.id}" ${owned || !affordable ? "disabled" : ""}>
-                      ${owned ? "Built" : "Build"}
-                    </button>
-                  </article>
-                `;
-              }).join("")
+            ? visibleBuildings.map((building) => renderBuildingCard(state, building, now)).join("")
             : `<div class="empty-line">Nothing sturdy enough to name yet.</div>`
         }
       </div>
@@ -1259,16 +1425,115 @@ function renderBuildingPanel(state: GameState): string {
   `;
 }
 
-function renderSidePanel(state: GameState, activeSidePanel: SidePanelId, campLogVisible: boolean): string {
+function renderBuildingCard(state: GameState, building: (typeof buildingDefinitions)[number], now: number): string {
+  const built = isBuildingBuilt(state, building.id, now);
+  const affordable = hasCost(state, building.recipe);
+  const disabled = built || !affordable;
+  const imageUrl = getBuildingImageUrl(state, building.id, now);
+  const buttonLabel = getBuildingButtonLabel(state, building.id, now);
+
   return `
-    <aside class="inventory-panel panel ${campLogVisible ? "" : "log-hidden"}">
+    <article class="craft-item building-card ${built ? "owned" : ""} ${building.id === "campfire" && built ? "lit" : ""}">
+      <button
+        class="building-image-button"
+        type="button"
+        data-command="build-structure"
+        data-id="${building.id}"
+        data-disabled="${disabled}"
+        data-tooltip-source
+        aria-disabled="${disabled}"
+        aria-label="${buttonLabel} ${building.label}"
+      >
+        <img class="building-image" src="${imageUrl}" alt="" aria-hidden="true" />
+        ${renderBuildingTooltip(state, building, now)}
+      </button>
+    </article>
+  `;
+}
+
+function renderBuildingTooltip(state: GameState, building: (typeof buildingDefinitions)[number], now: number): string {
+  const built = isBuildingBuilt(state, building.id, now);
+  const affordable = hasCost(state, building.recipe);
+  const rows: ActionTooltipRow[] = [
+    { label: "Status", value: getBuildingStatusText(state, building.id, now, built, affordable) },
+    { label: "Cost", value: describeCost(building.recipe) },
+    { label: "Use", value: building.blurb }
+  ];
+
+  return `
+    <div class="slot-tooltip" role="tooltip">
+      <div class="tooltip-title">
+        <strong>${building.label}</strong>
+      </div>
+      <dl>
+        ${rows
+          .map((row) => `
+            <div>
+              <dt>${row.label}</dt>
+              <dd>${row.value}</dd>
+            </div>
+          `)
+          .join("")}
+      </dl>
+    </div>
+  `;
+}
+
+function isBuildingBuilt(state: GameState, buildingId: BuildingId, now: number): boolean {
+  return buildingId === "campfire" ? isCampfireLit(state, now) : state.buildings[buildingId];
+}
+
+function getBuildingImageUrl(state: GameState, buildingId: BuildingId, now: number): string {
+  switch (buildingId) {
+    case "campfire":
+      return isCampfireLit(state, now) ? campfireLitUrl : campfireUnlitUrl;
+    case "tanningRack":
+      return tanningRackUrl;
+    case "hideTent":
+      return hideTentUrl;
+  }
+}
+
+function getBuildingButtonLabel(state: GameState, buildingId: BuildingId, now: number): string {
+  if (buildingId === "campfire" && isCampfireLit(state, now)) {
+    return "Lit";
+  }
+
+  return isBuildingBuilt(state, buildingId, now) ? "Built" : "Build";
+}
+
+function getBuildingStatusText(
+  state: GameState,
+  buildingId: BuildingId,
+  now: number,
+  built: boolean,
+  affordable: boolean
+): string {
+  if (buildingId === "campfire") {
+    return built
+      ? `Lit, burns out in <b data-campfire-remaining>${formatDuration(getCampfireRemainingMs(state, now))}</b>`
+      : affordable
+        ? "Ready to build, burns for 15m"
+        : `Needs ${getMissingCostText(state, buildingDefinitions.find((building) => building.id === buildingId)?.recipe ?? {})}`;
+  }
+
+  if (built) {
+    return "Built";
+  }
+
+  return affordable
+    ? "Ready to build"
+    : `Needs ${getMissingCostText(state, buildingDefinitions.find((building) => building.id === buildingId)?.recipe ?? {})}`;
+}
+
+function renderSidePanel(state: GameState, activeSidePanel: SidePanelId): string {
+  return `
+    <aside class="inventory-panel panel log-hidden">
       <div class="panel-tabs" role="tablist" aria-label="Character panel">
         ${renderSidePanelButton("inventory", "Inventory", activeSidePanel)}
         ${renderSidePanelButton("equipment", "Equipment", activeSidePanel)}
       </div>
       ${activeSidePanel === "inventory" ? renderInventory(state) : renderEquipment(state)}
-      ${campLogVisible ? renderLog(state) : ""}
-      ${renderCampLogToggle(campLogVisible)}
     </aside>
   `;
 }
@@ -1333,6 +1598,7 @@ function renderCharacterInventory(state: GameState): string {
     return state.characterInventory[resourceId] > 0 || getResourceQuantity(state, resourceId, "character") > 0;
   });
   const carriedWeight = getCharacterInventoryWeight(state);
+  const maxWeight = getCharacterMaxWeight(state);
   const iconIds = carriedIds.filter((id) => Boolean(resourceSlotImages[id]));
   const rowIds = carriedIds.filter((id) => !resourceSlotImages[id]);
 
@@ -1340,7 +1606,7 @@ function renderCharacterInventory(state: GameState): string {
     <div class="resource-group character-inventory-group">
       <div class="inventory-summary-heading">
         <h3>Camerons Inventory</h3>
-        <span>${formatWeightAmount(carriedWeight)}/${CHARACTER_MAX_WEIGHT}</span>
+        <span>${formatWeightAmount(carriedWeight)}/${formatWeightAmount(maxWeight)}</span>
       </div>
       ${
         carriedIds.length
@@ -1601,6 +1867,8 @@ function renderEmptyEquipmentSlot(index: number, toolId: ToolId | null): string 
 
 function getToolInitials(toolId: ToolId): string {
   switch (toolId) {
+    case "basket":
+      return "BK";
     case "fishingPole":
       return "FP";
     case "stoneAxe":
@@ -1698,9 +1966,9 @@ function restoreScrollPositions(root: HTMLElement, scrollPositions: Map<string, 
   }
 }
 
-function renderLog(state: GameState): string {
+function renderLog(state: GameState, extraClass = ""): string {
   return `
-    <section class="log-panel">
+    <section class="log-panel ${extraClass}">
       <div class="section-heading">
         <span>Camp Log</span>
         <span class="quiet">${state.log.length}</span>

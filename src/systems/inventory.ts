@@ -8,7 +8,9 @@ import {
 } from "../data/resources";
 import type { Cost, GameState, ResourceCountDelta, ResourceCounts, ResourceId } from "../types";
 
-export const CHARACTER_MAX_WEIGHT = 10;
+export const BASE_CHARACTER_MAX_WEIGHT = 10;
+export const BASKET_CARRY_WEIGHT_BONUS = 5;
+export const CHARACTER_MAX_WEIGHT = BASE_CHARACTER_MAX_WEIGHT;
 type InventorySource = "camp" | "character";
 
 export function normalizeInventory(state: GameState): void {
@@ -81,6 +83,11 @@ export function getCharacterInventoryWeight(state: GameState): number {
   return getInventoryWeight(state.characterInventory);
 }
 
+export function getCharacterMaxWeight(state: GameState): number {
+  const basket = state.tools.basket;
+  return BASE_CHARACTER_MAX_WEIGHT + (basket?.owned && basket.durability > 0 ? BASKET_CARRY_WEIGHT_BONUS : 0);
+}
+
 export function addCharacterResources(
   state: GameState,
   resources: Cost,
@@ -88,6 +95,7 @@ export function addCharacterResources(
 ): Cost {
   const accepted: Cost = {};
   let carriedWeight = getCharacterInventoryWeight(state);
+  const maxWeight = getCharacterMaxWeight(state);
 
   for (const resourceId of resourceOrder) {
     const amount = normalizeResourceAmount(resourceId, resources[resourceId] ?? 0);
@@ -96,7 +104,7 @@ export function addCharacterResources(
     }
 
     const weight = getResourceWeight(resourceId);
-    const availableWeight = CHARACTER_MAX_WEIGHT - carriedWeight;
+    const availableWeight = maxWeight - carriedWeight;
     const acceptedAmount =
       weight > 0
         ? normalizeResourceAmount(

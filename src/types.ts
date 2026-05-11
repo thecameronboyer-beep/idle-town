@@ -28,9 +28,9 @@ export type ResourceId =
   | "brookSticklebackFilet"
   | "pebblePerchFilet";
 
-export type ToolId = "stoneAxe" | "stoneSpear" | "stoneKnife" | "stonePickAxe" | "fishingPole";
+export type ToolId = "stoneAxe" | "stoneSpear" | "stoneKnife" | "stonePickAxe" | "fishingPole" | "basket";
 
-export type BuildingId = "campfire" | "tanningRack";
+export type BuildingId = "campfire" | "tanningRack" | "hideTent";
 
 export type ActionId =
   | "gatherSticks"
@@ -42,6 +42,8 @@ export type ActionId =
   | "mineCopper"
   | "mineTin"
   | "fishRiver"
+  | "craftLowestTool"
+  | "craftBasket"
   | "craftFishingPole"
   | "craftStoneKnife"
   | "craftStoneAxe"
@@ -110,7 +112,7 @@ export interface LogEntry {
 }
 
 export interface GameState {
-  version: 3;
+  version: 4;
   createdAt: number;
   updatedAt: number;
   lastSimulatedAt: number;
@@ -122,6 +124,7 @@ export interface GameState {
   characterResourceCounts: ResourceCounts;
   tools: OwnedTools;
   buildings: OwnedBuildings;
+  campfireExpiresAt: number | null;
   seenResources: ResourceId[];
   currentAction: RunningAction | null;
   log: LogEntry[];

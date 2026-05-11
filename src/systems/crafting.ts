@@ -1,14 +1,17 @@
 import { buildingDefinitions } from "../data/craftables";
 import type { BuildingId, Cost, GameState, ResourceId } from "../types";
+import { expireCampfire, isCampfireLit, lightCampfire } from "./buildings";
 import { describeCost, hasCost, payCost } from "./inventory";
 import { addLog } from "./log";
 import { isBuildingVisible } from "./progression";
 
 export function buildStructure(state: GameState, buildingId: BuildingId, now = Date.now()): boolean {
+  expireCampfire(state, now);
   const definition = buildingDefinitions.find((building) => building.id === buildingId);
+  const alreadyBuilt = buildingId === "campfire" ? isCampfireLit(state, now) : state.buildings[buildingId];
   if (
     !definition ||
-    state.buildings[buildingId] ||
+    alreadyBuilt ||
     !isBuildingVisible(state, buildingId) ||
     !hasCost(state, definition.recipe)
   ) {
@@ -16,8 +19,13 @@ export function buildStructure(state: GameState, buildingId: BuildingId, now = D
   }
 
   payCost(state, definition.recipe);
-  state.buildings[buildingId] = true;
-  addLog(state, `Cameron builds a ${definition.label}.`, "craft", now);
+  if (buildingId === "campfire") {
+    lightCampfire(state, now);
+    addLog(state, "Cameron builds a campfire and brings it to flame.", "craft", now);
+  } else {
+    state.buildings[buildingId] = true;
+    addLog(state, `Cameron builds a ${definition.label}.`, "craft", now);
+  }
   touch(state, now);
   return true;
 }

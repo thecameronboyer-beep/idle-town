@@ -14,18 +14,29 @@ if (!app) {
 let state = loadGame();
 let wilderness: WildernessCanvas | null = null;
 let wildernessCanvas: HTMLCanvasElement | null = null;
+let testSpeedMultiplier = 1;
+let gameNow = Date.now();
+let lastRealClockAt = gameNow;
 
 const render = createRenderer(app, {
   requestRender: () => draw(),
   persist: () => saveGame(state),
   reset: () => {
+    resetGameClock();
     state = resetSave();
     draw();
+  },
+  getNow: () => syncGameClock(),
+  getTestSpeedMultiplier: () => testSpeedMultiplier,
+  toggleTestSpeed: () => {
+    syncGameClock();
+    testSpeedMultiplier = testSpeedMultiplier === 10 ? 1 : 10;
   }
 });
 
 function draw(): void {
-  render(state);
+  const now = syncGameClock();
+  render(state, now);
   const canvas = document.querySelector<HTMLCanvasElement>("#wilderness-canvas");
   if (canvas && canvas !== wildernessCanvas) {
     wilderness?.stop();
@@ -38,8 +49,9 @@ function draw(): void {
 }
 
 function tick(): void {
+  const now = syncGameClock();
   const beforeSignature = getRenderSignature();
-  simulateUntil(state);
+  simulateUntil(state, now);
   const afterSignature = getRenderSignature();
 
   if (beforeSignature !== afterSignature) {
@@ -76,6 +88,7 @@ function getRenderSignature(): string {
     characterResourceCounts: state.characterResourceCounts,
     tools: state.tools,
     buildings: state.buildings,
+    campfireExpiresAt: state.campfireExpiresAt,
     seenResources: state.seenResources,
     currentAction: state.currentAction
       ? {
@@ -97,11 +110,14 @@ function getRenderSignature(): string {
 }
 
 function updateLiveActionIndicators(): void {
+  const now = syncGameClock();
+  updateLiveCampfireIndicators(now);
+
   if (!state.currentAction) {
     return;
   }
 
-  const progress = Math.min(1, Math.max(0, getActionProgress(state)));
+  const progress = Math.min(1, Math.max(0, getActionProgress(state, now)));
   const progressElement = document.querySelector<HTMLElement>("[data-action-progress]");
   const remainingElement = document.querySelector<HTMLElement>("[data-action-remaining]");
 
@@ -110,8 +126,32 @@ function updateLiveActionIndicators(): void {
   }
 
   if (remainingElement) {
-    remainingElement.textContent = formatDuration(state.currentAction.endsAt - Date.now());
+    remainingElement.textContent = formatDuration(state.currentAction.endsAt - now);
   }
+}
+
+function updateLiveCampfireIndicators(now: number): void {
+  const remainingElements = document.querySelectorAll<HTMLElement>("[data-campfire-remaining]");
+  if (!remainingElements.length || !state.campfireExpiresAt) {
+    return;
+  }
+
+  for (const element of remainingElements) {
+    element.textContent = formatDuration(state.campfireExpiresAt - now);
+  }
+}
+
+function syncGameClock(): number {
+  const realNow = Date.now();
+  const elapsed = Math.max(0, realNow - lastRealClockAt);
+  gameNow += elapsed * testSpeedMultiplier;
+  lastRealClockAt = realNow;
+  return gameNow;
+}
+
+function resetGameClock(): void {
+  gameNow = Date.now();
+  lastRealClockAt = gameNow;
 }
 
 function animateLiveActionIndicators(): void {

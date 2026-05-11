@@ -1,5 +1,6 @@
 import { fishResourceIds } from "../data/resources";
 import type { ActionId, BuildingId, GameState } from "../types";
+import { isCampfireLit } from "./buildings";
 import { hasUsableTool } from "./tools";
 
 function hasSeenMeat(state: GameState): boolean {
@@ -18,13 +19,15 @@ function hasSeenFish(state: GameState): boolean {
   });
 }
 
-export function isActionUnlocked(state: GameState, actionId: ActionId): boolean {
+export function isActionUnlocked(state: GameState, actionId: ActionId, now = Date.now()): boolean {
   switch (actionId) {
     case "gatherSticks":
     case "gatherStones":
     case "gatherFlaxFibers":
     case "gatherMushrooms":
     case "gatherBerries":
+    case "craftLowestTool":
+    case "craftBasket":
     case "craftFishingPole":
     case "craftStoneKnife":
     case "craftStoneAxe":
@@ -48,9 +51,9 @@ export function isActionUnlocked(state: GameState, actionId: ActionId): boolean 
     case "butcherSquirrel":
       return state.seenResources.includes("squirrel");
     case "cookRabbitMeat":
-      return state.buildings.campfire && state.seenResources.includes("rabbitMeat");
+      return isCampfireLit(state, now) && state.seenResources.includes("rabbitMeat");
     case "cookSquirrelMeat":
-      return state.buildings.campfire && state.seenResources.includes("squirrelMeat");
+      return isCampfireLit(state, now) && state.seenResources.includes("squirrelMeat");
     case "tanHide":
       return state.buildings.tanningRack && state.seenResources.includes("hide");
   }
@@ -75,21 +78,25 @@ export function getActionLockReason(state: GameState, actionId: ActionId): strin
     case "butcherSquirrel":
       return "Needs Squirrel";
     case "cookRabbitMeat":
-      return state.buildings.campfire ? "Needs Rabbit Meat" : "Needs Campfire";
+      return isCampfireLit(state) ? "Needs Rabbit Meat" : "Needs Lit Campfire";
     case "cookSquirrelMeat":
-      return state.buildings.campfire ? "Needs Squirrel Meat" : "Needs Campfire";
+      return isCampfireLit(state) ? "Needs Squirrel Meat" : "Needs Lit Campfire";
     case "tanHide":
       return state.buildings.tanningRack ? "Needs Hide" : "Needs Tanning Rack";
+    case "craftLowestTool":
+      return "Needs Craft Materials";
     default:
       return "";
   }
 }
 
-export function isBuildingVisible(state: GameState, buildingId: BuildingId): boolean {
+export function isBuildingVisible(state: GameState, buildingId: BuildingId, now = Date.now()): boolean {
   switch (buildingId) {
     case "campfire":
-      return state.buildings.campfire || hasSeenMeat(state);
+      return isCampfireLit(state, now) || hasSeenMeat(state);
     case "tanningRack":
       return state.buildings.tanningRack || state.seenResources.includes("hide");
+    case "hideTent":
+      return state.buildings.hideTent || state.seenResources.includes("hide");
   }
 }
