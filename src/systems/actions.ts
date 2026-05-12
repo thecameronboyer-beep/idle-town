@@ -7,7 +7,17 @@ import {
   getResourceLabel,
   normalizeResourceAmount
 } from "../data/resources";
-import type { ActionId, Cost, GameState, LocationId, ResourceCountDelta, ResourceId, RunningAction, ToolId } from "../types";
+import type {
+  ActionId,
+  CharacterLocationId,
+  Cost,
+  GameState,
+  LocationId,
+  ResourceCountDelta,
+  ResourceId,
+  RunningAction,
+  ToolId
+} from "../types";
 import {
   addCharacterResources,
   addResources,
@@ -234,20 +244,26 @@ export function startAction(
     return false;
   }
 
-  const locationId = isCarryAction(actionId) ? (options.locationId ?? "meadow") : undefined;
-  const travelDuration = locationId ? getLocationTravelMs(locationId) : 0;
+  const targetLocationId = getActionTargetLocation(actionId, options.locationId);
+  const originLocationId = getSelectedCharacterLocation(state);
+  const travelDuration = getTravelMs(originLocationId, targetLocationId);
   state.currentAction = {
     actionId,
     characterId: state.selectedCharacterId,
-    phase: locationId ? "travelingTo" : "working",
-    locationId,
+    phase: travelDuration > 0 ? "travelingTo" : "working",
+    originLocationId,
+    targetLocationId,
+    locationId: targetLocationId === "camp" ? undefined : targetLocationId,
     loopActionIds: [actionId],
-    loopLocationIds: [locationId ?? null],
+    loopLocationIds: [targetLocationId === "camp" ? null : targetLocationId],
     loopIndex: 0,
     startedAt: now,
     endsAt: now + (travelDuration || definition.durationMs),
     repeat: true
   };
+  if (travelDuration <= 0) {
+    setCharacterLocation(state, state.selectedCharacterId, targetLocationId);
+  }
   setCharacterWorking(state, true);
   state.updatedAt = now;
   state.lastSimulatedAt = now;
@@ -260,7 +276,9 @@ export function stopAction(state: GameState, now = Date.now()): void {
   }
 
   const definition = getActionDefinition(state.currentAction.actionId);
-  const returnedToCamp = depositCarriedResources(state, now);
+  const stoppedLocation = getStoppedCharacterLocation(state.currentAction, getSelectedCharacterLocation(state));
+  setCharacterLocation(state, state.currentAction.characterId, stoppedLocation);
+  const returnedToCamp = stoppedLocation === "camp" ? depositCarriedResources(state, now) : false;
   state.currentAction = null;
   setCharacterWorking(state, false);
   state.updatedAt = now;
@@ -269,13 +287,17 @@ export function stopAction(state: GameState, now = Date.now()): void {
     state,
     returnedToCamp
       ? `Cameron stops ${definition?.verb ?? "working"} and returns to camp.`
-      : `Cameron stops ${definition?.verb ?? "working"}.`,
+      : `Cameron stops ${definition?.verb ?? "working"} at ${formatCharacterLocation(stoppedLocation)}.`,
     "muted",
     now
   );
 }
 
 export function depositCarriedResources(state: GameState, now = Date.now()): boolean {
+  if (getSelectedCharacterLocation(state) !== "camp") {
+    return false;
+  }
+
   const deposited = depositCharacterResources(state);
   if (Object.keys(deposited).length <= 0) {
     return false;
@@ -348,11 +370,13 @@ export function getActionProgress(state: GameState, now = Date.now()): number {
 
 function completeRunningAction(state: GameState, running: RunningAction, now: number, targetTime: number): void {
   if (running.phase === "travelingTo") {
+    setCharacterLocation(state, running.characterId, getRunningTargetLocation(running));
     startWorkingCycle(state, running, now);
     return;
   }
 
   if (running.phase === "travelingBack") {
+    setCharacterLocation(state, running.characterId, "camp");
     depositCarriedResources(state, now);
 
     if (running.repeat) {
@@ -491,22 +515,36 @@ function startWorkingCycle(state: GameState, running: RunningAction, now: number
     return;
   }
 
+  const targetLocationId = getRunningTargetLocation(running);
+  setCharacterLocation(state, running.characterId, targetLocationId);
   state.currentAction = {
     ...running,
     phase: "working",
+    originLocationId: targetLocationId,
+    targetLocationId,
+    locationId: targetLocationId === "camp" ? undefined : targetLocationId,
     startedAt: now,
     endsAt: now + definition.durationMs
   };
 }
 
 function startTravelingToLocation(state: GameState, running: RunningAction, now: number): void {
-  const locationId = running.locationId ?? getLoopLocationId(running, running.loopIndex ?? 0) ?? "meadow";
+  const targetLocationId = getLoopTargetLocationId(running, running.loopIndex ?? 0);
+  const originLocationId = getCharacterLocation(state, running.characterId);
+  const travelDuration = getTravelMs(originLocationId, targetLocationId);
+  if (travelDuration <= 0) {
+    startWorkingCycle(state, { ...running, targetLocationId, locationId: targetLocationId === "camp" ? undefined : targetLocationId }, now);
+    return;
+  }
+
   state.currentAction = {
     ...running,
     phase: "travelingTo",
-    locationId,
+    originLocationId,
+    targetLocationId,
+    locationId: targetLocationId === "camp" ? undefined : targetLocationId,
     startedAt: now,
-    endsAt: now + getLocationTravelMs(locationId)
+    endsAt: now + travelDuration
   };
 }
 
@@ -516,14 +554,16 @@ function startTravelingBackToCamp(
   now: number,
   nextLoopIndex = getNextLoopIndexAfterCompletedAction(running)
 ): void {
-  const locationId = running.locationId ?? "meadow";
+  const originLocationId = getRunningTargetLocation(running);
   state.currentAction = {
     ...running,
     phase: "travelingBack",
-    locationId,
+    originLocationId,
+    targetLocationId: "camp",
+    locationId: originLocationId === "camp" ? undefined : originLocationId,
     nextLoopIndex,
     startedAt: now,
-    endsAt: now + getLocationTravelMs(locationId)
+    endsAt: now + getTravelMs(originLocationId, "camp")
   };
 }
 
@@ -539,6 +579,8 @@ function startFollowUpAction(state: GameState, running: RunningAction, loopIndex
     ...running,
     actionId,
     phase: "followUp",
+    originLocationId: getRunningTargetLocation(running),
+    targetLocationId: getRunningTargetLocation(running),
     loopIndex,
     startedAt: now,
     endsAt: now + definition.durationMs
@@ -563,13 +605,16 @@ function startLoopActionAtIndex(state: GameState, running: RunningAction, index:
     return false;
   }
 
-  const locationId = getLoopLocationId(running, loopIndex) ?? (isCarryAction(actionId) ? "meadow" : undefined);
-  const travelDuration = locationId ? getLocationTravelMs(locationId) : 0;
+  const targetLocationId = getLoopTargetLocationId(running, loopIndex);
+  const originLocationId = getCharacterLocation(state, running.characterId);
+  const travelDuration = getTravelMs(originLocationId, targetLocationId);
   state.currentAction = {
     ...running,
     actionId,
-    phase: locationId ? "travelingTo" : "working",
-    locationId,
+    phase: travelDuration > 0 ? "travelingTo" : "working",
+    originLocationId,
+    targetLocationId,
+    locationId: targetLocationId === "camp" ? undefined : targetLocationId,
     loopActionIds: loop,
     loopLocationIds: getRunningActionLoopLocations(running, loop),
     loopIndex,
@@ -578,6 +623,9 @@ function startLoopActionAtIndex(state: GameState, running: RunningAction, index:
     startedAt: now,
     endsAt: now + (travelDuration || definition.durationMs)
   };
+  if (travelDuration <= 0) {
+    setCharacterLocation(state, running.characterId, targetLocationId);
+  }
   return true;
 }
 
@@ -638,6 +686,47 @@ function getLoopLocationId(running: RunningAction, index: number): LocationId | 
   const loop = getRunningActionLoop(running);
   const actionId = loop[clampLoopIndex(index, loop)];
   return getRunningActionLoopLocations(running, loop)[clampLoopIndex(index, loop)] ?? (isCarryAction(actionId) ? "meadow" : undefined);
+}
+
+function getLoopTargetLocationId(running: RunningAction, index: number): CharacterLocationId {
+  const loop = getRunningActionLoop(running);
+  const actionId = loop[clampLoopIndex(index, loop)];
+  return getActionTargetLocation(actionId, getLoopLocationId(running, index));
+}
+
+function getActionTargetLocation(actionId: ActionId, locationId: LocationId | undefined): CharacterLocationId {
+  return isCarryAction(actionId) ? (locationId ?? "meadow") : "camp";
+}
+
+function getRunningTargetLocation(running: RunningAction): CharacterLocationId {
+  return running.targetLocationId ?? running.locationId ?? "camp";
+}
+
+function getSelectedCharacterLocation(state: GameState): CharacterLocationId {
+  return getCharacterLocation(state, state.selectedCharacterId);
+}
+
+function getCharacterLocation(state: GameState, characterId: string): CharacterLocationId {
+  return state.characters.find((character) => character.id === characterId)?.locationId ?? "camp";
+}
+
+function setCharacterLocation(state: GameState, characterId: string, locationId: CharacterLocationId): void {
+  const character = state.characters.find((entry) => entry.id === characterId);
+  if (character) {
+    character.locationId = locationId;
+  }
+}
+
+function getStoppedCharacterLocation(running: RunningAction, currentLocation: CharacterLocationId): CharacterLocationId {
+  if (running.phase === "travelingTo" || running.phase === "travelingBack") {
+    return running.originLocationId ?? currentLocation;
+  }
+
+  return getRunningTargetLocation(running);
+}
+
+function formatCharacterLocation(locationId: CharacterLocationId): string {
+  return locationId === "camp" ? "camp" : `the ${locationId}`;
 }
 
 function getActiveActionId(running: RunningAction): ActionId {
@@ -701,6 +790,18 @@ function shouldReturnToCamp(rewards: Cost, accepted: Cost, state: GameState): bo
 
 function getLocationTravelMs(locationId: LocationId): number {
   return LOCATION_TRAVEL_MS[locationId];
+}
+
+function getTravelMs(originLocationId: CharacterLocationId, targetLocationId: CharacterLocationId): number {
+  if (originLocationId === targetLocationId) {
+    return 0;
+  }
+
+  return getTravelLegMs(originLocationId) + getTravelLegMs(targetLocationId);
+}
+
+function getTravelLegMs(locationId: CharacterLocationId): number {
+  return locationId === "camp" ? 0 : getLocationTravelMs(locationId);
 }
 
 function rollRewards(

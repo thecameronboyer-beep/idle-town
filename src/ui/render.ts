@@ -49,6 +49,7 @@ import hideTentUrl from "../assets/buildings/hide-tent-2x2.png";
 import tanningRackUrl from "../assets/buildings/tanning-rack-2x2.png";
 import woodIconUrl from "../assets/items/wood-icon.png";
 import { getCampfireRemainingMs, isCampfireLit } from "../systems/buildings";
+import { getBuildingCount, getPopulationCapacity, getPopulationCount } from "../systems/camp";
 import { buildStructure, getMissingCostText } from "../systems/crafting";
 import {
   describeCost,
@@ -73,7 +74,17 @@ import {
 } from "../systems/actions";
 import { getActionLockReason, isActionUnlocked, isBuildingVisible } from "../systems/progression";
 import { getMaxToolDurability } from "../systems/tools";
-import type { ActionId, BuildingId, GameState, Inventory, LocationId, LogEntry, ResourceId, ToolId } from "../types";
+import type {
+  ActionId,
+  BuildingId,
+  CharacterLocationId,
+  GameState,
+  Inventory,
+  LocationId,
+  LogEntry,
+  ResourceId,
+  ToolId
+} from "../types";
 
 type ActionFilterId =
   | "crafting"
@@ -103,6 +114,11 @@ type ActionCategory = {
 type SidePanelId = "inventory" | "equipment";
 type InventorySource = "camp" | "character";
 type ActionLoopTarget = { afterIndex: number } | null;
+
+type MapPoint = {
+  x: number;
+  y: number;
+};
 
 type EquipmentStat = {
   label: string;
@@ -222,6 +238,31 @@ const locationDefinitions: LocationDefinition[] = [
   }
 ];
 
+const locationMapImageUrl = `${import.meta.env.BASE_URL}Map.png`;
+const mapCampPoint: MapPoint = { x: 746, y: 603 };
+const mapLocationPoints: Record<LocationId, MapPoint> = {
+  meadow: { x: 260, y: 793 },
+  river: { x: 1327, y: 810 },
+  forest: { x: 410, y: 270 },
+  mine: { x: 1080, y: 270 }
+};
+const mapPoints: Record<CharacterLocationId, MapPoint> = {
+  camp: mapCampPoint,
+  ...mapLocationPoints
+};
+const mapRoutePaths: Record<LocationId, string> = {
+  meadow: "M746 603 C656 666 566 716 456 751 C381 777 318 790 260 793",
+  river: "M746 603 C860 646 994 715 1128 807 C1190 850 1262 841 1327 810",
+  forest: "M746 603 C676 558 612 506 565 424 C529 360 483 306 410 270",
+  mine: "M746 603 C824 540 870 482 900 407 C927 338 992 290 1080 270"
+};
+const mapReturnRoutePaths: Record<LocationId, string> = {
+  meadow: "M260 793 C318 790 381 777 456 751 C566 716 656 666 746 603",
+  river: "M1327 810 C1262 841 1190 850 1128 807 C994 715 860 646 746 603",
+  forest: "M410 270 C483 306 529 360 565 424 C612 506 676 558 746 603",
+  mine: "M1080 270 C992 290 927 338 900 407 C870 482 824 540 746 603"
+};
+
 const EQUIPMENT_SLOT_COUNT = 10;
 const equipmentToolSlots: Array<ToolId | null> = [
   "fishingPole",
@@ -334,6 +375,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
   let activeLocation: LocationId = "meadow";
   let activeSidePanel: SidePanelId = "inventory";
   let campLogVisible = false;
+  let mapVisible = false;
   let actionLoopTarget: ActionLoopTarget = null;
   let selectedLoopIndex = 0;
   let currentState: GameState | null = null;
@@ -360,6 +402,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
 
     if (command === "set-action-category" && isActionCategoryId(id)) {
+      mapVisible = false;
       activeActionCategory = id;
       const categoryFilters = getCategoryFilters(activeActionCategory);
       if (categoryFilters.length && !categoryFilters.some((filter) => filter.id === activeActionFilter)) {
@@ -370,12 +413,14 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
 
     if (command === "set-action-filter" && isActionFilterId(id)) {
+      mapVisible = false;
       activeActionFilter = id;
       handlers.requestRender();
       return;
     }
 
     if (command === "set-location" && isLocationId(id)) {
+      mapVisible = false;
       activeLocation = id;
       handlers.requestRender();
       return;
@@ -389,6 +434,14 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "toggle-camp-log") {
       campLogVisible = !campLogVisible;
+      mapVisible = false;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "open-map") {
+      campLogVisible = false;
+      mapVisible = true;
       handlers.requestRender();
       return;
     }
@@ -528,6 +581,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       activeSidePanel,
       activeLocation,
       campLogVisible,
+      mapVisible,
       actionLoopTarget,
       selectedLoopIndex,
       now,
@@ -555,6 +609,7 @@ function renderApp(
   activeSidePanel: SidePanelId,
   activeLocation: LocationId,
   campLogVisible: boolean,
+  mapVisible: boolean,
   actionLoopTarget: ActionLoopTarget,
   selectedLoopIndex: number,
   now: number,
@@ -562,10 +617,16 @@ function renderApp(
 ): string {
   return `
     <div class="game-shell">
-      ${renderCharacterSidebar(state, activeActionCategory, campLogVisible, testSpeedMultiplier)}
+      ${renderCharacterSidebar(state, activeActionCategory, campLogVisible, mapVisible, testSpeedMultiplier)}
       <main class="main-panel">
         ${renderWorldPanel(state, actionLoopTarget, selectedLoopIndex, now)}
-        ${campLogVisible ? renderMainLogPanel(state) : renderWorkArea(state, activeActionCategory, activeActionFilter, activeLocation, actionLoopTarget, now)}
+        ${
+          mapVisible
+            ? renderLocationMapPanel(state, now)
+            : campLogVisible
+              ? renderMainLogPanel(state)
+              : renderWorkArea(state, activeActionCategory, activeActionFilter, activeLocation, actionLoopTarget, now)
+        }
       </main>
       ${renderSidePanel(state, activeSidePanel)}
     </div>
@@ -577,10 +638,11 @@ function renderCharacterSidebar(
   state: GameState,
   activeActionCategory: ActionCategoryId,
   campLogVisible: boolean,
+  mapVisible: boolean,
   testSpeedMultiplier: number
 ): string {
   const cameron = state.characters[0];
-  const condition = state.currentAction ? getRunningActionStatus(state) : "keeping still";
+  const condition = state.currentAction ? getRunningActionStatus(state) : `at ${getCharacterLocationLabel(cameron.locationId)}`;
 
   return `
     <aside class="character-sidebar panel">
@@ -601,9 +663,9 @@ function renderCharacterSidebar(
           <nav class="sidebar-actions" aria-label="Action filters">
             <div class="category-buttons">
               ${actionCategories
-                .map((category) => renderCategoryButton(category, activeActionCategory))
+                .map((category) => renderCategoryButton(category, activeActionCategory, mapVisible))
                 .join("")}
-              ${renderMapLink()}
+              ${renderMapButton(mapVisible)}
             </div>
           </nav>
           <div class="sidebar-footer">
@@ -638,8 +700,8 @@ function renderMainLogPanel(state: GameState): string {
   `;
 }
 
-function renderCategoryButton(category: ActionCategory, activeActionCategory: ActionCategoryId): string {
-  const active = category.id === activeActionCategory;
+function renderCategoryButton(category: ActionCategory, activeActionCategory: ActionCategoryId, mapVisible: boolean): string {
+  const active = !mapVisible && category.id === activeActionCategory;
 
   return `
     <button
@@ -654,11 +716,16 @@ function renderCategoryButton(category: ActionCategory, activeActionCategory: Ac
   `;
 }
 
-function renderMapLink(): string {
+function renderMapButton(active: boolean): string {
   return `
-    <a class="category-button map-link" href="${import.meta.env.BASE_URL}location-map.html" aria-label="Open map">
+    <button
+      class="category-button map-button ${active ? "active" : ""}"
+      type="button"
+      data-command="open-map"
+      aria-pressed="${active}"
+    >
       <span>Map</span>
-    </a>
+    </button>
   `;
 }
 
@@ -672,7 +739,8 @@ function renderWorkArea(
 ): string {
   if (activeActionCategory === "camp") {
     return `
-      <div class="work-area single-panel">
+      <div class="work-area camp-work-area">
+        ${renderCampStatsPanel(state)}
         ${renderBuildingPanel(state, now)}
       </div>
     `;
@@ -684,6 +752,195 @@ function renderWorkArea(
       ${renderActionStack(state, activeActionFilter, activeLocation, actionLoopTarget)}
     </div>
   `;
+}
+
+function renderCampStatsPanel(state: GameState): string {
+  return `
+    <section class="panel camp-stats-panel" aria-label="Camp stats">
+      <div class="section-heading">
+        <span>Stats</span>
+      </div>
+      <div class="camp-stat-list">
+        <div class="camp-stat-row">
+          <span>Population</span>
+          <strong>${getPopulationCount(state)}/${getPopulationCapacity(state)}</strong>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderLocationMapPanel(state: GameState, now: number): string {
+  return `
+    <div class="work-area single-panel">
+      <section class="panel location-map-panel" aria-label="World map">
+        <div class="location-map-frame">
+          <img class="location-map-image" src="${locationMapImageUrl}" alt="Idle Town parchment world map" />
+          <svg class="location-map-traveler-layer" viewBox="0 0 1536 1000" aria-hidden="true">
+            <defs>
+              ${Object.entries(mapRoutePaths)
+                .map(([locationId, path]) => `<path id="map-route-${locationId}" class="location-map-route" d="${path}" />`)
+                .join("")}
+              ${Object.entries(mapReturnRoutePaths)
+                .map(([locationId, path]) => `<path id="map-return-route-${locationId}" class="location-map-route" d="${path}" />`)
+                .join("")}
+            </defs>
+            ${state.characters.map((character, index) => renderMapCharacter(state, character, index, now)).join("")}
+          </svg>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderMapCharacter(
+  state: GameState,
+  character: GameState["characters"][number],
+  index: number,
+  now: number
+): string {
+  const running = state.currentAction?.characterId === character.id ? state.currentAction : null;
+  const currentLocationId = character.locationId ?? "camp";
+  const offset = getMapCharacterOffset(index);
+
+  if (running && (running.phase === "travelingTo" || running.phase === "travelingBack")) {
+    const originLocationId = getRunningMapOriginLocation(running, currentLocationId);
+    const targetLocationId = getRunningMapTargetLocation(running);
+    if (originLocationId !== targetLocationId) {
+      return renderMovingMapCharacter(character, running, originLocationId, targetLocationId, offset, now);
+    }
+  }
+
+  const point = running && (running.phase === "working" || running.phase === "followUp")
+    ? mapPoints[getRunningMapTargetLocation(running)]
+    : mapPoints[currentLocationId];
+
+  return renderStationaryMapCharacter(character, point, offset, Boolean(running));
+}
+
+function renderMovingMapCharacter(
+  character: GameState["characters"][number],
+  running: NonNullable<GameState["currentAction"]>,
+  originLocationId: CharacterLocationId,
+  targetLocationId: CharacterLocationId,
+  offset: MapPoint,
+  now: number
+): string {
+  const phaseProgress = getPhaseProgress(running, now);
+  const routeId = `map-character-route-${getSafeDomId(character.id)}`;
+  const routePath = getMapTravelPath(originLocationId, targetLocationId);
+  const startKey = phaseProgress;
+  const remainingMs = Math.max(250, running.endsAt - now);
+
+  return `
+    <path id="${routeId}" class="location-map-route" d="${routePath}" />
+    <g class="location-map-character moving">
+      <animateMotion
+        dur="${remainingMs.toFixed(0)}ms"
+        fill="freeze"
+        repeatCount="1"
+        keyPoints="${startKey.toFixed(4)};1"
+        keyTimes="0;1"
+        calcMode="linear"
+      >
+        <mpath href="#${routeId}" />
+      </animateMotion>
+      <g transform="translate(${offset.x} ${offset.y})">
+        ${renderMapCharacterGlyph(character, true)}
+      </g>
+    </g>
+  `;
+}
+
+function renderStationaryMapCharacter(
+  character: GameState["characters"][number],
+  point: MapPoint,
+  offset: MapPoint,
+  active: boolean
+): string {
+  return `
+    <g class="location-map-character ${active ? "working" : "idle"}" transform="translate(${point.x + offset.x} ${point.y + offset.y})">
+      ${renderMapCharacterGlyph(character, active)}
+    </g>
+  `;
+}
+
+function renderMapCharacterGlyph(character: GameState["characters"][number], active: boolean): string {
+  return `
+    <circle class="location-map-character-shadow" cx="0" cy="4" r="15" />
+    <circle class="location-map-character-ring" cx="0" cy="0" r="13" />
+    <circle class="location-map-character-face ${active ? "active" : ""}" cx="0" cy="0" r="10" />
+    <text class="location-map-character-initial" x="0" y="4">${getCharacterInitials(character.name)}</text>
+    <text class="location-map-character-name" x="0" y="29">${character.name}</text>
+  `;
+}
+
+function getPhaseProgress(running: NonNullable<GameState["currentAction"]>, now: number): number {
+  const duration = running.endsAt - running.startedAt;
+  return duration <= 0 ? 1 : clamp((now - running.startedAt) / duration, 0, 1);
+}
+
+function getRunningMapTargetLocation(running: NonNullable<GameState["currentAction"]>): CharacterLocationId {
+  if (running.targetLocationId) {
+    return running.targetLocationId;
+  }
+
+  return running.phase === "travelingBack" ? "camp" : (running.locationId ?? "camp");
+}
+
+function getRunningMapOriginLocation(
+  running: NonNullable<GameState["currentAction"]>,
+  currentLocationId: CharacterLocationId
+): CharacterLocationId {
+  if (running.originLocationId) {
+    return running.originLocationId;
+  }
+
+  return running.phase === "travelingBack" ? (running.locationId ?? currentLocationId) : currentLocationId;
+}
+
+function getMapTravelPath(originLocationId: CharacterLocationId, targetLocationId: CharacterLocationId): string {
+  if (originLocationId === targetLocationId) {
+    const point = mapPoints[originLocationId];
+    return `M${point.x} ${point.y}`;
+  }
+
+  if (originLocationId === "camp" && targetLocationId !== "camp") {
+    return mapRoutePaths[targetLocationId];
+  }
+
+  if (originLocationId !== "camp" && targetLocationId === "camp") {
+    return mapReturnRoutePaths[originLocationId];
+  }
+
+  const originLocation = originLocationId as LocationId;
+  const targetLocation = targetLocationId as LocationId;
+  return `${mapReturnRoutePaths[originLocation]} ${mapRoutePaths[targetLocation].replace(/^M746 603\s+/, "")}`;
+}
+
+function getSafeDomId(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
+function getMapCharacterOffset(index: number): MapPoint {
+  const offsets: MapPoint[] = [
+    { x: 0, y: 0 },
+    { x: 26, y: -10 },
+    { x: -26, y: 12 },
+    { x: 14, y: 24 }
+  ];
+
+  return offsets[index % offsets.length] ?? offsets[0];
+}
+
+function getCharacterInitials(name: string): string {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("");
+
+  return (initials || "?").slice(0, 2).toUpperCase();
 }
 
 function renderActionStack(
@@ -897,13 +1154,14 @@ function getRunningActionTitle(state: GameState): string {
     return "Working";
   }
 
-  const location = running.locationId ? getLocation(running.locationId).label : "the wilds";
+  const targetLocation = getCharacterLocationLabel(getRunningMapTargetLocation(running));
+  const originLocation = getCharacterLocationLabel(getRunningMapOriginLocation(running, "camp"));
   if (running.phase === "travelingTo") {
-    return `Traveling to ${location}`;
+    return `Traveling to ${targetLocation}`;
   }
 
   if (running.phase === "travelingBack") {
-    return `Returning from ${location}`;
+    return `Returning to camp from ${originLocation}`;
   }
 
   if (running.phase === "followUp") {
@@ -937,13 +1195,14 @@ function getRunningActionStatus(state: GameState): string {
     return "keeping still";
   }
 
-  const location = running.locationId ? getLocation(running.locationId).label.toLowerCase() : "camp";
+  const targetLocation = getCharacterLocationLabel(getRunningMapTargetLocation(running));
+  const originLocation = getCharacterLocationLabel(getRunningMapOriginLocation(running, "camp"));
   if (running.phase === "travelingTo") {
-    return `traveling to ${location}`;
+    return `traveling to ${targetLocation}`;
   }
 
   if (running.phase === "travelingBack") {
-    return `returning from ${location}`;
+    return `returning to camp from ${originLocation}`;
   }
 
   if (running.phase === "followUp") {
@@ -985,6 +1244,14 @@ function isLocationId(id: string | undefined): id is LocationId {
 
 function isSidePanelId(id: string | undefined): id is SidePanelId {
   return id === "inventory" || id === "equipment";
+}
+
+function isSelectedCharacterAtCamp(state: GameState): boolean {
+  return state.characters.find((character) => character.id === state.selectedCharacterId)?.locationId === "camp";
+}
+
+function getCharacterLocationLabel(locationId: CharacterLocationId): string {
+  return locationId === "camp" ? "camp" : `the ${getLocation(locationId).label.toLowerCase()}`;
 }
 
 function hasLocationPanel(filterId: ActionFilterId): boolean {
@@ -1428,12 +1695,14 @@ function renderBuildingPanel(state: GameState, now: number): string {
 function renderBuildingCard(state: GameState, building: (typeof buildingDefinitions)[number], now: number): string {
   const built = isBuildingBuilt(state, building.id, now);
   const affordable = hasCost(state, building.recipe);
-  const disabled = built || !affordable;
+  const atCamp = isSelectedCharacterAtCamp(state);
+  const repeatable = isRepeatableBuilding(building.id);
+  const disabled = (!repeatable && built) || !affordable || !atCamp;
   const imageUrl = getBuildingImageUrl(state, building.id, now);
   const buttonLabel = getBuildingButtonLabel(state, building.id, now);
 
   return `
-    <article class="craft-item building-card ${built ? "owned" : ""} ${building.id === "campfire" && built ? "lit" : ""}">
+    <article class="craft-item building-card ${built || getBuildingCount(state, building.id) > 0 ? "owned" : ""} ${building.id === "campfire" && built ? "lit" : ""}">
       <button
         class="building-image-button"
         type="button"
@@ -1454,8 +1723,9 @@ function renderBuildingCard(state: GameState, building: (typeof buildingDefiniti
 function renderBuildingTooltip(state: GameState, building: (typeof buildingDefinitions)[number], now: number): string {
   const built = isBuildingBuilt(state, building.id, now);
   const affordable = hasCost(state, building.recipe);
+  const atCamp = isSelectedCharacterAtCamp(state);
   const rows: ActionTooltipRow[] = [
-    { label: "Status", value: getBuildingStatusText(state, building.id, now, built, affordable) },
+    { label: "Status", value: getBuildingStatusText(state, building.id, now, built, affordable, atCamp) },
     { label: "Cost", value: describeCost(building.recipe) },
     { label: "Use", value: building.blurb }
   ];
@@ -1480,7 +1750,15 @@ function renderBuildingTooltip(state: GameState, building: (typeof buildingDefin
 }
 
 function isBuildingBuilt(state: GameState, buildingId: BuildingId, now: number): boolean {
+  if (isRepeatableBuilding(buildingId)) {
+    return false;
+  }
+
   return buildingId === "campfire" ? isCampfireLit(state, now) : state.buildings[buildingId];
+}
+
+function isRepeatableBuilding(buildingId: BuildingId): boolean {
+  return buildingId === "hideTent";
 }
 
 function getBuildingImageUrl(state: GameState, buildingId: BuildingId, now: number): string {
@@ -1495,6 +1773,10 @@ function getBuildingImageUrl(state: GameState, buildingId: BuildingId, now: numb
 }
 
 function getBuildingButtonLabel(state: GameState, buildingId: BuildingId, now: number): string {
+  if (isRepeatableBuilding(buildingId)) {
+    return "Build";
+  }
+
   if (buildingId === "campfire" && isCampfireLit(state, now)) {
     return "Lit";
   }
@@ -1507,8 +1789,18 @@ function getBuildingStatusText(
   buildingId: BuildingId,
   now: number,
   built: boolean,
-  affordable: boolean
+  affordable: boolean,
+  atCamp: boolean
 ): string {
+  if (!atCamp && !built) {
+    return "Needs Cameron at camp";
+  }
+
+  if (buildingId === "hideTent") {
+    const count = getBuildingCount(state, buildingId);
+    return affordable ? `Tents: ${count}; next gives +1 housing` : `Tents: ${count}; needs ${getMissingCostText(state, buildingDefinitions.find((building) => building.id === buildingId)?.recipe ?? {})}`;
+  }
+
   if (buildingId === "campfire") {
     return built
       ? `Lit, burns out in <b data-campfire-remaining>${formatDuration(getCampfireRemainingMs(state, now))}</b>`
@@ -1601,6 +1893,7 @@ function renderCharacterInventory(state: GameState): string {
   const maxWeight = getCharacterMaxWeight(state);
   const iconIds = carriedIds.filter((id) => Boolean(resourceSlotImages[id]));
   const rowIds = carriedIds.filter((id) => !resourceSlotImages[id]);
+  const canStoreAtCamp = !state.currentAction && isSelectedCharacterAtCamp(state);
 
   return `
     <div class="resource-group character-inventory-group">
@@ -1610,7 +1903,7 @@ function renderCharacterInventory(state: GameState): string {
       </div>
       ${
         carriedIds.length
-          ? `<button class="deposit-button" type="button" data-command="deposit-carried" ${state.currentAction ? "disabled" : ""}>Store at Camp</button>`
+          ? `<button class="deposit-button" type="button" data-command="deposit-carried" ${canStoreAtCamp ? "" : "disabled"}>Store at Camp</button>`
           : ""
       }
       ${

@@ -63,6 +63,7 @@ export type ResourceCounts = Record<ResourceId, number>;
 export type ResourceCountDelta = Partial<Record<ResourceId, number>>;
 
 export type LocationId = "meadow" | "river" | "forest" | "mine";
+export type CharacterLocationId = "camp" | LocationId;
 
 export type RunningActionPhase = "travelingTo" | "working" | "followUp" | "travelingBack";
 
@@ -75,6 +76,7 @@ export interface ToolState {
 export type OwnedTools = Record<ToolId, ToolState>;
 
 export type OwnedBuildings = Record<BuildingId, boolean>;
+export type OwnedBuildingCounts = Record<BuildingId, number>;
 
 export type Cost = Partial<Record<ResourceId, number>>;
 
@@ -83,12 +85,15 @@ export interface Character {
   name: string;
   epithet: string;
   condition: "alone" | "working" | "resting";
+  locationId: CharacterLocationId;
 }
 
 export interface RunningAction {
   actionId: ActionId;
   characterId: string;
   phase: RunningActionPhase;
+  originLocationId?: CharacterLocationId;
+  targetLocationId?: CharacterLocationId;
   locationId?: LocationId;
   loopActionIds?: ActionId[];
   loopLocationIds?: Array<LocationId | null>;
@@ -124,6 +129,7 @@ export interface GameState {
   characterResourceCounts: ResourceCounts;
   tools: OwnedTools;
   buildings: OwnedBuildings;
+  buildingCounts: OwnedBuildingCounts;
   campfireExpiresAt: number | null;
   seenResources: ResourceId[];
   currentAction: RunningAction | null;

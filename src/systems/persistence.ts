@@ -1,12 +1,23 @@
 import { toolDefinitions } from "../data/craftables";
 import { wholeCountResourceIds } from "../data/resources";
 import {
+  createEmptyBuildingCounts,
   createEmptyInventory,
   createEmptyResourceCounts,
   createEmptyTools,
   createInitialState
 } from "../state/createInitialState";
-import type { GameState, OwnedTools, ResourceId, ToolId, ToolState } from "../types";
+import type {
+  CharacterLocationId,
+  GameState,
+  OwnedBuildingCounts,
+  OwnedBuildings,
+  OwnedTools,
+  ResourceId,
+  ToolId,
+  ToolState
+} from "../types";
+import { syncPopulationWithHousing } from "./camp";
 import { normalizeInventory } from "./inventory";
 
 const SAVE_KEY = "idle-town:first-survival-slice:v1";
@@ -31,6 +42,10 @@ export function loadGame(): GameState {
   try {
     const parsed = JSON.parse(saved) as Partial<GameState>;
     const fallback = createInitialState();
+    const buildings = {
+      ...fallback.buildings,
+      ...(parsed.buildings ?? {})
+    };
     const state: GameState = {
       ...fallback,
       ...parsed,
@@ -51,12 +66,10 @@ export function loadGame(): GameState {
         ...(parsed.characterResourceCounts ?? {})
       },
       tools: normalizeTools(parsed.tools),
-      buildings: {
-        ...fallback.buildings,
-        ...(parsed.buildings ?? {})
-      },
+      buildings,
+      buildingCounts: normalizeBuildingCounts(parsed.buildingCounts, buildings, fallback.buildingCounts),
       campfireExpiresAt: typeof parsed.campfireExpiresAt === "number" ? parsed.campfireExpiresAt : fallback.campfireExpiresAt,
-      characters: parsed.characters?.length ? parsed.characters : fallback.characters,
+      characters: normalizeCharacters(parsed.characters, fallback.characters),
       seenResources: parsed.seenResources?.length ? parsed.seenResources : fallback.seenResources,
       log: parsed.log?.length ? parsed.log : fallback.log,
       version: CURRENT_SAVE_VERSION
@@ -65,11 +78,62 @@ export function loadGame(): GameState {
     migrateLegacyAnimalCounts(state, savedVersion);
     migrateWholeResourceCounts(state, savedVersion);
     migrateCampfireTimer(state, savedVersion);
+    syncPopulationWithHousing(state);
     normalizeInventory(state);
     return state;
   } catch {
     return createInitialState();
   }
+}
+
+function normalizeBuildingCounts(
+  savedCounts: unknown,
+  buildings: OwnedBuildings,
+  fallbackCounts: OwnedBuildingCounts
+): OwnedBuildingCounts {
+  const counts = {
+    ...createEmptyBuildingCounts(),
+    ...fallbackCounts
+  };
+
+  if (savedCounts && typeof savedCounts === "object") {
+    const rawCounts = savedCounts as Partial<Record<keyof OwnedBuildingCounts, number>>;
+    for (const buildingId of Object.keys(counts) as Array<keyof OwnedBuildingCounts>) {
+      counts[buildingId] = Math.max(0, Math.floor(Number(rawCounts[buildingId] ?? counts[buildingId])));
+    }
+  }
+
+  for (const buildingId of Object.keys(buildings) as Array<keyof OwnedBuildings>) {
+    if (buildings[buildingId] && counts[buildingId] <= 0) {
+      counts[buildingId] = 1;
+    }
+  }
+
+  return counts;
+}
+
+function normalizeCharacters(savedCharacters: unknown, fallbackCharacters: GameState["characters"]): GameState["characters"] {
+  if (!Array.isArray(savedCharacters) || !savedCharacters.length) {
+    return fallbackCharacters;
+  }
+
+  return savedCharacters.map((savedCharacter, index) => {
+    const fallbackCharacter = fallbackCharacters[index] ?? fallbackCharacters[0];
+    if (!savedCharacter || typeof savedCharacter !== "object") {
+      return fallbackCharacter;
+    }
+
+    const candidate = savedCharacter as Partial<GameState["characters"][number]>;
+    return {
+      ...fallbackCharacter,
+      ...candidate,
+      locationId: isCharacterLocationId(candidate.locationId) ? candidate.locationId : fallbackCharacter.locationId
+    };
+  });
+}
+
+function isCharacterLocationId(value: unknown): value is CharacterLocationId {
+  return value === "camp" || value === "meadow" || value === "river" || value === "forest" || value === "mine";
 }
 
 function migrateCampfireTimer(state: GameState, savedVersion: number): void {

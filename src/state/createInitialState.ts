@@ -1,6 +1,6 @@
 import { baseVisibleResources, resourceOrder } from "../data/resources";
 import { toolDefinitions } from "../data/craftables";
-import type { GameState, Inventory, OwnedBuildings, OwnedTools, ResourceCounts } from "../types";
+import type { GameState, Inventory, OwnedBuildingCounts, OwnedBuildings, OwnedTools, ResourceCounts } from "../types";
 
 export function createEmptyInventory(): Inventory {
   return Object.fromEntries(resourceOrder.map((id) => [id, 0])) as Inventory;
@@ -16,6 +16,14 @@ export function createEmptyTools(): OwnedTools {
   ) as OwnedTools;
 }
 
+export function createEmptyBuildingCounts(): OwnedBuildingCounts {
+  return {
+    campfire: 0,
+    tanningRack: 0,
+    hideTent: 0
+  };
+}
+
 export function createInitialState(now = Date.now()): GameState {
   return {
     version: 4,
@@ -28,7 +36,8 @@ export function createInitialState(now = Date.now()): GameState {
         id: "cameron",
         name: "Cameron",
         epithet: "Alone at the treeline",
-        condition: "resting"
+        condition: "resting",
+        locationId: "camp"
       }
     ],
     inventory: createEmptyInventory(),
@@ -41,6 +50,7 @@ export function createInitialState(now = Date.now()): GameState {
       tanningRack: false,
       hideTent: false
     } satisfies OwnedBuildings,
+    buildingCounts: createEmptyBuildingCounts(),
     campfireExpiresAt: null,
     seenResources: [...baseVisibleResources],
     currentAction: null,

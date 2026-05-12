@@ -86,14 +86,22 @@ function getRenderSignature(): string {
     characterInventory: state.characterInventory,
     resourceCounts: state.resourceCounts,
     characterResourceCounts: state.characterResourceCounts,
+    characters: state.characters.map((character) => ({
+      id: character.id,
+      condition: character.condition,
+      locationId: character.locationId
+    })),
     tools: state.tools,
     buildings: state.buildings,
+    buildingCounts: state.buildingCounts,
     campfireExpiresAt: state.campfireExpiresAt,
     seenResources: state.seenResources,
     currentAction: state.currentAction
       ? {
           actionId: state.currentAction.actionId,
           phase: state.currentAction.phase,
+          originLocationId: state.currentAction.originLocationId,
+          targetLocationId: state.currentAction.targetLocationId,
           locationId: state.currentAction.locationId,
           loopActionIds: state.currentAction.loopActionIds,
           loopLocationIds: state.currentAction.loopLocationIds,
