@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Idle Town Location Map</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 44%, rgba(97, 57, 28, 0.22), transparent 48%),
+          linear-gradient(145deg, #1a1008 0%, #3a2517 56%, #100b07 100%);
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      main {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        padding: clamp(8px, 1.6vw, 22px);
+      }
+
+      .map-shell {
+        position: relative;
+        width: min(100%, 1536px);
+        max-height: calc(100vh - 16px);
+        aspect-ratio: 1536 / 1000;
+        overflow: hidden;
+        border-radius: 3px;
+        background: #2b1b0f;
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.58);
+      }
+
+      .map-image,
+      .traveler-layer {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .map-image {
+        display: block;
+        object-fit: cover;
+        user-select: none;
+      }
+
+      .traveler-layer {
+        pointer-events: none;
+      }
+
+      .route {
+        fill: none;
+        stroke: transparent;
+      }
+
+      .traveler {
+        filter: drop-shadow(0 2px 2px rgba(18, 10, 4, 0.55));
+      }
+
+      .traveler-head {
+        fill: #f0d08a;
+        stroke: #18100a;
+        stroke-width: 1.7;
+      }
+
+      .traveler-cloak {
+        fill: #17100a;
+        stroke: #17100a;
+        stroke-linejoin: round;
+        stroke-width: 1.4;
+      }
+
+      .traveler-staff {
+        stroke: #17100a;
+        stroke-linecap: round;
+        stroke-width: 1.5;
+      }
+
+      @media (max-width: 760px) {
+        body {
+          overflow: auto;
+        }
+
+        main {
+          align-items: start;
+        }
+
+        .map-shell {
+          max-height: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        animateMotion {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="map-shell" aria-label="Idle Town map with travelers">
+        <img class="map-image" src="./Map.png" alt="Idle Town parchment world map" />
+
+        <svg class="traveler-layer" viewBox="0 0 1536 1000" aria-hidden="true">
+          <defs>
+            <symbol id="traveler" viewBox="-10 -14 20 28">
+              <circle class="traveler-head" cx="0" cy="-7" r="4" />
+              <path class="traveler-cloak" d="M0 -2 L7 12 L-7 12 Z" />
+              <path class="traveler-staff" d="M6 -3 L10 12" />
+            </symbol>
+          </defs>
+
+          <path id="route-forest" class="route" d="M746 598 C682 558 610 503 565 424 C536 374 490 336 438 301" />
+          <path id="route-mine" class="route" d="M754 595 C823 541 870 483 898 407 C922 344 973 303 1048 278" />
+          <path id="route-meadow" class="route" d="M736 617 C659 687 597 759 500 824 C404 889 319 936 238 1008" />
+          <path id="route-river" class="route" d="M760 612 C865 644 992 712 1128 807 C1190 850 1262 841 1327 810" />
+          <path id="route-scout" class="route" d="M748 603 C606 579 464 494 361 371 C257 248 315 124 497 82 C730 28 950 93 1110 256 C1247 396 1268 611 1129 806 C1000 890 835 795 748 603" />
+
+          <g class="traveler">
+            <animateMotion dur="22s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.52;1" calcMode="linear">
+              <mpath href="#route-forest" />
+            </animateMotion>
+            <use href="#traveler" width="24" height="34" x="-12" y="-17" />
+          </g>
+
+          <g class="traveler">
+            <animateMotion dur="30s" begin="-8s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.52;1" calcMode="linear">
+              <mpath href="#route-mine" />
+            </animateMotion>
+            <use href="#traveler" width="24" height="34" x="-12" y="-17" />
+          </g>
+
+          <g class="traveler">
+            <animateMotion dur="20s" begin="-5s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.52;1" calcMode="linear">
+              <mpath href="#route-meadow" />
+            </animateMotion>
+            <use href="#traveler" width="24" height="34" x="-12" y="-17" />
+          </g>
+
+          <g class="traveler">
+            <animateMotion dur="24s" begin="-12s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.52;1" calcMode="linear">
+              <mpath href="#route-river" />
+            </animateMotion>
+            <use href="#traveler" width="24" height="34" x="-12" y="-17" />
+          </g>
+
+          <g class="traveler" opacity="0.86">
+            <animateMotion dur="54s" begin="-18s" repeatCount="indefinite" rotate="auto">
+              <mpath href="#route-scout" />
+            </animateMotion>
+            <use href="#traveler" width="20" height="29" x="-10" y="-14.5" />
+          </g>
+        </svg>
+      </section>
+    </main>
+  </body>
+</html>
