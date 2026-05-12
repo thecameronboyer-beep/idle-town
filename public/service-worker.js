@@ -1,4 +1,4 @@
-const CACHE_NAME = "idle-town-first-fire-v1";
+const CACHE_NAME = "idle-town-first-fire-v2";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -37,28 +37,57 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+  if (event.request.mode === "navigate" || event.request.destination === "document") {
+    event.respondWith(networkFirst(event.request, "./index.html"));
+    return;
+  }
 
-      return fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.ok) {
-            const responseCopy = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseCopy));
-          }
+  if (["script", "style", "worker"].includes(event.request.destination)) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
 
-          return networkResponse;
-        })
-        .catch(() => {
-          if (event.request.mode === "navigate") {
-            return caches.match("./index.html");
-          }
-
-          return new Response("", { status: 504, statusText: "Offline" });
-        });
-    })
-  );
+  event.respondWith(cacheFirst(event.request));
 });
+
+async function networkFirst(request, fallbackUrl) {
+  try {
+    const networkResponse = await fetch(request);
+    await cacheResponse(request, networkResponse);
+    return networkResponse;
+  } catch {
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    if (fallbackUrl) {
+      const fallbackResponse = await caches.match(fallbackUrl);
+      if (fallbackResponse) {
+        return fallbackResponse;
+      }
+    }
+
+    return new Response("", { status: 504, statusText: "Offline" });
+  }
+}
+
+async function cacheFirst(request) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  const networkResponse = await fetch(request);
+  await cacheResponse(request, networkResponse);
+  return networkResponse;
+}
+
+async function cacheResponse(request, response) {
+  if (!response || !response.ok) {
+    return;
+  }
+
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put(request, response.clone());
+}
