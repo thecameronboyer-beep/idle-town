@@ -111,7 +111,7 @@ type ActionCategory = {
   filterIds: ActionFilterId[];
 };
 
-type SidePanelId = "inventory" | "equipment";
+type SidePanelId = "inventory" | "equipment" | "log";
 type InventorySource = "camp" | "character";
 type ActionLoopTarget = { afterIndex: number } | null;
 
@@ -1243,7 +1243,7 @@ function isLocationId(id: string | undefined): id is LocationId {
 }
 
 function isSidePanelId(id: string | undefined): id is SidePanelId {
-  return id === "inventory" || id === "equipment";
+  return id === "inventory" || id === "equipment" || id === "log";
 }
 
 function isSelectedCharacterAtCamp(state: GameState): boolean {
@@ -1820,14 +1820,26 @@ function getBuildingStatusText(
 
 function renderSidePanel(state: GameState, activeSidePanel: SidePanelId): string {
   return `
-    <aside class="inventory-panel panel log-hidden">
+    <aside class="inventory-panel panel ${activeSidePanel === "log" ? "log-open" : "log-hidden"}">
       <div class="panel-tabs" role="tablist" aria-label="Character panel">
         ${renderSidePanelButton("inventory", "Inventory", activeSidePanel)}
         ${renderSidePanelButton("equipment", "Equipment", activeSidePanel)}
+        ${renderSidePanelButton("log", "Log", activeSidePanel)}
       </div>
-      ${activeSidePanel === "inventory" ? renderInventory(state) : renderEquipment(state)}
+      ${renderSidePanelContent(state, activeSidePanel)}
     </aside>
   `;
+}
+
+function renderSidePanelContent(state: GameState, activeSidePanel: SidePanelId): string {
+  switch (activeSidePanel) {
+    case "equipment":
+      return renderEquipment(state);
+    case "log":
+      return renderLog(state, "side-log-panel");
+    case "inventory":
+      return renderInventory(state);
+  }
 }
 
 function renderCampLogToggle(campLogVisible: boolean): string {
