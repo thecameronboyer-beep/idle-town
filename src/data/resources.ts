@@ -14,6 +14,12 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "Weight, edge, and spark."
   },
   {
+    id: "flaxPlant",
+    label: "Flax Plant",
+    group: "resources",
+    blurb: "Fresh flax stalks that need retting before useful fiber can be combed free."
+  },
+  {
     id: "flaxFiber",
     label: "Flax Fiber",
     group: "resources",
