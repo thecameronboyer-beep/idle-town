@@ -1,7 +1,7 @@
 import { fishResourceIds } from "../data/resources";
-import { getSmithingRecipe } from "../data/smithing";
 import type { ActionId, BuildingId, GameState } from "../types";
 import { isCampfireLit } from "./buildings";
+import { getSmithingRecipeLockReason, isSmithingRecipeUnlocked } from "./smithing";
 import { hasUsableTool } from "./tools";
 
 function hasSeenMeat(state: GameState): boolean {
@@ -24,7 +24,11 @@ function hasSeenFish(state: GameState): boolean {
 }
 
 export function isActionUnlocked(state: GameState, actionId: ActionId, now = Date.now()): boolean {
-  if (getSmithingRecipe(actionId)) {
+  if (isSmithingRecipeUnlocked(state, actionId)) {
+    return true;
+  }
+  const smithingLockReason = getSmithingRecipeLockReason(state, actionId);
+  if (smithingLockReason) {
     return false;
   }
 
@@ -72,6 +76,11 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
 }
 
 export function getActionLockReason(state: GameState, actionId: ActionId): string {
+  const smithingLockReason = getSmithingRecipeLockReason(state, actionId);
+  if (smithingLockReason) {
+    return smithingLockReason;
+  }
+
   switch (actionId) {
     case "fishRiver":
       return "Needs Fishing Pole";

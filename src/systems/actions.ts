@@ -1,4 +1,5 @@
 import { actionDefinitions, getActionDefinition } from "../data/actions";
+import { getSmithingRecipe } from "../data/smithing";
 import type { ActionId, Cost, GameState, RunningAction } from "../types";
 import {
   addCharacterResources,
@@ -138,6 +139,11 @@ export function startActionLoop(
 }
 
 export function getActionCost(actionId: ActionId): Cost {
+  const smithingRecipe = getSmithingRecipe(actionId);
+  if (smithingRecipe) {
+    return smithingRecipe.cost;
+  }
+
   switch (actionId) {
     case "cookRabbitMeat":
       return { rabbitMeat: 1 };
