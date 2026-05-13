@@ -128,5 +128,11 @@ export const buildingDefinitions: CraftableDefinition<BuildingId>[] = [
     label: "Primitive Spinning Wheel",
     recipe: { wood: 8, stick: 6, linenThread: 2 },
     blurb: "A simple frame, spindle, and wheel for turning flax fiber into thread faster."
+  },
+  {
+    id: "primitiveLoom",
+    label: "Primitive Loom",
+    recipe: { wood: 10, stick: 8, linenThread: 4 },
+    blurb: "A wooden frame for stretching warp threads and weaving linen cloth."
   }
 ];

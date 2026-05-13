@@ -88,7 +88,8 @@ const BUILDING_SKILL_XP: Record<BuildingId, number> = {
   tanningRack: 320,
   hideTent: 450,
   crudeStoneFurnace: 520,
-  primitiveSpinningWheel: 360
+  primitiveSpinningWheel: 360,
+  primitiveLoom: 480
 };
 
 export function createEmptySkills(): Skills {

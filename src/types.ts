@@ -56,7 +56,8 @@ export type BuildingId =
   | "tanningRack"
   | "hideTent"
   | "crudeStoneFurnace"
-  | "primitiveSpinningWheel";
+  | "primitiveSpinningWheel"
+  | "primitiveLoom";
 
 export type ActionId =
   | "gatherSticks"
