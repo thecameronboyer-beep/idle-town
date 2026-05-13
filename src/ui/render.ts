@@ -2256,6 +2256,8 @@ function getBuildingImageUrl(state: GameState, buildingId: BuildingId, now: numb
       return tanningRackUrl;
     case "hideTent":
       return hideTentUrl;
+    case "crudeStoneFurnace":
+      return campfireUnlitUrl;
   }
 }
 

@@ -109,6 +109,8 @@ export function isBuildingUnlocked(state: GameState, buildingId: BuildingId, now
       return state.buildings.tanningRack || state.seenResources.includes("hide");
     case "hideTent":
       return state.buildings.hideTent || state.seenResources.includes("hide");
+    case "crudeStoneFurnace":
+      return state.buildings.crudeStoneFurnace || state.seenResources.includes("coal") || state.seenResources.includes("copper");
   }
 }
 
@@ -119,5 +121,7 @@ export function getBuildingUnlockReason(_state: GameState, buildingId: BuildingI
     case "tanningRack":
     case "hideTent":
       return "See Hide";
+    case "crudeStoneFurnace":
+      return "See Coal or Copper";
   }
 }

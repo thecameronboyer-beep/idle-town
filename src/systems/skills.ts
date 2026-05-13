@@ -70,7 +70,8 @@ const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
 const BUILDING_SKILL_XP: Record<BuildingId, number> = {
   campfire: 80,
   tanningRack: 320,
-  hideTent: 450
+  hideTent: 450,
+  crudeStoneFurnace: 520
 };
 
 export function createEmptySkills(): Skills {
