@@ -17,7 +17,20 @@ export interface TextileRecipeDefinition {
   requiredAnyResources?: ResourceId[];
 }
 
-export const textileRecipeDefinitions: TextileRecipeDefinition[] = [];
+export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
+  {
+    actionId: "retFlax",
+    label: "Ret Flax",
+    verb: "retting flax",
+    kind: "retting",
+    durationMs: 60000,
+    cost: { flaxPlant: 3 },
+    output: { rettedFlax: 3 },
+    blurb: "Soak and wait out whole flax stalks until the fibers loosen from the woody stem.",
+    unlockHint: "Gather Flax Plant",
+    requiredSeenResources: ["flaxPlant"]
+  }
+];
 
 export const textileActionIds: ActionId[] = textileRecipeDefinitions.map((recipe) => recipe.actionId);
 

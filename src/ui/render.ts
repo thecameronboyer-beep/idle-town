@@ -2192,6 +2192,8 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [squirrelIconUrl];
     case "tanHide":
       return [hideIconUrl];
+    case "retFlax":
+      return [flaxFiberIconUrl];
     case "smeltCopperBar":
       return [copperIconUrl, coalIconUrl];
     case "smeltBronzeBar":

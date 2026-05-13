@@ -78,6 +78,7 @@ export type ActionId =
   | "cookSquirrelMeat"
   | "tanHide"
   | "craftLeatherBackpack"
+  | "retFlax"
   | "smeltCopperBar"
   | "smeltBronzeBar"
   | "craftPot"

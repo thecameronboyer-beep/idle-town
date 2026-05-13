@@ -67,6 +67,7 @@ const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
   cookSquirrelMeat: { skillId: "cooking", xp: 160 },
   tanHide: { skillId: "leatherworking", xp: 430 },
   craftLeatherBackpack: { skillId: "leatherworking", xp: 900 },
+  retFlax: { skillId: "textiles", xp: 420 },
   smeltCopperBar: { skillId: "smithing", xp: 260 },
   smeltBronzeBar: { skillId: "smithing", xp: 420 },
   craftPot: { skillId: "smithing", xp: 220 },
