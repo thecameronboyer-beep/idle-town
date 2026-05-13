@@ -1,4 +1,5 @@
 import { getActionDefinition } from "../data/actions";
+import { combatClassDefinitions, getCombatEnemyDefinition, getCombatLocationDefinition } from "../data/combat";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
 import { getSmithingRecipe, metalworkingActionIds, smeltingActionIds, smithingActionIds } from "../data/smithing";
 import {
@@ -63,6 +64,18 @@ import tanningRackUrl from "../assets/buildings/tanning-rack-2x2.png";
 import woodIconUrl from "../assets/items/wood-icon.png";
 import { getCampfireRemainingMs, isCampfireLit } from "../systems/buildings";
 import { getBuildingCount, getPopulationCapacity, getPopulationCount } from "../systems/camp";
+import {
+  dispatchCharacterToCombat,
+  getCombatUnitForCharacter,
+  getLivingEnemyUnits,
+  isCharacterDispatched,
+  recallCharacterFromCombat
+} from "../systems/combat";
+import {
+  formatCombatClassXp,
+  getCharacterCombatLoadout,
+  getCombatClassProgressView
+} from "../systems/combatClasses";
 import { buildStructure, getMissingCostText } from "../systems/crafting";
 import {
   BASE_CHARACTER_MAX_WEIGHT,
@@ -118,6 +131,7 @@ import type {
   ActionId,
   BuildingId,
   CharacterLocationId,
+  CombatUnit,
   GameState,
   Inventory,
   LocationId,
@@ -586,6 +600,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
   let mapVisible = false;
   let characterPanelVisible = false;
   let characterDetailsVisible = false;
+  let combatPanelVisible = false;
   let settingsPanelVisible = false;
   let actionLoopsPanelVisible = false;
   let actionLoopTarget: ActionLoopTarget = null;
@@ -618,6 +633,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       activeActionCategory = id;
@@ -633,6 +649,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       activeActionFilter = id;
@@ -644,6 +661,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       activeLocation = id;
@@ -657,6 +675,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = true;
+      combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       handlers.requestRender();
@@ -668,6 +687,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       handlers.requestRender();
@@ -679,6 +699,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = true;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       handlers.requestRender();
@@ -690,6 +711,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = false;
       characterPanelVisible = true;
       characterDetailsVisible = false;
+      combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       handlers.requestRender();
@@ -701,6 +723,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = true;
+      combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       handlers.requestRender();
@@ -712,6 +735,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      combatPanelVisible = false;
       actionLoopsPanelVisible = false;
       settingsPanelVisible = true;
       handlers.requestRender();
@@ -723,8 +747,45 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = true;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "open-combat") {
+      campLogVisible = false;
+      mapVisible = false;
+      characterPanelVisible = false;
+      characterDetailsVisible = false;
+      combatPanelVisible = true;
+      settingsPanelVisible = false;
+      actionLoopsPanelVisible = false;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "dispatch-combat") {
+      const characterId = button.dataset.characterId ?? state.selectedCharacterId;
+      dispatchCharacterToCombat(state, characterId, "ruins", handlers.getNow());
+      combatPanelVisible = true;
+      campLogVisible = false;
+      mapVisible = false;
+      characterPanelVisible = false;
+      characterDetailsVisible = false;
+      settingsPanelVisible = false;
+      actionLoopsPanelVisible = false;
+      handlers.persist();
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "recall-combat") {
+      const characterId = button.dataset.characterId ?? state.selectedCharacterId;
+      recallCharacterFromCombat(state, characterId, handlers.getNow());
+      combatPanelVisible = true;
+      handlers.persist();
       handlers.requestRender();
       return;
     }
@@ -943,6 +1004,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       mapVisible,
       characterPanelVisible,
       characterDetailsVisible,
+      combatPanelVisible,
       settingsPanelVisible,
       actionLoopsPanelVisible,
       actionLoopTarget,
@@ -966,6 +1028,7 @@ function renderApp(
   mapVisible: boolean,
   characterPanelVisible: boolean,
   characterDetailsVisible: boolean,
+  combatPanelVisible: boolean,
   settingsPanelVisible: boolean,
   actionLoopsPanelVisible: boolean,
   actionLoopTarget: ActionLoopTarget,
@@ -983,6 +1046,7 @@ function renderApp(
         mapVisible,
         characterPanelVisible,
         characterDetailsVisible,
+        combatPanelVisible,
         settingsPanelVisible,
         actionLoopsPanelVisible,
         testSpeedMultiplier
@@ -998,6 +1062,8 @@ function renderApp(
             ? renderSettingsPanel()
             : characterPanelVisible
             ? renderCharacterPanel(state)
+            : combatPanelVisible
+            ? renderCombatPanel(state, now)
             : mapVisible
             ? renderLocationMapPanel(state, now)
             : campLogVisible
@@ -1017,6 +1083,7 @@ function renderCharacterSidebar(
   mapVisible: boolean,
   characterPanelVisible: boolean,
   characterDetailsVisible: boolean,
+  combatPanelVisible: boolean,
   settingsPanelVisible: boolean,
   actionLoopsPanelVisible: boolean,
   testSpeedMultiplier: number
@@ -1028,6 +1095,7 @@ function renderCharacterSidebar(
     !mapVisible &&
     !characterPanelVisible &&
     !characterDetailsVisible &&
+    !combatPanelVisible &&
     !settingsPanelVisible &&
     !actionLoopsPanelVisible;
 
@@ -1058,9 +1126,11 @@ function renderCharacterSidebar(
                 .map((category) => renderCategoryButton(category, activeActionCategory, workAreaVisible))
                 .join("")}
               ${renderCharactersButton(characterPanelVisible)}
+              ${renderCombatButton(combatPanelVisible)}
               ${renderMapButton(mapVisible)}
             </div>
           </nav>
+          ${renderPartyRail(state)}
           <div class="sidebar-footer">
             ${renderActionLoopsToggle(actionLoopsPanelVisible)}
             ${renderCampLogToggle(campLogVisible)}
@@ -1102,7 +1172,8 @@ function renderCharacterPanel(state: GameState): string {
 
 function renderCharacterSelectCard(state: GameState, character: GameState["characters"][number]): string {
   const selected = state.selectedCharacterId === character.id;
-  const active = Boolean(getCurrentAction(state, character.id));
+  const active = Boolean(getCurrentAction(state, character.id) || getCombatUnitForCharacter(state, character.id));
+  const loadout = getCharacterCombatLoadout(state, character.id);
 
   return `
     <button
@@ -1116,6 +1187,7 @@ function renderCharacterSelectCard(state: GameState, character: GameState["chara
       <span class="character-select-copy">
         <strong>${character.name}</strong>
         <small>${character.epithet}</small>
+        <small>${loadout.classLabel} · ${loadout.weaponLabel}</small>
         <em>${getCharacterStatusText(state, character)}</em>
       </span>
       <span class="character-select-badge">${selected ? "Selected" : "Select"}</span>
@@ -1173,6 +1245,86 @@ function renderCharactersButton(active: boolean): string {
   `;
 }
 
+function renderCombatButton(active: boolean): string {
+  return `
+    <button
+      class="category-button combat-button ${active ? "active" : ""}"
+      type="button"
+      data-command="open-combat"
+      aria-pressed="${active}"
+    >
+      <span>Ruins</span>
+    </button>
+  `;
+}
+
+function renderPartyRail(state: GameState): string {
+  return `
+    <section class="party-rail" aria-label="Party">
+      <div class="party-rail-heading">
+        <span>Party</span>
+        <small>${state.characters.length} available</small>
+      </div>
+      <div class="party-member-list">
+        ${state.characters.map((character) => renderPartyMember(state, character)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderPartyMember(state: GameState, character: GameState["characters"][number]): string {
+  const unit = getCombatUnitForCharacter(state, character.id);
+  const dispatched = Boolean(unit);
+  const running = getCurrentAction(state, character.id);
+  const loadout = getCharacterCombatLoadout(state, character.id);
+  const combatStats = unit ?? character.combat;
+  const hpMax = unit?.maxHp ?? loadout.maxHp;
+  const manaMax = unit?.maxMana ?? loadout.maxMana;
+  const hp = Math.min(hpMax, combatStats.hp);
+  const mana = Math.min(manaMax, combatStats.mana);
+  const status = dispatched ? "In Ruins" : running ? "Working" : "Ready";
+  const command = dispatched ? "recall-combat" : "dispatch-combat";
+  const disabled = !dispatched && Boolean(running);
+
+  return `
+    <article class="party-member ${dispatched ? "dispatched" : ""}">
+      <div class="party-member-topline">
+        <span class="portrait small" aria-hidden="true">${getCharacterInitials(character.name)}</span>
+        <span>
+          <strong>${character.name}</strong>
+          <small>${loadout.classLabel} · ${status}</small>
+        </span>
+      </div>
+      ${renderVitalsBar("HP", hp, hpMax, "hp")}
+      ${renderVitalsBar("Mana", mana, manaMax, "mana")}
+      <button
+        class="party-dispatch-button"
+        type="button"
+        data-command="${command}"
+        data-character-id="${character.id}"
+        ${disabled ? "disabled" : ""}
+      >
+        ${dispatched ? "Recall" : "Dispatch"}
+      </button>
+    </article>
+  `;
+}
+
+function renderVitalsBar(label: string, current: number, max: number, type: "hp" | "mana"): string {
+  const safeMax = Math.max(1, max);
+  const safeCurrent = Math.max(0, Math.min(safeMax, current));
+  const ratio = safeCurrent / safeMax;
+  return `
+    <div class="vitals-row ${type}">
+      <span>${label}</span>
+      <div class="vitals-track" aria-hidden="true">
+        <span style="transform: scaleX(${ratio.toFixed(4)})"></span>
+      </div>
+      <strong>${Math.round(safeCurrent)}/${Math.round(safeMax)}</strong>
+    </div>
+  `;
+}
+
 function renderCategoryButton(
   category: ActionCategory,
   activeActionCategory: ActionCategoryId,
@@ -1203,6 +1355,140 @@ function renderMapButton(active: boolean): string {
     >
       <span>Map</span>
     </button>
+  `;
+}
+
+function renderCombatPanel(state: GameState, now: number): string {
+  const location = getCombatLocationDefinition("ruins");
+  const encounter = state.combat.encounter;
+  const enemyCount = getLivingEnemyUnits(encounter).length;
+  const dispatchedCount = state.characters.filter((character) => isCharacterDispatched(state, character.id)).length;
+
+  return `
+    <div class="work-area combat-work-area">
+      <section class="panel combat-panel" aria-label="${location.label}" data-editor-id="combat-panel" data-editor-label="Combat panel" data-editor-files="src/ui/render.ts, src/style.css">
+        <div class="combat-panel-heading">
+          <span>
+            <span class="kicker">Combat Location</span>
+            <h2>${location.label}</h2>
+          </span>
+          <span class="combat-status-pill">${encounter ? `Wave ${encounter.wave}` : "Quiet"}</span>
+        </div>
+        <p class="combat-location-blurb">${location.blurb}</p>
+        <div class="combat-summary-grid">
+          <div>
+            <strong>${dispatchedCount}</strong>
+            <small>Dispatched</small>
+          </div>
+          <div>
+            <strong>${enemyCount}</strong>
+            <small>Enemies</small>
+          </div>
+          <div>
+            <strong>${encounter?.defeatedEnemies ?? 0}</strong>
+            <small>Defeated</small>
+          </div>
+        </div>
+        ${renderCombatGrid(state, now)}
+      </section>
+      <aside class="panel combat-side-panel" aria-label="Combat status" data-editor-id="combat-side-panel" data-editor-label="Combat side panel" data-editor-files="src/ui/render.ts, src/style.css">
+        <div class="section-heading">
+          <span>Status</span>
+        </div>
+        ${renderCombatRoster(state, now)}
+        ${renderCombatEventLog(state)}
+      </aside>
+    </div>
+  `;
+}
+
+function renderCombatGrid(state: GameState, now: number): string {
+  const location = getCombatLocationDefinition("ruins");
+  const encounter = state.combat.encounter;
+  const cells: string[] = [];
+
+  for (let y = 0; y < location.gridHeight; y += 1) {
+    for (let x = 0; x < location.gridWidth; x += 1) {
+      const unit = encounter?.units.find((candidate) => candidate.x === x && candidate.y === y && candidate.hp > 0) ?? null;
+      cells.push(renderCombatCell(unit, x, y, now));
+    }
+  }
+
+  return `
+    <div class="combat-field" style="--combat-cols: ${location.gridWidth}; --combat-rows: ${location.gridHeight};" aria-label="Combat grid">
+      ${cells.join("")}
+    </div>
+    <div class="combat-field-message">${encounter?.message ?? "Dispatch a party member from the left rail."}</div>
+  `;
+}
+
+function renderCombatCell(unit: CombatUnit | null, x: number, y: number, now: number): string {
+  if (!unit) {
+    return `<div class="combat-cell" data-grid-x="${x}" data-grid-y="${y}"></div>`;
+  }
+
+  const glyph =
+    unit.kind === "enemy" && unit.enemyId
+      ? getCombatEnemyDefinition(unit.enemyId).glyph
+      : getCharacterInitials(unit.name);
+  const nextAct = Math.max(0, unit.nextActAt - now);
+  return `
+    <div class="combat-cell occupied ${unit.kind}" data-grid-x="${x}" data-grid-y="${y}" title="${unit.name}">
+      <span class="combat-unit-glyph">${glyph}</span>
+      <span class="combat-unit-name">${unit.name}</span>
+      <span class="combat-unit-timer">${formatDuration(nextAct)}</span>
+      ${renderVitalsBar("HP", unit.hp, unit.maxHp, "hp")}
+    </div>
+  `;
+}
+
+function renderCombatRoster(state: GameState, now: number): string {
+  const encounter = state.combat.encounter;
+  if (!encounter) {
+    return `<div class="empty-line">No one is fighting.</div>`;
+  }
+
+  return `
+    <div class="combat-roster-list">
+      ${encounter.units.map((unit) => renderCombatRosterUnit(unit, now)).join("")}
+    </div>
+  `;
+}
+
+function renderCombatRosterUnit(unit: CombatUnit, now: number): string {
+  const classLabel = unit.classId ? getCombatClassDefinitionLabel(unit.classId) : "Enemy";
+  const actionText = unit.hp > 0 ? `Acts in ${formatDuration(unit.nextActAt - now)}` : "Down";
+  return `
+    <article class="combat-roster-unit ${unit.kind}">
+      <div>
+        <strong>${unit.name}</strong>
+        <small>${classLabel} · ${actionText}</small>
+      </div>
+      ${renderVitalsBar("HP", unit.hp, unit.maxHp, "hp")}
+      ${unit.maxMana > 0 ? renderVitalsBar("Mana", unit.mana, unit.maxMana, "mana") : ""}
+    </article>
+  `;
+}
+
+function getCombatClassDefinitionLabel(classId: string): string {
+  return combatClassDefinitions.find((definition) => definition.id === classId)?.label ?? "Fighter";
+}
+
+function renderCombatEventLog(state: GameState): string {
+  const entries = state.combat.log.slice(0, 8);
+  return `
+    <section class="combat-event-log" aria-label="Combat log">
+      <h3>Combat Log</h3>
+      <div class="combat-log-list">
+        ${
+          entries.length
+            ? entries
+                .map((entry) => `<div class="combat-log-entry ${entry.tone}">${entry.text}</div>`)
+                .join("")
+            : `<div class="empty-line">No combat events yet.</div>`
+        }
+      </div>
+    </section>
   `;
 }
 
@@ -2059,6 +2345,10 @@ function getPossessiveName(name: string): string {
 }
 
 function getCharacterStatusText(state: GameState, character: GameState["characters"][number]): string {
+  if (getCombatUnitForCharacter(state, character.id)) {
+    return "fighting in The Ruins";
+  }
+
   if (getCurrentAction(state, character.id)) {
     return getRunningActionStatus(state, character.id);
   }
@@ -2902,11 +3192,17 @@ function renderCharacterStatsPanel(state: GameState): string {
   const running = getCurrentAction(state, selectedCharacter.id);
   const assignedLoop = selectedCharacter.actionLoopId ? getActionLoop(state, selectedCharacter.actionLoopId) : null;
   const currentActionLabel = running ? (getActionDefinition(getActiveActionId(running))?.label ?? "Working") : "Idle";
+  const loadout = getCharacterCombatLoadout(state, selectedCharacter.id);
+  const combatStats = getCombatUnitForCharacter(state, selectedCharacter.id) ?? selectedCharacter.combat;
   const stats: EquipmentStat[] = [
     { label: "Status", value: getCharacterStatusText(state, selectedCharacter) },
     { label: "Location", value: getCharacterLocationLabel(selectedCharacter.locationId) },
     { label: "Current", value: currentActionLabel },
     { label: "Action Loop", value: assignedLoop?.name ?? "None" },
+    { label: "Class", value: loadout.classLabel },
+    { label: "Weapon", value: loadout.weaponLabel },
+    { label: "HP", value: `${Math.round(combatStats.hp)} / ${Math.round(combatStats.maxHp)}` },
+    { label: "Mana", value: `${Math.round(combatStats.mana)} / ${Math.round(combatStats.maxMana)}` },
     ...getEquipmentSummaryStats(state)
   ];
 
@@ -2947,6 +3243,7 @@ function renderSkillsPanel(state: GameState): string {
     <h3>Skills</h3>
     <section class="side-panel-content skills-screen" aria-label="Skills" data-editor-id="skills-screen" data-editor-label="Skills screen" data-editor-files="src/ui/render.ts, src/style.css">
       ${visibleGroups.map((group) => renderSkillGroup(state, group)).join("")}
+      ${renderCombatClassProgressPanel(state)}
     </section>
   `;
 }
@@ -2999,6 +3296,53 @@ function renderSkillRow(state: GameState, skillId: SkillId): string {
           ? `<button class="skill-prestige-button" type="button" data-command="prestige-skill" data-id="${skillId}">Prestige</button>`
           : ""
       }
+    </article>
+  `;
+}
+
+function renderCombatClassProgressPanel(state: GameState): string {
+  const selectedCharacter = getSelectedCharacter(state);
+  const loadout = getCharacterCombatLoadout(state, selectedCharacter.id);
+  const rows = combatClassDefinitions.filter((definition) => {
+    const progress = selectedCharacter.classProgress[definition.id];
+    return definition.id === loadout.classId || (progress?.totalXp ?? 0) > 0;
+  });
+
+  return `
+    <section class="skill-group combat-class-group" aria-label="Combat class experience">
+      <h4>Combat Classes</h4>
+      <div class="skill-group-list">
+        ${rows.map((definition) => renderCombatClassRow(state, definition.id)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderCombatClassRow(state: GameState, classId: (typeof combatClassDefinitions)[number]["id"]): string {
+  const selectedCharacter = getSelectedCharacter(state);
+  const definition = combatClassDefinitions.find((candidate) => candidate.id === classId) ?? combatClassDefinitions[0];
+  const progress = selectedCharacter.classProgress[classId];
+  const progressView = getCombatClassProgressView(progress);
+  const progressLabel = progressView.atCap
+    ? "Max level"
+    : `${formatCombatClassXp(progressView.xpIntoLevel)} / ${formatCombatClassXp(progressView.xpForLevel)} XP`;
+
+  return `
+    <article class="skill-row combat-class-row" data-editor-id="combat-class-row-${classId}" data-editor-label="Combat class row: ${definition.label}" data-editor-files="src/ui/render.ts, src/style.css">
+      <div class="skill-row-heading">
+        <span>
+          <strong>${definition.label}</strong>
+          <small>${definition.weaponLabel} · Total ${formatCombatClassXp(progress.totalXp)} XP</small>
+        </span>
+        <span class="skill-level-pill">Lv ${progress.level}</span>
+      </div>
+      <div class="skill-progress-track" aria-hidden="true">
+        <span style="transform: scaleX(${Math.min(1, Math.max(0, progressView.ratio)).toFixed(4)})"></span>
+      </div>
+      <div class="skill-row-meta">
+        <span>${progressLabel}</span>
+        <span>${definition.role}</span>
+      </div>
     </article>
   `;
 }
