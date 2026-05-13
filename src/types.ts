@@ -28,7 +28,14 @@ export type ResourceId =
   | "brookSticklebackFilet"
   | "pebblePerchFilet";
 
-export type ToolId = "stoneAxe" | "stoneSpear" | "stoneKnife" | "stonePickAxe" | "fishingPole" | "basket";
+export type ToolId =
+  | "stoneAxe"
+  | "stoneSpear"
+  | "stoneKnife"
+  | "stonePickAxe"
+  | "fishingPole"
+  | "basket"
+  | "leatherBackpack";
 
 export type BuildingId = "campfire" | "tanningRack" | "hideTent";
 
@@ -56,7 +63,21 @@ export type ActionId =
   | "butcherSquirrel"
   | "cookRabbitMeat"
   | "cookSquirrelMeat"
-  | "tanHide";
+  | "tanHide"
+  | "craftLeatherBackpack";
+
+export type SkillId =
+  | "foraging"
+  | "mining"
+  | "fishing"
+  | "woodcutting"
+  | "hunting"
+  | "crafting"
+  | "butchering"
+  | "cooking"
+  | "leatherworking"
+  | "construction"
+  | "agility";
 
 export type Inventory = Record<ResourceId, number>;
 export type ResourceCounts = Record<ResourceId, number>;
@@ -80,12 +101,33 @@ export type OwnedBuildingCounts = Record<BuildingId, number>;
 
 export type Cost = Partial<Record<ResourceId, number>>;
 
+export interface SkillPrestigeBonus {
+  id: string;
+  label: string;
+  description?: string;
+  value?: number;
+  kind?: string;
+}
+
+export interface SkillState {
+  level: number;
+  xp: number;
+  totalXp: number;
+  prestige: number;
+  bonuses: SkillPrestigeBonus[];
+}
+
+export type Skills = Record<SkillId, SkillState>;
+
 export interface Character {
   id: string;
   name: string;
   epithet: string;
   condition: "alone" | "working" | "resting";
   locationId: CharacterLocationId;
+  inventory: Inventory;
+  resourceCounts: ResourceCounts;
+  actionLoopId?: string;
 }
 
 export interface RunningAction {
@@ -105,11 +147,23 @@ export interface RunningAction {
   repeat: boolean;
 }
 
+export interface ActionLoop {
+  id: string;
+  name: string;
+  actionIds: ActionId[];
+  locationIds: Array<LocationId | null>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type LogScope = "camp" | "character";
+
 export interface LogEntry {
   id: string;
   time: number;
   text: string;
   tone: "muted" | "gain" | "craft" | "warning";
+  scope?: LogScope;
   aggregateKey?: string;
   aggregateTotal?: number;
   aggregateUnit?: string;
@@ -117,7 +171,7 @@ export interface LogEntry {
 }
 
 export interface GameState {
-  version: 4;
+  version: 6;
   createdAt: number;
   updatedAt: number;
   lastSimulatedAt: number;
@@ -132,6 +186,9 @@ export interface GameState {
   buildingCounts: OwnedBuildingCounts;
   campfireExpiresAt: number | null;
   seenResources: ResourceId[];
+  skills: Skills;
+  actionLoops: ActionLoop[];
+  currentActions: RunningAction[];
   currentAction: RunningAction | null;
   log: LogEntry[];
 }

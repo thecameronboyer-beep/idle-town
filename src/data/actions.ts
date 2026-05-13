@@ -168,6 +168,13 @@ export const actionDefinitions: ActionDefinition[] = [
     verb: "working hide",
     durationMs: 36000,
     blurb: "Scrape, stretch, wait, repeat."
+  },
+  {
+    id: "craftLeatherBackpack",
+    label: "Craft Leather Backpack",
+    verb: "crafting a leather backpack",
+    durationMs: 15000,
+    blurb: "Knot a crude leather sling pouch with a drawstring."
   }
 ];
 

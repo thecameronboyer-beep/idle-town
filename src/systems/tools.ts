@@ -27,7 +27,13 @@ export function equipFreshTool(state: GameState, toolId: ToolId): boolean {
   return true;
 }
 
-export function damageTool(state: GameState, toolId: ToolId, amount: number, now = Date.now()): void {
+export function damageTool(
+  state: GameState,
+  toolId: ToolId,
+  amount: number,
+  now = Date.now(),
+  characterName = "Cameron"
+): void {
   const tool = state.tools[toolId];
   if (!tool?.owned || tool.durability <= 0) {
     return;
@@ -37,11 +43,11 @@ export function damageTool(state: GameState, toolId: ToolId, amount: number, now
   if (tool.durability === 0) {
     const label = getToolDefinition(toolId)?.label ?? "Tool";
     if (equipFreshTool(state, toolId)) {
-      addLog(state, `${label} breaks; Cameron takes a fresh one from inventory.`, "warning", now);
+      addLog(state, `${label} breaks; ${characterName} takes a fresh one from inventory.`, "warning", now, "character");
       return;
     }
 
     tool.owned = false;
-    addLog(state, `${label} breaks. No spare remains.`, "warning", now);
+    addLog(state, `${label} breaks. No spare remains.`, "warning", now, "character");
   }
 }
