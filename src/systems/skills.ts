@@ -42,6 +42,7 @@ export const skillIds: SkillId[] = skillDefinitions.map((definition) => definiti
 const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
   gatherSticks: { skillId: "foraging", xp: 70 },
   gatherStones: { skillId: "foraging", xp: 85 },
+  gatherFlaxPlants: { skillId: "foraging", xp: 110 },
   gatherFlaxFibers: { skillId: "foraging", xp: 100 },
   gatherMushrooms: { skillId: "foraging", xp: 100 },
   gatherBerries: { skillId: "foraging", xp: 100 },

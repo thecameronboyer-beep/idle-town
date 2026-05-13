@@ -17,6 +17,13 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Cameron checks creek beds and exposed roots."
   },
   {
+    id: "gatherFlaxPlants",
+    label: "Gather Flax Plants",
+    verb: "cutting flax plants",
+    durationMs: 11000,
+    blurb: "Cut whole flax stalks for later retting and fiber work."
+  },
+  {
     id: "gatherFlaxFibers",
     label: "Gather Flax Fibers",
     verb: "pulling flax fibers",

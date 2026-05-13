@@ -187,7 +187,7 @@ const actionFilters: ActionFilter[] = [
   {
     id: "foraging",
     label: "Forage",
-    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxFibers", "gatherMushrooms", "gatherBerries"]
+    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxPlants", "gatherFlaxFibers", "gatherMushrooms", "gatherBerries"]
   },
   {
     id: "fishing",
@@ -287,7 +287,7 @@ const locationDefinitions: LocationDefinition[] = [
     id: "meadow",
     label: "Meadow",
     iconUrl: meadowLocationIconUrl,
-    actionIds: ["gatherSticks", "gatherStones", "gatherMushrooms", "gatherBerries"]
+    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxPlants", "gatherMushrooms", "gatherBerries"]
   },
   {
     id: "river",
@@ -2146,6 +2146,8 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [stickIconUrl];
     case "gatherStones":
       return [stoneIconUrl];
+    case "gatherFlaxPlants":
+      return [flaxFiberIconUrl];
     case "gatherFlaxFibers":
       return [flaxFiberIconUrl];
     case "gatherMushrooms":
@@ -2245,6 +2247,8 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
       return [...rows, { label: "Pickup", value: "1-3 Sticks" }, { label: "Each", value: "1 weight" }];
     case "gatherStones":
       return [...rows, { label: "Pickup", value: "1-2 Stones" }, { label: "Each", value: "1 weight" }];
+    case "gatherFlaxPlants":
+      return [...rows, { label: "Pickup", value: "2-4 Flax Plants" }, { label: "Each", value: "1 weight" }];
     case "gatherFlaxFibers":
       return [...rows, { label: "Pickup", value: "1-3 Flax Fibers" }, { label: "Each", value: "1 weight" }];
     case "gatherMushrooms":

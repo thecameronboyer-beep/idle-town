@@ -153,6 +153,7 @@ function isGatherAction(actionId: ActionId): boolean {
   return (
     actionId === "gatherSticks" ||
     actionId === "gatherStones" ||
+    actionId === "gatherFlaxPlants" ||
     actionId === "gatherFlaxFibers" ||
     actionId === "gatherMushrooms" ||
     actionId === "gatherBerries" ||

@@ -35,6 +35,7 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
   switch (actionId) {
     case "gatherSticks":
     case "gatherStones":
+    case "gatherFlaxPlants":
     case "gatherFlaxFibers":
     case "gatherMushrooms":
     case "gatherBerries":

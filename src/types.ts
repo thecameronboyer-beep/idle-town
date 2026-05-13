@@ -53,6 +53,7 @@ export type BuildingId = "campfire" | "tanningRack" | "hideTent" | "crudeStoneFu
 export type ActionId =
   | "gatherSticks"
   | "gatherStones"
+  | "gatherFlaxPlants"
   | "gatherFlaxFibers"
   | "gatherMushrooms"
   | "gatherBerries"

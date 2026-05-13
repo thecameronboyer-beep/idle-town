@@ -93,6 +93,14 @@ export function rollRewards(
         tone: "gain"
       };
     }
+    case "gatherFlaxPlants": {
+      const amount = randomInt(2, 4);
+      return {
+        resources: { flaxPlant: amount },
+        message: `Cameron cuts ${amount} ${plural("Flax Plant", amount)} from the meadow.`,
+        tone: "gain"
+      };
+    }
     case "gatherFlaxFibers": {
       const amount = randomInt(1, 3);
       return {
@@ -298,6 +306,8 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
       return `${characterName} gathered sticks`;
     case "gatherStones":
       return `${characterName} gathered stones`;
+    case "gatherFlaxPlants":
+      return `${characterName} gathered flax plants`;
     case "gatherFlaxFibers":
       return `${characterName} gathered flax fibers`;
     case "gatherMushrooms":
