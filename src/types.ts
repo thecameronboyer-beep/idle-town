@@ -5,6 +5,7 @@ export type ResourceId =
   | "rettedFlax"
   | "flaxFiber"
   | "linenThread"
+  | "linenCloth"
   | "mushroom"
   | "berry"
   | "wood"
