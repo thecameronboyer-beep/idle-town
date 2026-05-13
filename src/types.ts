@@ -87,6 +87,7 @@ export type ActionId =
   | "retFlax"
   | "separateFlaxFiber"
   | "handSpinLinenThread"
+  | "spinLinenThread"
   | "smeltCopperBar"
   | "smeltBronzeBar"
   | "craftPot"

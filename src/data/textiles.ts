@@ -53,6 +53,19 @@ export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
     blurb: "Twist clean flax fiber into usable linen thread by hand.",
     unlockHint: "Separate Flax Fiber",
     requiredSeenResources: ["flaxFiber"]
+  },
+  {
+    actionId: "spinLinenThread",
+    label: "Spin Linen Thread",
+    verb: "spinning thread",
+    kind: "spinning",
+    durationMs: 18000,
+    cost: { flaxFiber: 5 },
+    output: { linenThread: 5 },
+    blurb: "Use the spinning wheel to turn a batch of flax fiber into thread more quickly.",
+    unlockHint: "Build Primitive Spinning Wheel",
+    requiredBuildings: ["primitiveSpinningWheel"],
+    requiredSeenResources: ["flaxFiber"]
   }
 ];
 
