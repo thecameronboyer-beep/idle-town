@@ -1,6 +1,6 @@
 import { getActionDefinition } from "../data/actions";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
-import { getSmithingRecipe } from "../data/smithing";
+import { getSmithingRecipe, smithingActionIds } from "../data/smithing";
 import {
   formatResourceAmount,
   getResourceLabel,
@@ -118,6 +118,7 @@ import type {
 
 type ActionFilterId =
   | "crafting"
+  | "smithing"
   | "foraging"
   | "mining"
   | "fishing"
@@ -221,6 +222,11 @@ const actionFilters: ActionFilter[] = [
     ]
   },
   {
+    id: "smithing",
+    label: "Smithing",
+    actionIds: [...smithingActionIds]
+  },
+  {
     id: "butchering",
     label: "Butchering",
     actionIds: ["butcherFish", "butcherRabbit", "butcherSquirrel"]
@@ -246,7 +252,7 @@ const actionCategories: ActionCategory[] = [
   {
     id: "processing",
     label: "Processing",
-    filterIds: ["crafting", "butchering", "cooking", "leatherworking"]
+    filterIds: ["crafting", "smithing", "butchering", "cooking", "leatherworking"]
   },
   {
     id: "camp",
@@ -257,6 +263,7 @@ const actionCategories: ActionCategory[] = [
 
 const filterSkillIds: Record<ActionFilterId, SkillId> = {
   crafting: "crafting",
+  smithing: "smithing",
   foraging: "foraging",
   mining: "mining",
   fishing: "fishing",
