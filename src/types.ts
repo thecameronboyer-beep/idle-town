@@ -192,7 +192,7 @@ export interface LogEntry {
 }
 
 export interface GameState {
-  version: 6;
+  version: 7;
   createdAt: number;
   updatedAt: number;
   lastSimulatedAt: number;

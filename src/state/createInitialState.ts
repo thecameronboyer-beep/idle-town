@@ -47,7 +47,7 @@ export function createStarterActionLoop(now = Date.now()): ActionLoop {
 
 export function createInitialState(now = Date.now()): GameState {
   return {
-    version: 6,
+    version: 7,
     createdAt: now,
     updatedAt: now,
     lastSimulatedAt: now,
