@@ -29,7 +29,7 @@ import { normalizeInventory } from "./inventory";
 import { normalizeSkills } from "./skills";
 
 const SAVE_KEY = "idle-town:first-survival-slice:v1";
-const CURRENT_SAVE_VERSION = 7;
+const CURRENT_SAVE_VERSION = 8;
 const LEGACY_CAMPFIRE_DURATION_MS = 15 * 60 * 1000;
 const WHOLE_RESOURCE_AVERAGE_WEIGHTS: Partial<Record<ResourceId, number>> = {
   minnow: 1,

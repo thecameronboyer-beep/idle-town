@@ -69,8 +69,15 @@ export function getResourceWeight(resourceId: ResourceId): number {
       return 2;
     case "stick":
     case "stone":
+    case "flaxPlant":
+    case "rettedFlax":
     case "flaxFiber":
       return 1;
+    case "linenThread":
+    case "linenCloth":
+    case "copperNeedle":
+    case "bronzeNeedle":
+      return 0.1;
     case "mushroom":
     case "berry":
       return 0.1;
