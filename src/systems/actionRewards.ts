@@ -15,7 +15,7 @@ import {
 } from "./inventory";
 import { addStackedLog } from "./log";
 import { randomFloat, randomInt } from "./math";
-import { damageTool, equipFreshTool, hasUsableTool } from "./tools";
+import { damageBestToolForRole, equipFreshTool, getToolTierForRole, hasUsableTool, hasUsableToolForRole } from "./tools";
 
 export type ActionRewards = {
   resources: Cost;
@@ -118,11 +118,11 @@ export function rollRewards(
       };
     }
     case "mineCoal":
-      return mineResource("coal");
+      return mineResource(state, "coal");
     case "mineCopper":
-      return mineResource("copper");
+      return mineResource(state, "copper");
     case "mineTin":
-      return mineResource("tin");
+      return mineResource(state, "tin");
     case "fishRiver":
       return fishRiver();
     case "craftLowestTool":
@@ -139,7 +139,9 @@ export function rollRewards(
         tone: "craft"
       };
     case "chopTrees": {
-      const wood = randomInt(2, 4);
+      const toolTier = getToolTierForRole(state, "woodcutting");
+      const woodBonus = toolTier >= 3 ? 1 : toolTier >= 2 && Math.random() < 0.5 ? 1 : 0;
+      const wood = randomInt(2, 4) + woodBonus;
       const sticks = Math.random() < 0.35 ? 1 : 0;
       return {
         resources: { wood, stick: sticks },
@@ -263,22 +265,22 @@ export function hasCarriedWholeFish(state: GameState, characterId = state.select
 export function applyToolWear(state: GameState, actionId: ActionId, now: number, characterName: string): void {
   switch (actionId) {
     case "fishRiver":
-      damageTool(state, "fishingPole", 1, now, characterName);
+      damageBestToolForRole(state, "fishing", 1, now, characterName);
       break;
     case "mineCoal":
     case "mineCopper":
     case "mineTin":
-      damageTool(state, "stonePickAxe", 1, now, characterName);
+      damageBestToolForRole(state, "mining", 1, now, characterName);
       break;
     case "chopTrees":
-      damageTool(state, "stoneAxe", 1, now, characterName);
+      damageBestToolForRole(state, "woodcutting", 1, now, characterName);
       break;
     case "huntSmallAnimals":
-      damageTool(state, "stoneSpear", 1, now, characterName);
+      damageBestToolForRole(state, "hunting", 1, now, characterName);
       break;
     case "butcherRabbit":
     case "butcherSquirrel":
-      damageTool(state, "stoneKnife", 1, now, characterName);
+      damageBestToolForRole(state, "butchering", 1, now, characterName);
       break;
     default:
       break;
@@ -390,12 +392,15 @@ function fishRiver(): ActionRewards {
   };
 }
 
-function mineResource(resourceId: "coal" | "copper" | "tin"): ActionRewards {
+function mineResource(state: GameState, resourceId: "coal" | "copper" | "tin"): ActionRewards {
   const label = getResourceLabel(resourceId);
+  const toolTier = getToolTierForRole(state, "mining");
+  const bonusChance = toolTier >= 3 ? 0.35 : toolTier >= 2 ? 0.18 : 0;
+  const amount = 1 + (Math.random() < bonusChance ? 1 : 0);
 
   return {
-    resources: { [resourceId]: 1 },
-    message: `Cameron mines 1 ${label}.`,
+    resources: { [resourceId]: amount },
+    message: `Cameron mines ${amount} ${label}.`,
     tone: "gain"
   };
 }
@@ -428,9 +433,11 @@ function butcherAnimal(
 
   const meatId: ResourceId = animal === "rabbit" ? "rabbitMeat" : "squirrelMeat";
   const meat = animal === "rabbit" ? randomInt(1, 2) : 1;
-  const hasKnife = hasUsableTool(state, "stoneKnife");
-  const hideChance = animal === "rabbit" ? 0.65 : 0.42;
-  const boneChance = animal === "rabbit" ? 0.24 : 0.14;
+  const knifeTier = getToolTierForRole(state, "butchering");
+  const hasKnife = hasUsableToolForRole(state, "butchering");
+  const recoveryBonus = knifeTier >= 3 ? 0.18 : knifeTier >= 2 ? 0.08 : 0;
+  const hideChance = Math.min(0.9, (animal === "rabbit" ? 0.65 : 0.42) + recoveryBonus);
+  const boneChance = Math.min(0.75, (animal === "rabbit" ? 0.24 : 0.14) + recoveryBonus);
   const hide = Math.random() < hideChance ? 1 : 0;
   const bone = Math.random() < boneChance ? 1 : 0;
   const resources: Cost = {

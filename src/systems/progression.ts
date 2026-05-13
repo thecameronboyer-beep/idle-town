@@ -2,7 +2,7 @@ import { fishResourceIds } from "../data/resources";
 import type { ActionId, BuildingId, GameState } from "../types";
 import { isCampfireLit } from "./buildings";
 import { getSmithingRecipeLockReason, isSmithingRecipeUnlocked } from "./smithing";
-import { hasUsableTool } from "./tools";
+import { hasUsableToolForRole } from "./tools";
 
 function hasSeenMeat(state: GameState): boolean {
   return state.seenResources.includes("rabbitMeat") || state.seenResources.includes("squirrelMeat");
@@ -47,15 +47,15 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
     case "craftStoneSpear":
       return true;
     case "fishRiver":
-      return hasUsableTool(state, "fishingPole");
+      return hasUsableToolForRole(state, "fishing");
     case "mineCoal":
     case "mineCopper":
     case "mineTin":
-      return hasUsableTool(state, "stonePickAxe");
+      return hasUsableToolForRole(state, "mining");
     case "chopTrees":
-      return hasUsableTool(state, "stoneAxe");
+      return hasUsableToolForRole(state, "woodcutting");
     case "huntSmallAnimals":
-      return hasUsableTool(state, "stoneSpear");
+      return hasUsableToolForRole(state, "hunting");
     case "butcherFish":
       return hasSeenFish(state);
     case "butcherRabbit":
@@ -87,9 +87,9 @@ export function getActionLockReason(state: GameState, actionId: ActionId): strin
     case "mineCoal":
     case "mineCopper":
     case "mineTin":
-      return "Needs Stone Pick Axe";
+      return "Needs Mining Tool";
     case "chopTrees":
-      return "Needs Stone Axe";
+      return "Needs Woodcutting Tool";
     case "huntSmallAnimals":
       return "Needs Stone Spear";
     case "butcherFish":
