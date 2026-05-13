@@ -77,6 +77,7 @@ export type SkillId =
   | "woodcutting"
   | "hunting"
   | "crafting"
+  | "smithing"
   | "butchering"
   | "cooking"
   | "leatherworking"

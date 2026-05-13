@@ -268,7 +268,7 @@ const filterSkillIds: Record<ActionFilterId, SkillId> = {
 
 const characterSkillGroups: SkillGroup[] = [
   { label: "Gather", skillIds: ["foraging", "mining", "fishing", "woodcutting", "hunting"] },
-  { label: "Process", skillIds: ["crafting", "butchering", "cooking", "leatherworking"] },
+  { label: "Process", skillIds: ["crafting", "smithing", "butchering", "cooking", "leatherworking"] },
   { label: "Combat", skillIds: [] },
   { label: "Other", skillIds: ["construction", "agility"] }
 ];
