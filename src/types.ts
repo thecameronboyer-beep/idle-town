@@ -160,6 +160,19 @@ export interface WeaponStats {
   range: WeaponRange;
 }
 
+export type CombatLocationId = "ruins";
+export type EnemyId = "goblin";
+export type CombatClassId =
+  | "fighter"
+  | "warrior"
+  | "bruiser"
+  | "crusher"
+  | "archer"
+  | "shaman"
+  | "mage"
+  | "caster"
+  | "rogue";
+
 export type LocationId = "meadow" | "river" | "forest" | "mine";
 export type CharacterLocationId = "camp" | LocationId;
 
