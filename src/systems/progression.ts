@@ -138,6 +138,8 @@ export function isBuildingUnlocked(state: GameState, buildingId: BuildingId, now
       return state.buildings.hideTent || state.seenResources.includes("hide");
     case "crudeStoneFurnace":
       return state.buildings.crudeStoneFurnace || state.seenResources.includes("coal") || state.seenResources.includes("copper");
+    case "primitiveSpinningWheel":
+      return state.buildings.primitiveSpinningWheel || state.seenResources.includes("linenThread");
   }
 }
 
@@ -150,5 +152,7 @@ export function getBuildingUnlockReason(_state: GameState, buildingId: BuildingI
       return "See Hide";
     case "crudeStoneFurnace":
       return "See Coal or Copper";
+    case "primitiveSpinningWheel":
+      return "See Linen Thread";
   }
 }

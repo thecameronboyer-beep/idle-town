@@ -50,7 +50,12 @@ export type ToolId =
   | "basket"
   | "leatherBackpack";
 
-export type BuildingId = "campfire" | "tanningRack" | "hideTent" | "crudeStoneFurnace";
+export type BuildingId =
+  | "campfire"
+  | "tanningRack"
+  | "hideTent"
+  | "crudeStoneFurnace"
+  | "primitiveSpinningWheel";
 
 export type ActionId =
   | "gatherSticks"

@@ -30,7 +30,8 @@ export function createEmptyBuildingCounts(): OwnedBuildingCounts {
     campfire: 0,
     tanningRack: 0,
     hideTent: 0,
-    crudeStoneFurnace: 0
+    crudeStoneFurnace: 0,
+    primitiveSpinningWheel: 0
   };
 }
 
@@ -73,7 +74,8 @@ export function createInitialState(now = Date.now()): GameState {
       campfire: false,
       tanningRack: false,
       hideTent: false,
-      crudeStoneFurnace: false
+      crudeStoneFurnace: false,
+      primitiveSpinningWheel: false
     } satisfies OwnedBuildings,
     buildingCounts: createEmptyBuildingCounts(),
     campfireExpiresAt: null,
