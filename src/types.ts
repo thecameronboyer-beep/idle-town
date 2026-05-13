@@ -2,6 +2,7 @@ export type ResourceId =
   | "stick"
   | "stone"
   | "flaxPlant"
+  | "rettedFlax"
   | "flaxFiber"
   | "mushroom"
   | "berry"

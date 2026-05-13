@@ -20,6 +20,12 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "Fresh flax stalks that need retting before useful fiber can be combed free."
   },
   {
+    id: "rettedFlax",
+    label: "Retted Flax",
+    group: "resources",
+    blurb: "Soaked and loosened flax stems ready for breaking and combing."
+  },
+  {
     id: "flaxFiber",
     label: "Flax Fiber",
     group: "resources",
