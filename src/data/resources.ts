@@ -32,6 +32,12 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "Pale plant fiber for future cordage and cloth."
   },
   {
+    id: "linenThread",
+    label: "Linen Thread",
+    group: "crafted",
+    blurb: "Twisted flax fiber ready for weaving, stitching, and more precise craft."
+  },
+  {
     id: "mushroom",
     label: "Mushroom",
     group: "resources",
