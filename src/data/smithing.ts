@@ -1,4 +1,4 @@
-import type { Cost } from "../types";
+import type { Cost, ToolId } from "../types";
 
 export const smithingActionIds = [
   "smeltCopperBar",
@@ -24,7 +24,7 @@ export interface SmithingRecipeDefinition {
   durationMs: number;
   cost: Cost;
   output?: Cost;
-  toolId?: string;
+  toolId?: ToolId;
   blurb: string;
   unlockHint: string;
 }
