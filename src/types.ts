@@ -79,6 +79,7 @@ export type ActionId =
   | "tanHide"
   | "craftLeatherBackpack"
   | "retFlax"
+  | "separateFlaxFiber"
   | "smeltCopperBar"
   | "smeltBronzeBar"
   | "craftPot"

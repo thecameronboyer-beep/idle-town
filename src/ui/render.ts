@@ -2193,6 +2193,7 @@ function getActionIconUrls(actionId: ActionId): string[] {
     case "tanHide":
       return [hideIconUrl];
     case "retFlax":
+    case "separateFlaxFiber":
       return [flaxFiberIconUrl];
     case "smeltCopperBar":
       return [copperIconUrl, coalIconUrl];
