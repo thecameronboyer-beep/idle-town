@@ -3085,6 +3085,10 @@ function formatLogResource(resourceId: ResourceId, amount: number): string {
     case "coal":
     case "copper":
     case "tin":
+    case "copperBar":
+    case "bronzeBar":
+    case "pot":
+    case "ladle":
       return label;
     default:
       return `${label}s`;

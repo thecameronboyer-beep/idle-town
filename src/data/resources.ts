@@ -56,6 +56,30 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "Pale ore that will matter once bronze is possible."
   },
   {
+    id: "copperBar",
+    label: "Copper Bar",
+    group: "crafted",
+    blurb: "A worked bar ready for first metal tools."
+  },
+  {
+    id: "bronzeBar",
+    label: "Bronze Bar",
+    group: "crafted",
+    blurb: "A harder alloy bar for sturdier tools."
+  },
+  {
+    id: "pot",
+    label: "Pot",
+    group: "crafted",
+    blurb: "A simple worked vessel for holding heat and liquid."
+  },
+  {
+    id: "ladle",
+    label: "Ladle",
+    group: "crafted",
+    blurb: "A small handled tool for moving hot metal safely."
+  },
+  {
     id: "minnow",
     label: "Minnow",
     group: "fish",
