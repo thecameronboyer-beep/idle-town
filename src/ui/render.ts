@@ -113,7 +113,7 @@ import {
 } from "../systems/skills";
 import { getFurnaceFuelStatus, getSmithingRecipeOutputText, isSmeltingAction } from "../systems/smithing";
 import { getTextileRecipeOutputText } from "../systems/textiles";
-import { getMaxToolDurability } from "../systems/tools";
+import { getBestUsableToolForRole, getMaxToolDurability } from "../systems/tools";
 import type {
   ActionId,
   BuildingId,
@@ -229,9 +229,16 @@ const actionFilters: ActionFilter[] = [
       "craftBasket",
       "craftFishingPole",
       "craftStoneKnife",
+      "craftStoneDagger",
       "craftStoneAxe",
       "craftStonePickAxe",
-      "craftStoneSpear"
+      "craftStoneSpear",
+      "craftWoodenClub",
+      "craftWoodenTwoHandedClub",
+      "craftWoodenSword",
+      "craftWoodenTwoHandedSword",
+      "craftShortBow",
+      "craftWoodenTotem"
     ]
   },
   {
@@ -357,21 +364,29 @@ const mapReturnRoutePaths: Record<LocationId, string> = {
   mine: "M1080 270 C992 290 927 338 900 407 C870 482 824 540 746 603"
 };
 
-const EQUIPMENT_SLOT_COUNT = 16;
+const EQUIPMENT_SLOT_COUNT = 24;
 const equipmentToolSlots: Array<ToolId | null> = [
   "fishingPole",
   "stoneKnife",
   "copperKnife",
   "bronzeKnife",
+  "stoneDagger",
+  "stoneSpear",
+  "woodenClub",
+  "woodenTwoHandedClub",
+  "woodenSword",
+  "woodenTwoHandedSword",
+  "shortBow",
+  "woodenTotem",
   "stoneAxe",
   "copperHatchet",
   "bronzeHatchet",
   "stonePickAxe",
   "copperPickaxe",
   "bronzePickaxe",
-  "stoneSpear",
   "basket",
   "leatherBackpack",
+  null,
   null,
   null,
   null
@@ -411,10 +426,17 @@ const emptySlotLabels: Partial<Record<ToolId, string>> = {
   basket: "Basket",
   fishingPole: "Pole",
   leatherBackpack: "Backpack",
-  stoneKnife: "Knife",
+  stoneKnife: "Skinning Knife",
+  stoneDagger: "Dagger",
   stoneAxe: "Axe",
   stonePickAxe: "Pick",
-  stoneSpear: "Spear"
+  stoneSpear: "Spear",
+  woodenClub: "Club",
+  woodenTwoHandedClub: "2H Club",
+  woodenSword: "Sword",
+  woodenTwoHandedSword: "2H Sword",
+  shortBow: "Bow",
+  woodenTotem: "Totem"
 };
 
 const resourceSlotImages: Partial<Record<ResourceId, string>> = {
@@ -443,7 +465,7 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   wood: woodIconUrl
 };
 
-const toolEquipmentStats: Record<ToolId, EquipmentStat[]> = {
+const toolEquipmentStats: Partial<Record<ToolId, EquipmentStat[]>> = {
   basket: [
     { label: "Slot", value: "Carry tool" },
     { label: "Effect", value: "+5 lb carry capacity" },
@@ -475,7 +497,7 @@ const toolEquipmentStats: Record<ToolId, EquipmentStat[]> = {
     { label: "Use", value: "Breaking stone" }
   ],
   stoneSpear: [
-    { label: "Slot", value: "Hunting tool" },
+    { label: "Slot", value: "Two-handed weapon" },
     { label: "Effect", value: "Hunt Small Animals unlocked" },
     { label: "Targets", value: "Rabbit, Squirrel" }
   ],
@@ -510,6 +532,41 @@ const toolEquipmentStats: Record<ToolId, EquipmentStat[]> = {
     { label: "Durability", value: "Better than copper" }
   ]
 };
+
+function getToolEquipmentStats(toolId: ToolId): EquipmentStat[] {
+  const definition = toolDefinitions.find((tool) => tool.id === toolId);
+  const stats = toolEquipmentStats[toolId] ?? [];
+  if (!definition?.weapon) {
+    return stats;
+  }
+
+  return [
+    { label: "Slot", value: `${definition.weapon.hands}H ${labelWeaponRange(definition.weapon.range)} weapon` },
+    { label: "Power", value: formatStatNumber(definition.weapon.damage) },
+    { label: "Speed", value: `${formatStatNumber(definition.weapon.speed)}x` },
+    { label: "Tier", value: labelToolTier(definition.tier) },
+    ...stats.filter((stat) => stat.label !== "Slot")
+  ];
+}
+
+function labelWeaponRange(range: "melee" | "ranged" | "focus"): string {
+  switch (range) {
+    case "ranged":
+      return "ranged";
+    case "focus":
+      return "focus";
+    case "melee":
+      return "melee";
+  }
+}
+
+function labelToolTier(tier: "primitive" | "copper" | "bronze"): string {
+  return tier[0].toUpperCase() + tier.slice(1);
+}
+
+function formatStatNumber(value: number): string {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+}
 
 type RenderHandlers = {
   requestRender: () => void;
@@ -2353,6 +2410,11 @@ function renderActionTooltip(label: string, rows: ActionTooltipRow[], statusText
 }
 
 function getActionIconUrls(actionId: ActionId): string[] {
+  const craftedTool = getCraftedToolDefinitionForAction(actionId);
+  if (craftedTool) {
+    return getToolIconUrls(craftedTool.id);
+  }
+
   switch (actionId) {
     case "gatherSticks":
       return [stickIconUrl];
@@ -2376,18 +2438,6 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [minnowIconUrl];
     case "craftLowestTool":
       return [craftMaterialsBundleButtonUrl];
-    case "craftBasket":
-      return [basketEquippedSlotUrl];
-    case "craftFishingPole":
-      return [fishingPoleEquippedSlotUrl];
-    case "craftStoneKnife":
-      return [stoneKnifeEquippedSlotUrl];
-    case "craftStoneAxe":
-      return [stoneAxeEquippedSlotUrl];
-    case "craftStonePickAxe":
-      return [stonePickAxeEquippedSlotUrl];
-    case "craftStoneSpear":
-      return [stoneSpearEquippedSlotUrl];
     case "craftLeatherBackpack":
       return [leatherBackpackEquippedSlotUrl];
     case "chopTrees":
@@ -2435,6 +2485,26 @@ function getActionIconUrls(actionId: ActionId): string[] {
     case "craftBronzeKnife":
       return [copperIconUrl, tinIconUrl];
   }
+
+  return [];
+}
+
+function getCraftedToolDefinitionForAction(actionId: ActionId) {
+  return toolDefinitions.find((tool) => tool.craftActionId === actionId);
+}
+
+function getToolIconUrls(toolId: ToolId): string[] {
+  const equippedImage = equippedSlotImages[toolId];
+  if (equippedImage) {
+    return [equippedImage];
+  }
+
+  const definition = toolDefinitions.find((tool) => tool.id === toolId);
+  if (definition?.weapon?.range === "ranged" || definition?.id.startsWith("wooden")) {
+    return [woodIconUrl];
+  }
+
+  return definition?.weapon ? [stoneIconUrl] : [];
 }
 
 function getActionInitials(actionId: ActionId): string {
@@ -2480,6 +2550,20 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
       { label: "Uses", value: describeCost(textileRecipe.cost) },
       { label: "Makes", value: getTextileRecipeOutputText(textileRecipe) },
       { label: "Unlock", value: textileRecipe.unlockHint }
+    ];
+  }
+  const craftedTool = getCraftedToolDefinitionForAction(actionId);
+  if (craftedTool) {
+    return [
+      ...rows,
+      { label: "Makes", value: `1 ${craftedTool.label}` },
+      { label: "Uses", value: describeCost(getActionCost(actionId)) },
+      ...(craftedTool.weapon
+        ? [
+            { label: "Power", value: formatStatNumber(craftedTool.weapon.damage) },
+            { label: "Style", value: `${craftedTool.weapon.hands}H ${labelWeaponRange(craftedTool.weapon.range)}` }
+          ]
+        : [])
     ];
   }
 
@@ -2547,14 +2631,6 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
       return [...rows, { label: "Makes", value: "1 Basket" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftFishingPole":
       return [...rows, { label: "Makes", value: "1 Fishing Pole" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
-    case "craftStoneKnife":
-      return [...rows, { label: "Makes", value: "1 Stone Knife" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
-    case "craftStoneAxe":
-      return [...rows, { label: "Makes", value: "1 Stone Axe" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
-    case "craftStonePickAxe":
-      return [...rows, { label: "Makes", value: "1 Stone Pick Axe" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
-    case "craftStoneSpear":
-      return [...rows, { label: "Makes", value: "1 Stone Spear" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftLeatherBackpack":
       return [...rows, { label: "Makes", value: "1 Leather Backpack" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "butcherFish":
@@ -3187,7 +3263,7 @@ function renderInventoryToolSlot(state: GameState, toolId: ToolId): string {
   const maxDurability = getMaxToolDurability(toolId);
   const stats: EquipmentStat[] = [
     { label: "Durability", value: `${maxDurability}/${maxDurability}` },
-    ...toolEquipmentStats[toolId]
+    ...getToolEquipmentStats(toolId)
   ];
 
   return `
@@ -3290,38 +3366,23 @@ function getEquipmentSummaryStats(state: GameState): EquipmentStat[] {
 
 function getEquippedFieldEffects(state: GameState): string[] {
   const effects: string[] = [];
-  if (state.tools.fishingPole.owned && state.tools.fishingPole.durability > 0) {
-    effects.push("Fishing");
-  }
-  if (state.tools.stoneKnife.owned && state.tools.stoneKnife.durability > 0) {
-    effects.push("Butchering");
-  }
-  if (state.tools.copperKnife.owned && state.tools.copperKnife.durability > 0) {
-    effects.push("Copper Butchering");
-  }
-  if (state.tools.bronzeKnife.owned && state.tools.bronzeKnife.durability > 0) {
-    effects.push("Bronze Butchering");
-  }
-  if (state.tools.stoneAxe.owned && state.tools.stoneAxe.durability > 0) {
-    effects.push("Woodcutting");
-  }
-  if (state.tools.copperHatchet.owned && state.tools.copperHatchet.durability > 0) {
-    effects.push("Copper Woodcutting");
-  }
-  if (state.tools.bronzeHatchet.owned && state.tools.bronzeHatchet.durability > 0) {
-    effects.push("Bronze Woodcutting");
-  }
-  if (state.tools.stonePickAxe.owned && state.tools.stonePickAxe.durability > 0) {
-    effects.push("Mining");
-  }
-  if (state.tools.copperPickaxe.owned && state.tools.copperPickaxe.durability > 0) {
-    effects.push("Copper Mining");
-  }
-  if (state.tools.bronzePickaxe.owned && state.tools.bronzePickaxe.durability > 0) {
-    effects.push("Bronze Mining");
-  }
-  if (state.tools.stoneSpear.owned && state.tools.stoneSpear.durability > 0) {
-    effects.push("Hunting");
+  const roleLabels = [
+    ["fishing", "Fishing"],
+    ["butchering", "Butchering"],
+    ["woodcutting", "Woodcutting"],
+    ["mining", "Mining"],
+    ["hunting", "Hunting"]
+  ] as const;
+
+  for (const [role, label] of roleLabels) {
+    const toolId = getBestUsableToolForRole(state, role);
+    if (!toolId) {
+      continue;
+    }
+
+    const definition = toolDefinitions.find((tool) => tool.id === toolId);
+    const prefix = definition && definition.tier !== "primitive" ? `${labelToolTier(definition.tier)} ` : "";
+    effects.push(role === "hunting" && definition ? `${label} (${definition.label})` : `${prefix}${label}`);
   }
   return effects;
 }
@@ -3340,7 +3401,7 @@ function renderEquipmentSlot(state: GameState, toolId: ToolId): string {
   const stats = [
     { label: "Durability", value: usable ? `${durability}/${maxDurability}` : "Broken" },
     { label: "Inventory", value: `${tool.quantity} ${tool.quantity === 1 ? "spare" : "spares"}` },
-    ...toolEquipmentStats[toolId]
+    ...getToolEquipmentStats(toolId)
   ];
   const iconOnly = Boolean(equippedSlotImages[toolId]);
 
@@ -3394,7 +3455,7 @@ function renderEmptyEquipmentSlot(index: number, toolId: ToolId | null): string 
       ${
         imageUrl
           ? `<img class="slot-shadow-icon" src="${imageUrl}" alt="" aria-hidden="true" />`
-          : `<span class="slot-glyph">+</span>`
+          : `<span class="slot-glyph">${toolId ? getToolInitials(toolId) : "+"}</span>`
       }
       <strong>${label}</strong>
     </div>
@@ -3428,8 +3489,30 @@ function getToolInitials(toolId: ToolId): string {
     case "stoneSpear":
       return "SP";
     case "stoneKnife":
-      return "KN";
+      return "SK";
+    case "stoneDagger":
+      return "DG";
+    case "woodenSword":
+      return "WS";
+    case "woodenTwoHandedSword":
+      return "2S";
+    case "woodenClub":
+      return "WC";
+    case "woodenTwoHandedClub":
+      return "2C";
+    case "shortBow":
+      return "SB";
+    case "woodenTotem":
+      return "WT";
   }
+
+  const definition = toolDefinitions.find((tool) => tool.id === toolId);
+  return (definition?.label ?? toolId)
+    .split(" ")
+    .map((word) => word[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 function getTooltipSlot(target: EventTarget | null, root: HTMLElement): HTMLElement | null {
