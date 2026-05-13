@@ -93,6 +93,8 @@ export type ActionId =
   | "handSpinLinenThread"
   | "spinLinenThread"
   | "weaveLinenCloth"
+  | "craftCopperNeedle"
+  | "craftBronzeNeedle"
   | "smeltCopperBar"
   | "smeltBronzeBar"
   | "craftPot"

@@ -2198,6 +2198,10 @@ function getActionIconUrls(actionId: ActionId): string[] {
     case "spinLinenThread":
     case "weaveLinenCloth":
       return [flaxFiberIconUrl];
+    case "craftCopperNeedle":
+      return [copperIconUrl];
+    case "craftBronzeNeedle":
+      return [copperIconUrl, tinIconUrl];
     case "smeltCopperBar":
       return [copperIconUrl, coalIconUrl];
     case "smeltBronzeBar":

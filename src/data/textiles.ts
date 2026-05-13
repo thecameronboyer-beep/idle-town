@@ -79,6 +79,30 @@ export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
     unlockHint: "Build Primitive Loom",
     requiredBuildings: ["primitiveLoom"],
     requiredSeenResources: ["linenThread"]
+  },
+  {
+    actionId: "craftCopperNeedle",
+    label: "Craft Copper Needle",
+    verb: "crafting a copper needle",
+    kind: "tooling",
+    durationMs: 12000,
+    cost: { copperBar: 1 },
+    output: { copperNeedle: 1 },
+    blurb: "Draw a soft copper bar into a basic needle for stitching linen.",
+    unlockHint: "Smelt Copper Bar",
+    requiredSeenResources: ["copperBar"]
+  },
+  {
+    actionId: "craftBronzeNeedle",
+    label: "Craft Bronze Needle",
+    verb: "crafting a bronze needle",
+    kind: "tooling",
+    durationMs: 14000,
+    cost: { bronzeBar: 1 },
+    output: { bronzeNeedle: 1 },
+    blurb: "Shape a harder bronze needle for steadier sewing work.",
+    unlockHint: "Smelt Bronze Bar",
+    requiredSeenResources: ["bronzeBar"]
   }
 ];
 
