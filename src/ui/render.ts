@@ -1,6 +1,6 @@
 import { getActionDefinition } from "../data/actions";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
-import { getSmithingRecipe, smithingActionIds } from "../data/smithing";
+import { getSmithingRecipe, metalworkingActionIds, smeltingActionIds, smithingActionIds } from "../data/smithing";
 import {
   formatResourceAmount,
   getResourceLabel,
@@ -101,6 +101,7 @@ import {
   prestigeSkill,
   skillDefinitions
 } from "../systems/skills";
+import { getFurnaceFuelStatus, getSmithingRecipeOutputText, isSmeltingAction } from "../systems/smithing";
 import { getMaxToolDurability } from "../systems/tools";
 import type {
   ActionId,
@@ -1150,7 +1151,7 @@ function renderWorkArea(
   return `
       <div class="work-area">
       ${renderActionCategoryPanel(state, activeActionCategory, activeActionFilter)}
-      ${renderActionStack(state, activeActionFilter, activeLocation, actionLoopTarget)}
+      ${renderActionStack(state, activeActionFilter, activeLocation, actionLoopTarget, now)}
     </div>
   `;
 }
@@ -1348,14 +1349,15 @@ function renderActionStack(
   state: GameState,
   activeActionFilter: ActionFilterId,
   activeLocation: LocationId,
-  actionLoopTarget: ActionLoopTarget
+  actionLoopTarget: ActionLoopTarget,
+  now: number
 ): string {
   const filter = getActionFilter(activeActionFilter);
 
   return `
     <div class="action-stack">
       ${hasLocationPanel(filter.id) ? renderLocationPanel(filter, activeLocation) : ""}
-      ${renderActionPanel(state, activeActionFilter, activeLocation, actionLoopTarget)}
+      ${renderActionPanel(state, activeActionFilter, activeLocation, actionLoopTarget, now)}
     </div>
   `;
 }
@@ -1405,7 +1407,8 @@ function renderActionPanel(
   state: GameState,
   activeActionFilter: ActionFilterId,
   activeLocation: LocationId,
-  actionLoopTarget: ActionLoopTarget
+  actionLoopTarget: ActionLoopTarget,
+  now: number
 ): string {
   const filter = getActionFilter(activeActionFilter);
   const actionIds =
@@ -1415,6 +1418,9 @@ function renderActionPanel(
 
   if (filter.id === "crafting") {
     return renderCraftingActionPanel(state, actionIds, actionLoopTarget);
+  }
+  if (filter.id === "smithing") {
+    return renderSmithingActionPanel(state, actionIds, actionLoopTarget, now);
   }
 
   return `
@@ -1443,6 +1449,146 @@ function renderCraftingActionPanel(
         </div>
       </div>
     </section>
+  `;
+}
+
+function renderSmithingActionPanel(
+  state: GameState,
+  actionIds: ActionId[],
+  actionLoopTarget: ActionLoopTarget,
+  now: number
+): string {
+  const smeltingIds = actionIds.filter((actionId) => smeltingActionIds.some((id) => id === actionId));
+  const smithingIds = actionIds.filter((actionId) => metalworkingActionIds.some((id) => id === actionId));
+  const fuel = getFurnaceFuelStatus(state);
+
+  return `
+    <section class="action-panel smithing-action-panel" data-editor-id="action-panel-smithing" data-editor-label="Smithing action panel" data-editor-files="src/ui/render.ts, src/style.css">
+      <div class="smithing-panel-card">
+        <div class="smithing-status-grid">
+          <div class="smithing-status-item">
+            <span>Furnace</span>
+            <strong>${fuel.furnaceBuilt ? "Crude Stone Furnace" : "Not built"}</strong>
+          </div>
+          <div class="smithing-status-item">
+            <span>Coal</span>
+            <strong>${fuel.coal}</strong>
+          </div>
+          <div class="smithing-status-item">
+            <span>Fuel</span>
+            <strong>${fuel.furnaceBuilt ? (fuel.coal > 0 ? "Ready" : "Needs coal") : "Furnace locked"}</strong>
+          </div>
+        </div>
+        ${renderSmithingActiveSmelt(state, now)}
+        ${renderSmithingRecipeSection(state, "Smelting", smeltingIds, actionLoopTarget)}
+        ${renderSmithingRecipeSection(state, "Smithing", smithingIds, actionLoopTarget)}
+      </div>
+    </section>
+  `;
+}
+
+function renderSmithingActiveSmelt(state: GameState, now: number): string {
+  const running = getCurrentAction(state);
+  const activeActionId = running ? getActiveActionId(running) : null;
+  if (!running || !activeActionId || !isSmeltingAction(activeActionId)) {
+    return `
+      <div class="smithing-active-row idle">
+        <span>No active smelt</span>
+        <strong>Furnace idle</strong>
+      </div>
+    `;
+  }
+
+  const recipe = getSmithingRecipe(activeActionId);
+  const progress = clamp(getActionProgress(state, now), 0, 1);
+
+  return `
+    <div class="smithing-active-row">
+      <span>Active smelt</span>
+      <strong>${recipe?.label ?? "Smelting"}</strong>
+      <div class="progress-track smithing-progress-track">
+        <span data-smithing-action-progress style="transform: scaleX(${progress.toFixed(4)})"></span>
+        <em data-smithing-action-remaining>${formatDuration(running.endsAt - now)}</em>
+      </div>
+    </div>
+  `;
+}
+
+function renderSmithingRecipeSection(
+  state: GameState,
+  label: string,
+  actionIds: ActionId[],
+  actionLoopTarget: ActionLoopTarget
+): string {
+  return `
+    <div class="smithing-recipe-section">
+      <div class="section-heading">
+        <span>${label}</span>
+      </div>
+      <div class="smithing-recipe-grid">
+        ${actionIds.map((actionId) => renderSmithingRecipeCard(state, actionId, actionLoopTarget)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderSmithingRecipeCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
+  const definition = getActionDefinition(actionId);
+  const recipe = getSmithingRecipe(actionId);
+  if (!definition || !recipe) {
+    return "";
+  }
+
+  const unlocked = isActionUnlocked(state, actionId);
+  const cost = getActionCost(actionId);
+  const canStart = canStartAction(state, actionId);
+  const targetLoop = actionLoopTarget ? getActionLoop(state, actionLoopTarget.loopId) : null;
+  const running = getCurrentAction(state);
+  const assigningLoopAction = Boolean(actionLoopTarget && targetLoop);
+  const canAssignFollowUp = Boolean(
+    assigningLoopAction && targetLoop && actionLoopTarget && canInsertActionInSavedLoop(targetLoop, actionLoopTarget.afterIndex, actionId)
+  );
+  const active = running ? getActiveActionId(running) === actionId : false;
+  const disabled = assigningLoopAction ? !canAssignFollowUp : !canStart || active;
+  const missingCostText = getMissingCostText(state, cost);
+  const lockReason = canStart ? "" : unlocked ? missingCostText : getActionLockReason(state, actionId);
+  const statusText = assigningLoopAction
+    ? canAssignFollowUp
+      ? "Set as action loop step"
+      : "Not valid for this loop"
+    : active
+      ? "Running"
+      : !canStart && lockReason
+        ? lockReason
+        : "Ready";
+  const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
+  const tooltipRows = getActionTooltipRows(actionId, definition.durationMs);
+
+  return `
+    <button
+      class="smithing-recipe-card ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}"
+      type="button"
+      data-command="start-action"
+      data-id="${actionId}"
+      data-editor-id="smithing-recipe-${actionId}"
+      data-editor-label="Smithing recipe: ${definition.label}"
+      data-editor-files="src/ui/render.ts, src/style.css"
+      data-disabled="${disabled}"
+      data-tooltip-source
+      aria-disabled="${disabled}"
+      aria-label="${buttonLabel} ${definition.label}"
+    >
+      <span class="smithing-recipe-icon" aria-hidden="true">${renderActionIcon(actionId)}</span>
+      <span class="smithing-recipe-copy">
+        <strong>${definition.label}</strong>
+        <small>${statusText}</small>
+      </span>
+      <span class="smithing-recipe-meta">
+        <b>${getSmithingRecipeOutputText(recipe.actionId)}</b>
+        <small>${describeCost(cost)}</small>
+      </span>
+      ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+    </button>
   `;
 }
 

@@ -121,6 +121,8 @@ function updateLiveActionIndicators(): void {
   const progress = Math.min(1, Math.max(0, getActionProgress(state, now)));
   const progressElement = document.querySelector<HTMLElement>("[data-action-progress]");
   const remainingElement = document.querySelector<HTMLElement>("[data-action-remaining]");
+  const smithingProgressElement = document.querySelector<HTMLElement>("[data-smithing-action-progress]");
+  const smithingRemainingElement = document.querySelector<HTMLElement>("[data-smithing-action-remaining]");
 
   if (progressElement) {
     progressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
@@ -128,6 +130,14 @@ function updateLiveActionIndicators(): void {
 
   if (remainingElement) {
     remainingElement.textContent = formatDuration(running.endsAt - now);
+  }
+
+  if (smithingProgressElement) {
+    smithingProgressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
+  }
+
+  if (smithingRemainingElement) {
+    smithingRemainingElement.textContent = formatDuration(running.endsAt - now);
   }
 }
 

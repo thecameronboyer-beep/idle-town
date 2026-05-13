@@ -1081,6 +1081,199 @@ h3 {
   aspect-ratio: 1;
 }
 
+.smithing-panel-card {
+  display: grid;
+  width: min(100%, 54rem);
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(14, 15, 12, 0.52);
+}
+
+.smithing-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.smithing-status-item,
+.smithing-active-row {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.62rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 18, 14, 0.6);
+}
+
+.smithing-status-item span,
+.smithing-active-row span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.smithing-status-item strong,
+.smithing-active-row strong {
+  overflow: hidden;
+  color: #f4e6c8;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smithing-active-row {
+  grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
+  align-items: center;
+}
+
+.smithing-active-row > strong {
+  text-align: right;
+}
+
+.smithing-active-row .progress-track {
+  grid-column: 1 / -1;
+}
+
+.smithing-active-row.idle {
+  color: var(--muted);
+}
+
+.smithing-recipe-section {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.smithing-recipe-section .section-heading {
+  margin-bottom: 0;
+}
+
+.smithing-recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.55rem;
+}
+
+.smithing-recipe-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 3.1rem minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 0.38rem 0.65rem;
+  min-height: 7.25rem;
+  padding: 0.62rem;
+  overflow: visible;
+  text-align: left;
+  background: rgba(17, 18, 14, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(7, 8, 6, 0.42);
+}
+
+.smithing-recipe-card.active {
+  border-color: rgba(214, 164, 81, 0.62);
+  background: rgba(72, 62, 39, 0.62);
+}
+
+.smithing-recipe-card.locked {
+  opacity: 0.66;
+}
+
+.smithing-recipe-card[data-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.smithing-recipe-card[data-disabled="true"]:hover {
+  transform: none;
+}
+
+.smithing-recipe-icon {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 3.1rem;
+  min-width: 0;
+}
+
+.smithing-recipe-icon .action-card-main {
+  min-height: 0;
+}
+
+.smithing-recipe-icon .action-card-icon {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+}
+
+.smithing-recipe-icon .action-card-icon img {
+  width: 40px;
+  height: 40px;
+}
+
+.smithing-recipe-icon .action-card-icon.multi {
+  width: 50px;
+  min-width: 50px;
+}
+
+.smithing-recipe-icon .action-card-icon.multi img {
+  width: 34px;
+  height: 34px;
+  margin-left: -14px;
+}
+
+.smithing-recipe-icon .action-card-glyph {
+  width: 42px;
+  height: 42px;
+  font-size: 0.82rem;
+}
+
+.smithing-recipe-copy,
+.smithing-recipe-meta {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.smithing-recipe-copy strong,
+.smithing-recipe-copy small,
+.smithing-recipe-meta b,
+.smithing-recipe-meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smithing-recipe-copy strong {
+  color: #f4e6c8;
+  font-size: 0.9rem;
+  line-height: 1.18;
+}
+
+.smithing-recipe-copy small {
+  color: var(--amber);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.smithing-recipe-meta {
+  align-self: end;
+}
+
+.smithing-recipe-meta b {
+  color: #efe1c3;
+  font-size: 0.78rem;
+}
+
+.smithing-recipe-meta small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
 .location-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -2358,6 +2551,19 @@ h3 {
 
   .crafting-card {
     width: 100%;
+  }
+
+  .smithing-panel-card {
+    width: 100%;
+  }
+
+  .smithing-status-grid,
+  .smithing-active-row {
+    grid-template-columns: 1fr;
+  }
+
+  .smithing-active-row > strong {
+    text-align: left;
   }
 
   .craft-list {
