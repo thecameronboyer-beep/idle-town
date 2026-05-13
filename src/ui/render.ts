@@ -338,12 +338,18 @@ const mapReturnRoutePaths: Record<LocationId, string> = {
   mine: "M1080 270 C992 290 927 338 900 407 C870 482 824 540 746 603"
 };
 
-const EQUIPMENT_SLOT_COUNT = 10;
+const EQUIPMENT_SLOT_COUNT = 16;
 const equipmentToolSlots: Array<ToolId | null> = [
   "fishingPole",
   "stoneKnife",
+  "copperKnife",
+  "bronzeKnife",
   "stoneAxe",
+  "copperHatchet",
+  "bronzeHatchet",
   "stonePickAxe",
+  "copperPickaxe",
+  "bronzePickaxe",
   "stoneSpear",
   "basket",
   "leatherBackpack",
@@ -453,6 +459,36 @@ const toolEquipmentStats: Record<ToolId, EquipmentStat[]> = {
     { label: "Slot", value: "Hunting tool" },
     { label: "Effect", value: "Hunt Small Animals unlocked" },
     { label: "Targets", value: "Rabbit, Squirrel" }
+  ],
+  copperPickaxe: [
+    { label: "Slot", value: "Mining tool" },
+    { label: "Effect", value: "Mining upgrade" },
+    { label: "Durability", value: "2x stone" }
+  ],
+  copperHatchet: [
+    { label: "Slot", value: "Woodcutting tool" },
+    { label: "Effect", value: "Woodcutting upgrade" },
+    { label: "Durability", value: "Better than stone" }
+  ],
+  copperKnife: [
+    { label: "Slot", value: "Butchering tool" },
+    { label: "Effect", value: "Cleaner butchering" },
+    { label: "Durability", value: "Better than stone" }
+  ],
+  bronzePickaxe: [
+    { label: "Slot", value: "Mining tool" },
+    { label: "Effect", value: "Best early mining" },
+    { label: "Durability", value: "Better than copper" }
+  ],
+  bronzeHatchet: [
+    { label: "Slot", value: "Woodcutting tool" },
+    { label: "Effect", value: "Best early chopping" },
+    { label: "Durability", value: "Better than copper" }
+  ],
+  bronzeKnife: [
+    { label: "Slot", value: "Butchering tool" },
+    { label: "Effect", value: "Best early butchering" },
+    { label: "Durability", value: "Better than copper" }
   ]
 };
 
@@ -2863,11 +2899,29 @@ function getEquippedFieldEffects(state: GameState): string[] {
   if (state.tools.stoneKnife.owned && state.tools.stoneKnife.durability > 0) {
     effects.push("Butchering");
   }
+  if (state.tools.copperKnife.owned && state.tools.copperKnife.durability > 0) {
+    effects.push("Copper Butchering");
+  }
+  if (state.tools.bronzeKnife.owned && state.tools.bronzeKnife.durability > 0) {
+    effects.push("Bronze Butchering");
+  }
   if (state.tools.stoneAxe.owned && state.tools.stoneAxe.durability > 0) {
     effects.push("Woodcutting");
   }
+  if (state.tools.copperHatchet.owned && state.tools.copperHatchet.durability > 0) {
+    effects.push("Copper Woodcutting");
+  }
+  if (state.tools.bronzeHatchet.owned && state.tools.bronzeHatchet.durability > 0) {
+    effects.push("Bronze Woodcutting");
+  }
   if (state.tools.stonePickAxe.owned && state.tools.stonePickAxe.durability > 0) {
     effects.push("Mining");
+  }
+  if (state.tools.copperPickaxe.owned && state.tools.copperPickaxe.durability > 0) {
+    effects.push("Copper Mining");
+  }
+  if (state.tools.bronzePickaxe.owned && state.tools.bronzePickaxe.durability > 0) {
+    effects.push("Bronze Mining");
   }
   if (state.tools.stoneSpear.owned && state.tools.stoneSpear.durability > 0) {
     effects.push("Hunting");
@@ -2962,6 +3016,18 @@ function getToolInitials(toolId: ToolId): string {
       return "AX";
     case "stonePickAxe":
       return "PX";
+    case "copperPickaxe":
+      return "CP";
+    case "copperHatchet":
+      return "CH";
+    case "copperKnife":
+      return "CK";
+    case "bronzePickaxe":
+      return "BP";
+    case "bronzeHatchet":
+      return "BH";
+    case "bronzeKnife":
+      return "BK";
     case "stoneSpear":
       return "SP";
     case "stoneKnife":

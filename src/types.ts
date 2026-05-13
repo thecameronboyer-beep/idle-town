@@ -37,6 +37,12 @@ export type ToolId =
   | "stoneSpear"
   | "stoneKnife"
   | "stonePickAxe"
+  | "copperPickaxe"
+  | "copperHatchet"
+  | "copperKnife"
+  | "bronzePickaxe"
+  | "bronzeHatchet"
+  | "bronzeKnife"
   | "fishingPole"
   | "basket"
   | "leatherBackpack";

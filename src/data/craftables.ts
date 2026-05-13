@@ -34,6 +34,48 @@ export const toolDefinitions: ToolDefinition[] = [
     maxDurability: 10
   },
   {
+    id: "copperPickaxe",
+    label: "Copper Pickaxe",
+    recipe: { copperBar: 3, stick: 1, flaxFiber: 1 },
+    blurb: "A softer metal pick with better balance than stone.",
+    maxDurability: 24
+  },
+  {
+    id: "copperHatchet",
+    label: "Copper Hatchet",
+    recipe: { copperBar: 2, stick: 1, flaxFiber: 1 },
+    blurb: "A compact copper chopping head lashed to a handle.",
+    maxDurability: 22
+  },
+  {
+    id: "copperKnife",
+    label: "Copper Knife",
+    recipe: { copperBar: 1, stick: 1, flaxFiber: 1 },
+    blurb: "A sharper, longer-lasting knife for camp work.",
+    maxDurability: 30
+  },
+  {
+    id: "bronzePickaxe",
+    label: "Bronze Pickaxe",
+    recipe: { bronzeBar: 3, stick: 1, flaxFiber: 1 },
+    blurb: "A sturdy bronze mining tool with a harder edge.",
+    maxDurability: 42
+  },
+  {
+    id: "bronzeHatchet",
+    label: "Bronze Hatchet",
+    recipe: { bronzeBar: 2, stick: 1, flaxFiber: 1 },
+    blurb: "A bronze chopping tool that holds its bite.",
+    maxDurability: 38
+  },
+  {
+    id: "bronzeKnife",
+    label: "Bronze Knife",
+    recipe: { bronzeBar: 1, stick: 1, flaxFiber: 1 },
+    blurb: "A reliable bronze edge for finer butchering.",
+    maxDurability: 48
+  },
+  {
     id: "fishingPole",
     label: "Fishing Pole",
     recipe: { stick: 1, flaxFiber: 1 },
