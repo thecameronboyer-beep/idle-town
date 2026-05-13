@@ -149,6 +149,11 @@ export function getActionCost(actionId: ActionId): Cost {
     return textileRecipe.cost;
   }
 
+  const craftedToolId = getCraftedToolId(actionId);
+  if (craftedToolId) {
+    return getToolRecipe(craftedToolId);
+  }
+
   switch (actionId) {
     case "cookRabbitMeat":
       return { rabbitMeat: 1 };
@@ -158,20 +163,6 @@ export function getActionCost(actionId: ActionId): Cost {
       return { hide: 1 };
     case "craftLowestTool":
       return {};
-    case "craftBasket":
-      return getToolRecipe("basket");
-    case "craftFishingPole":
-      return getToolRecipe("fishingPole");
-    case "craftStoneKnife":
-      return getToolRecipe("stoneKnife");
-    case "craftStoneAxe":
-      return getToolRecipe("stoneAxe");
-    case "craftStonePickAxe":
-      return getToolRecipe("stonePickAxe");
-    case "craftStoneSpear":
-      return getToolRecipe("stoneSpear");
-    case "craftLeatherBackpack":
-      return getToolRecipe("leatherBackpack");
     default:
       return {};
   }

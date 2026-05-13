@@ -1,16 +1,6 @@
 import { toolDefinitions } from "../data/craftables";
-import type { GameState, ToolId } from "../types";
+import type { GameState, ToolId, ToolRole } from "../types";
 import { addLog } from "./log";
-
-export type ToolRole = "mining" | "woodcutting" | "butchering" | "fishing" | "hunting";
-
-const TOOL_ROLE_TIERS: Record<ToolRole, ToolId[]> = {
-  mining: ["bronzePickaxe", "copperPickaxe", "stonePickAxe"],
-  woodcutting: ["bronzeHatchet", "copperHatchet", "stoneAxe"],
-  butchering: ["bronzeKnife", "copperKnife", "stoneKnife"],
-  fishing: ["fishingPole"],
-  hunting: ["stoneSpear"]
-};
 
 export function getToolDefinition(toolId: ToolId) {
   return toolDefinitions.find((tool) => tool.id === toolId);
@@ -25,8 +15,14 @@ export function hasUsableTool(state: GameState, toolId: ToolId): boolean {
   return Boolean(tool?.owned && tool.durability > 0);
 }
 
+export function getToolDefinitionsForRole(role: ToolRole) {
+  return toolDefinitions
+    .filter((tool) => tool.roles.includes(role))
+    .sort((left, right) => getToolRoleTier(right.id, role) - getToolRoleTier(left.id, role));
+}
+
 export function getBestUsableToolForRole(state: GameState, role: ToolRole): ToolId | null {
-  return TOOL_ROLE_TIERS[role].find((toolId) => hasUsableTool(state, toolId)) ?? null;
+  return getToolDefinitionsForRole(role).find((tool) => hasUsableTool(state, tool.id))?.id ?? null;
 }
 
 export function hasUsableToolForRole(state: GameState, role: ToolRole): boolean {
@@ -39,8 +35,25 @@ export function getToolTierForRole(state: GameState, role: ToolRole): number {
     return 0;
   }
 
-  const tiers = TOOL_ROLE_TIERS[role];
-  return tiers.length - tiers.indexOf(toolId);
+  return getToolRoleTier(toolId, role);
+}
+
+export function getToolRoleTier(toolId: ToolId, role: ToolRole): number {
+  const definition = getToolDefinition(toolId);
+  if (!definition?.roles.includes(role)) {
+    return 0;
+  }
+
+  return definition.roleTiers?.[role] ?? definition.weapon?.damage ?? 1;
+}
+
+export function getToolCombatPower(toolId: ToolId): number {
+  return getToolDefinition(toolId)?.weapon?.damage ?? 0;
+}
+
+export function getCombatPowerForRole(state: GameState, role: ToolRole): number {
+  const toolId = getBestUsableToolForRole(state, role);
+  return toolId ? getToolCombatPower(toolId) : 0;
 }
 
 export function equipFreshTool(state: GameState, toolId: ToolId): boolean {

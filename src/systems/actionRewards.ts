@@ -1,4 +1,4 @@
-import { toolDefinitions } from "../data/craftables";
+import { primitiveToolCraftDefinitions, toolDefinitions } from "../data/craftables";
 import { getSmithingRecipe } from "../data/smithing";
 import { getTextileRecipe } from "../data/textiles";
 import {
@@ -16,7 +16,14 @@ import {
 } from "./inventory";
 import { addStackedLog } from "./log";
 import { randomFloat, randomInt } from "./math";
-import { damageBestToolForRole, equipFreshTool, getToolTierForRole, hasUsableTool, hasUsableToolForRole } from "./tools";
+import {
+  damageBestToolForRole,
+  equipFreshTool,
+  getCombatPowerForRole,
+  getToolTierForRole,
+  hasUsableTool,
+  hasUsableToolForRole
+} from "./tools";
 
 export type ActionRewards = {
   resources: Cost;
@@ -25,22 +32,10 @@ export type ActionRewards = {
   tone: "gain" | "craft";
 };
 
-export type ToolCraftActionId =
-  | "craftBasket"
-  | "craftFishingPole"
-  | "craftStoneKnife"
-  | "craftStoneAxe"
-  | "craftStonePickAxe"
-  | "craftStoneSpear";
+export type ToolCraftActionId = ActionId;
 
-export const TOOL_CRAFT_ACTIONS: Array<{ actionId: ToolCraftActionId; toolId: ToolId }> = [
-  { actionId: "craftBasket", toolId: "basket" },
-  { actionId: "craftFishingPole", toolId: "fishingPole" },
-  { actionId: "craftStoneKnife", toolId: "stoneKnife" },
-  { actionId: "craftStoneAxe", toolId: "stoneAxe" },
-  { actionId: "craftStonePickAxe", toolId: "stonePickAxe" },
-  { actionId: "craftStoneSpear", toolId: "stoneSpear" }
-];
+export const TOOL_CRAFT_ACTIONS: Array<{ actionId: ToolCraftActionId; toolId: ToolId }> =
+  primitiveToolCraftDefinitions.map((tool) => ({ actionId: tool.craftActionId, toolId: tool.id }));
 
 const RIVER_FISH: Array<{ id: ResourceId; minWeight: number; maxWeight: number }> = [
   { id: "minnow", minWeight: 0.5, maxWeight: 1.5 },
@@ -143,18 +138,8 @@ export function rollRewards(
     case "fishRiver":
       return fishRiver();
     case "craftLowestTool":
-    case "craftBasket":
-    case "craftFishingPole":
-    case "craftStoneKnife":
-    case "craftStoneAxe":
-    case "craftStonePickAxe":
-    case "craftStoneSpear":
     case "craftLeatherBackpack":
-      return {
-        resources: {},
-        message: "Cameron finishes a tool.",
-        tone: "craft"
-      };
+      break;
     case "chopTrees": {
       const toolTier = getToolTierForRole(state, "woodcutting");
       const woodBonus = toolTier >= 3 ? 1 : toolTier >= 2 && Math.random() < 0.5 ? 1 : 0;
@@ -167,7 +152,7 @@ export function rollRewards(
       };
     }
     case "huntSmallAnimals":
-      return huntSmallAnimal();
+      return huntSmallAnimal(state);
     case "butcherFish":
       return {
         resources: {},
@@ -198,11 +183,18 @@ export function rollRewards(
       };
   }
 
-  return {
-    resources: {},
-    message: "Cameron finishes the work.",
-    tone: "craft"
-  };
+  const craftedToolId = getCraftedToolId(actionId);
+  return craftedToolId
+    ? {
+        resources: {},
+        message: `Cameron finishes ${getToolDefinitionLabel(craftedToolId).toLowerCase()}.`,
+        tone: "craft"
+      }
+    : {
+        resources: {},
+        message: "Cameron finishes the work.",
+        tone: "craft"
+      };
 }
 
 export function getCraftedToolId(actionId: ActionId): ToolId | null {
@@ -211,24 +203,12 @@ export function getCraftedToolId(actionId: ActionId): ToolId | null {
     return smithingRecipe.toolId;
   }
 
-  switch (actionId) {
-    case "craftBasket":
-      return "basket";
-    case "craftFishingPole":
-      return "fishingPole";
-    case "craftStoneKnife":
-      return "stoneKnife";
-    case "craftStoneAxe":
-      return "stoneAxe";
-    case "craftStonePickAxe":
-      return "stonePickAxe";
-    case "craftStoneSpear":
-      return "stoneSpear";
-    case "craftLeatherBackpack":
-      return "leatherBackpack";
-    default:
-      return null;
+  const toolCraftAction = TOOL_CRAFT_ACTIONS.find((entry) => entry.actionId === actionId);
+  if (toolCraftAction) {
+    return toolCraftAction.toolId;
   }
+
+  return actionId === "craftLeatherBackpack" ? "leatherBackpack" : null;
 }
 
 export function completeToolCraft(
@@ -335,20 +315,8 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
       return `${characterName} mined tin`;
     case "fishRiver":
       return `${characterName} caught river fish`;
-    case "craftBasket":
-      return `${characterName} crafted baskets`;
     case "craftLowestTool":
       return `${characterName} balanced tool stock`;
-    case "craftFishingPole":
-      return `${characterName} crafted fishing poles`;
-    case "craftStoneKnife":
-      return `${characterName} crafted stone knives`;
-    case "craftStoneAxe":
-      return `${characterName} crafted stone axes`;
-    case "craftStonePickAxe":
-      return `${characterName} crafted stone pick axes`;
-    case "craftStoneSpear":
-      return `${characterName} crafted stone spears`;
     case "craftLeatherBackpack":
       return `${characterName} crafted leather backpacks`;
     case "chopTrees":
@@ -367,6 +335,11 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
       return `${characterName} cooked squirrel meat`;
     case "tanHide":
       return `${characterName} tanned hide`;
+  }
+
+  const craftedToolId = getCraftedToolId(actionId);
+  if (craftedToolId) {
+    return `${characterName} crafted ${pluralTool(getToolDefinitionLabel(craftedToolId)).toLowerCase()}`;
   }
 
   return `${characterName} completed work`;
@@ -428,9 +401,12 @@ function mineResource(state: GameState, resourceId: "coal" | "copper" | "tin"): 
   };
 }
 
-function huntSmallAnimal(): ActionRewards {
-  const animal = SMALL_GAME[Math.random() < 0.58 ? 0 : 1];
-  const weight = randomFloat(animal.minWeight, animal.maxWeight, 1);
+function huntSmallAnimal(state: GameState): ActionRewards {
+  const combatPower = getCombatPowerForRole(state, "hunting");
+  const rabbitChance = Math.min(0.76, 0.52 + combatPower * 0.025);
+  const animal = SMALL_GAME[Math.random() < rabbitChance ? 0 : 1];
+  const weightBonus = Math.min(0.8, Math.max(0, combatPower - 2.4) * 0.12);
+  const weight = randomFloat(animal.minWeight, animal.maxWeight + weightBonus, 1);
   const label = getResourceLabel(animal.id);
 
   return {
@@ -486,5 +462,13 @@ function plural(label: string, amount: number): string {
 }
 
 function pluralTool(label: string): string {
+  if (label.endsWith("Knife")) {
+    return `${label.slice(0, -"Knife".length)}Knives`;
+  }
+
   return label.endsWith("s") ? label : `${label}s`;
+}
+
+function getToolDefinitionLabel(toolId: ToolId): string {
+  return toolDefinitions.find((tool) => tool.id === toolId)?.label ?? "Tool";
 }

@@ -1,3 +1,4 @@
+import { primitiveToolCraftDefinitions } from "../data/craftables";
 import { fishResourceIds } from "../data/resources";
 import { getTextileRecipe } from "../data/textiles";
 import type { ActionId, BuildingId, GameState } from "../types";
@@ -5,6 +6,8 @@ import { isCampfireLit } from "./buildings";
 import { getSmithingRecipeLockReason, isSmithingRecipeUnlocked } from "./smithing";
 import { getTextileRecipeLockReason, isTextileRecipeUnlocked } from "./textiles";
 import { hasUsableToolForRole } from "./tools";
+
+const primitiveToolCraftActionIds = primitiveToolCraftDefinitions.map((tool) => tool.craftActionId);
 
 function hasSeenMeat(state: GameState): boolean {
   return state.seenResources.includes("rabbitMeat") || state.seenResources.includes("squirrelMeat");
@@ -38,6 +41,10 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
     return false;
   }
 
+  if (actionId === "craftLowestTool" || primitiveToolCraftActionIds.includes(actionId)) {
+    return true;
+  }
+
   switch (actionId) {
     case "gatherSticks":
     case "gatherStones":
@@ -45,13 +52,6 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
     case "gatherFlaxFibers":
     case "gatherMushrooms":
     case "gatherBerries":
-    case "craftLowestTool":
-    case "craftBasket":
-    case "craftFishingPole":
-    case "craftStoneKnife":
-    case "craftStoneAxe":
-    case "craftStonePickAxe":
-    case "craftStoneSpear":
       return true;
     case "fishRiver":
       return hasUsableToolForRole(state, "fishing");
@@ -102,7 +102,7 @@ export function getActionLockReason(state: GameState, actionId: ActionId): strin
     case "chopTrees":
       return "Needs Woodcutting Tool";
     case "huntSmallAnimals":
-      return "Needs Stone Spear";
+      return "Needs Hunting Weapon";
     case "butcherFish":
       return "Needs Carried Fish";
     case "butcherRabbit":
