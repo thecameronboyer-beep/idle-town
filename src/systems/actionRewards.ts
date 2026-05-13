@@ -1,5 +1,6 @@
 import { toolDefinitions } from "../data/craftables";
 import { getSmithingRecipe } from "../data/smithing";
+import { getTextileRecipe } from "../data/textiles";
 import {
   fishFiletByFishId,
   fishResourceIds,
@@ -72,6 +73,14 @@ export function rollRewards(
     return {
       resources: smithingRecipe.output ?? {},
       message: `Cameron finishes ${smithingRecipe.label.toLowerCase()}.`,
+      tone: "craft"
+    };
+  }
+  const textileRecipe = getTextileRecipe(actionId);
+  if (textileRecipe) {
+    return {
+      resources: textileRecipe.output,
+      message: `Cameron finishes ${textileRecipe.label.toLowerCase()}.`,
       tone: "craft"
     };
   }
@@ -299,6 +308,10 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
   const smithingRecipe = getSmithingRecipe(actionId);
   if (smithingRecipe) {
     return `${characterName} completed ${smithingRecipe.label.toLowerCase()}`;
+  }
+  const textileRecipe = getTextileRecipe(actionId);
+  if (textileRecipe) {
+    return `${characterName} completed ${textileRecipe.label.toLowerCase()}`;
   }
 
   switch (actionId) {

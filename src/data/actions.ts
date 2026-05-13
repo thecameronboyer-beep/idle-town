@@ -1,5 +1,6 @@
 import type { ActionDefinition } from "../types";
 import { smithingRecipeDefinitions } from "./smithing";
+import { textileRecipeDefinitions } from "./textiles";
 
 export const actionDefinitions: ActionDefinition[] = [
   {
@@ -185,6 +186,13 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Knot a crude leather sling pouch with a drawstring."
   },
   ...smithingRecipeDefinitions.map((recipe): ActionDefinition => ({
+    id: recipe.actionId,
+    label: recipe.label,
+    verb: recipe.verb,
+    durationMs: recipe.durationMs,
+    blurb: recipe.blurb
+  })),
+  ...textileRecipeDefinitions.map((recipe): ActionDefinition => ({
     id: recipe.actionId,
     label: recipe.label,
     verb: recipe.verb,

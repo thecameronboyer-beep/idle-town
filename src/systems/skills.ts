@@ -30,6 +30,7 @@ export const skillDefinitions: SkillDefinition[] = [
   { id: "hunting", label: "Hunting", description: "Tracking and taking small animals." },
   { id: "crafting", label: "Crafting", description: "Making tools and useful camp goods." },
   { id: "smithing", label: "Smithing", description: "Smelting ore and shaping early metalwork." },
+  { id: "textiles", label: "Textiles", description: "Retting flax, spinning thread, weaving cloth, and sewing goods." },
   { id: "butchering", label: "Butchering", description: "Breaking animals and fish into usable parts." },
   { id: "cooking", label: "Cooking", description: "Preparing food over fire." },
   { id: "leatherworking", label: "Leatherworking", description: "Turning hide into leather." },

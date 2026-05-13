@@ -1,5 +1,6 @@
 import { actionDefinitions, getActionDefinition } from "../data/actions";
 import { getSmithingRecipe } from "../data/smithing";
+import { getTextileRecipe } from "../data/textiles";
 import type { ActionId, Cost, GameState, RunningAction } from "../types";
 import {
   addCharacterResources,
@@ -142,6 +143,10 @@ export function getActionCost(actionId: ActionId): Cost {
   const smithingRecipe = getSmithingRecipe(actionId);
   if (smithingRecipe) {
     return smithingRecipe.cost;
+  }
+  const textileRecipe = getTextileRecipe(actionId);
+  if (textileRecipe) {
+    return textileRecipe.cost;
   }
 
   switch (actionId) {

@@ -1,7 +1,9 @@
 import { fishResourceIds } from "../data/resources";
+import { getTextileRecipe } from "../data/textiles";
 import type { ActionId, BuildingId, GameState } from "../types";
 import { isCampfireLit } from "./buildings";
 import { getSmithingRecipeLockReason, isSmithingRecipeUnlocked } from "./smithing";
+import { getTextileRecipeLockReason, isTextileRecipeUnlocked } from "./textiles";
 import { hasUsableToolForRole } from "./tools";
 
 function hasSeenMeat(state: GameState): boolean {
@@ -26,6 +28,10 @@ function hasSeenFish(state: GameState): boolean {
 export function isActionUnlocked(state: GameState, actionId: ActionId, now = Date.now()): boolean {
   if (isSmithingRecipeUnlocked(state, actionId)) {
     return true;
+  }
+  const textileRecipe = getTextileRecipe(actionId);
+  if (textileRecipe) {
+    return isTextileRecipeUnlocked(state, actionId);
   }
   const smithingLockReason = getSmithingRecipeLockReason(state, actionId);
   if (smithingLockReason) {
@@ -80,6 +86,10 @@ export function getActionLockReason(state: GameState, actionId: ActionId): strin
   const smithingLockReason = getSmithingRecipeLockReason(state, actionId);
   if (smithingLockReason) {
     return smithingLockReason;
+  }
+  const textileLockReason = getTextileRecipeLockReason(state, actionId);
+  if (textileLockReason) {
+    return textileLockReason;
   }
 
   switch (actionId) {
