@@ -266,7 +266,8 @@ h3 {
 }
 
 .map-button,
-.characters-button {
+.characters-button,
+.combat-button {
   display: block;
   border: 1px solid rgba(115, 168, 160, 0.38);
   border-radius: 7px;
@@ -278,12 +279,143 @@ h3 {
 }
 
 .map-button:hover,
-.characters-button:hover {
+.characters-button:hover,
+.combat-button:hover {
   border-color: rgba(230, 188, 109, 0.62);
   background:
     linear-gradient(90deg, rgba(115, 168, 160, 0.18), rgba(214, 164, 81, 0.12)),
     rgba(24, 25, 19, 0.8);
   transform: translateY(-1px);
+}
+
+.party-rail {
+  display: grid;
+  gap: 0.55rem;
+  min-height: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(14, 15, 12, 0.44);
+}
+
+.party-rail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.party-rail-heading span {
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.party-member-list {
+  display: grid;
+  gap: 0.5rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.party-member {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.55rem;
+  border: 1px solid rgba(236, 229, 213, 0.14);
+  border-radius: 8px;
+  background: rgba(17, 18, 14, 0.58);
+}
+
+.party-member.dispatched {
+  border-color: rgba(214, 164, 81, 0.48);
+  background:
+    linear-gradient(90deg, rgba(115, 168, 160, 0.12), rgba(214, 164, 81, 0.1)),
+    rgba(17, 18, 14, 0.74);
+}
+
+.party-member-topline {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 0.45rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.party-member-topline strong,
+.party-member-topline small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-member-topline strong {
+  color: #f4e6c8;
+  font-size: 0.86rem;
+  line-height: 1.15;
+}
+
+.party-member-topline small {
+  font-size: 0.68rem;
+}
+
+.party-dispatch-button {
+  min-height: 34px;
+  padding: 0.34rem 0.48rem;
+  font-size: 0.72rem;
+}
+
+.vitals-row {
+  display: grid;
+  grid-template-columns: 2.65rem minmax(0, 1fr) 3.15rem;
+  gap: 0.35rem;
+  align-items: center;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.vitals-row > span,
+.vitals-row > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vitals-row > strong {
+  color: #efe1c3;
+  text-align: right;
+}
+
+.vitals-track {
+  position: relative;
+  height: 0.42rem;
+  overflow: hidden;
+  border: 1px solid rgba(236, 229, 213, 0.12);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.vitals-track span {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform-origin: left center;
+}
+
+.vitals-row.hp .vitals-track span {
+  background: linear-gradient(90deg, #c46458, #d6a451);
+}
+
+.vitals-row.mana .vitals-track span {
+  background: linear-gradient(90deg, #4979b8, #73a8a0);
 }
 
 .character-panel {
@@ -615,6 +747,236 @@ h3 {
 
 .camp-work-area {
   grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+}
+
+.combat-work-area {
+  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+  align-items: start;
+}
+
+.combat-panel,
+.combat-side-panel {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.combat-panel-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.combat-panel-heading h2 {
+  font-size: clamp(2rem, 5vw, 4rem);
+}
+
+.combat-status-pill {
+  flex: 0 0 auto;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid rgba(214, 164, 81, 0.42);
+  border-radius: 999px;
+  color: #ffe3a6;
+  background: rgba(214, 164, 81, 0.12);
+  font-size: 0.72rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.combat-location-blurb {
+  max-width: 58rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.combat-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.combat-summary-grid > div {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.62rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 18, 14, 0.62);
+}
+
+.combat-summary-grid strong {
+  color: #f4e6c8;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.combat-summary-grid small {
+  overflow: hidden;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.combat-field {
+  display: grid;
+  grid-template-columns: repeat(var(--combat-cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--combat-rows), minmax(4.8rem, 1fr));
+  gap: 0.35rem;
+  width: min(100%, 54rem);
+  aspect-ratio: 7 / 5;
+  min-height: 22rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(236, 229, 213, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(45, 48, 39, 0.72), rgba(18, 19, 15, 0.92)),
+    rgba(14, 15, 12, 0.76);
+}
+
+.combat-cell {
+  display: grid;
+  grid-template-rows: minmax(1.6rem, auto) auto auto 1fr;
+  gap: 0.22rem;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.35rem;
+  border: 1px solid rgba(236, 229, 213, 0.1);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.combat-cell.occupied {
+  border-color: rgba(236, 229, 213, 0.26);
+  background: rgba(17, 18, 14, 0.68);
+  box-shadow: inset 0 0 0 1px rgba(7, 8, 6, 0.38);
+}
+
+.combat-cell.party {
+  border-color: rgba(115, 168, 160, 0.5);
+}
+
+.combat-cell.enemy {
+  border-color: rgba(196, 100, 88, 0.54);
+}
+
+.combat-unit-glyph {
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border: 1px solid rgba(236, 229, 213, 0.28);
+  border-radius: 50%;
+  color: #14120e;
+  background: #d6a451;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.92rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.combat-cell.enemy .combat-unit-glyph {
+  color: #fde4d8;
+  background: #7f332e;
+}
+
+.combat-unit-name,
+.combat-unit-timer {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combat-unit-name {
+  color: #f4e6c8;
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.combat-unit-timer {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 850;
+}
+
+.combat-cell .vitals-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.18rem;
+}
+
+.combat-cell .vitals-row > span,
+.combat-cell .vitals-row > strong {
+  display: none;
+}
+
+.combat-field-message {
+  min-height: 1.5rem;
+  color: #efe1c3;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.combat-roster-list,
+.combat-log-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.combat-roster-unit {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.62rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 18, 14, 0.58);
+}
+
+.combat-roster-unit.enemy {
+  border-color: rgba(196, 100, 88, 0.38);
+}
+
+.combat-roster-unit strong,
+.combat-roster-unit small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combat-roster-unit strong {
+  color: #f4e6c8;
+  line-height: 1.15;
+}
+
+.combat-event-log {
+  display: grid;
+  gap: 0.55rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.combat-log-entry {
+  padding: 0.52rem 0.6rem;
+  border: 1px solid rgba(236, 229, 213, 0.12);
+  border-radius: 8px;
+  color: #e8dcc4;
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 0.8rem;
+}
+
+.combat-log-entry.gain {
+  border-color: rgba(124, 155, 99, 0.42);
+}
+
+.combat-log-entry.warning {
+  border-color: rgba(196, 100, 88, 0.5);
 }
 
 .camp-stats-panel {
@@ -2477,6 +2839,18 @@ h3 {
     margin-top: 0;
   }
 
+  .party-rail {
+    padding: 0.55rem;
+  }
+
+  .party-member-list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(12rem, 1fr);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.1rem;
+  }
+
   .camp-log-toggle,
   .action-loops-toggle {
     min-height: 44px;
@@ -2515,6 +2889,7 @@ h3 {
 
   .work-area,
   .camp-work-area,
+  .combat-work-area,
   .skill-grid,
   .character-overview-content,
   .character-overview-pair {
@@ -2526,6 +2901,8 @@ h3 {
   }
 
   .location-map-panel,
+  .combat-panel,
+  .combat-side-panel,
   .action-panel,
   .location-panel,
   .skill-panel,
@@ -2568,6 +2945,30 @@ h3 {
 
   .smithing-active-row > strong {
     text-align: left;
+  }
+
+  .combat-field {
+    gap: 0.22rem;
+    min-height: 17rem;
+    padding: 0.35rem;
+  }
+
+  .combat-cell {
+    padding: 0.24rem;
+  }
+
+  .combat-unit-glyph {
+    width: 1.45rem;
+    height: 1.45rem;
+    font-size: 0.78rem;
+  }
+
+  .combat-unit-name {
+    font-size: 0.62rem;
+  }
+
+  .combat-unit-timer {
+    display: none;
   }
 
   .craft-list {
