@@ -131,6 +131,19 @@ export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
     unlockHint: "Craft Copper Needle or Bronze Needle",
     requiredSeenResources: ["linenCloth"],
     requiredAnyResources: [...sewingNeedleResourceIds]
+  },
+  {
+    actionId: "sewSimplePouch",
+    label: "Sew Simple Pouch",
+    verb: "sewing a simple pouch",
+    kind: "sewing",
+    durationMs: 22000,
+    cost: { linenCloth: 2, linenThread: 2 },
+    output: { simplePouch: 1 },
+    blurb: "Sew a small pouch with tied corners and a linen drawstring.",
+    unlockHint: "Craft Copper Needle or Bronze Needle",
+    requiredSeenResources: ["linenCloth"],
+    requiredAnyResources: [...sewingNeedleResourceIds]
   }
 ];
 

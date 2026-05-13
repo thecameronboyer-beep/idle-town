@@ -116,6 +116,12 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "Clean linen strips prepared for future medical use."
   },
   {
+    id: "simplePouch",
+    label: "Simple Pouch",
+    group: "crafted",
+    blurb: "A small sewn linen pouch for organizing camp goods."
+  },
+  {
     id: "pot",
     label: "Pot",
     group: "crafted",
