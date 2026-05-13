@@ -1,19 +1,31 @@
 import { normalizeResourceAmount } from "../data/resources";
-import type { Cost, GameState, LogEntry, ResourceId } from "../types";
+import type { Cost, GameState, LogEntry, LogScope, ResourceId } from "../types";
 
 const MAX_LOG_ENTRIES = 48;
+const DEFAULT_LOG_SCOPE: LogScope = "camp";
+const CHARACTER_AGGREGATE_PREFIXES = ["action:", "craft:", "deposit:"];
+const LEGACY_CHARACTER_TEXT_PREFIXES = [
+  "Cameron stops ",
+  "Cameron lacks ",
+  "Cameron crafted ",
+  "Cameron butchered ",
+  "Cameron returned ",
+  "The saved trail grows quiet"
+];
 
 export function addLog(
   state: GameState,
   text: string,
   tone: LogEntry["tone"] = "muted",
-  now = Date.now()
+  now = Date.now(),
+  scope: LogScope = DEFAULT_LOG_SCOPE
 ): void {
   state.log.unshift({
     id: `${now}-${Math.random().toString(36).slice(2)}`,
     time: now,
     text,
-    tone
+    tone,
+    scope
   });
   state.log = state.log.slice(0, MAX_LOG_ENTRIES);
 }
@@ -28,10 +40,14 @@ export function addStackedLog(
     resources?: Cost;
     tone?: LogEntry["tone"];
     now?: number;
+    scope?: LogScope;
   }
 ): void {
   const now = options.now ?? Date.now();
-  const existingIndex = state.log.findIndex((entry) => entry.aggregateKey === options.aggregateKey);
+  const scope = options.scope ?? DEFAULT_LOG_SCOPE;
+  const existingIndex = state.log.findIndex(
+    (entry) => entry.aggregateKey === options.aggregateKey && getLogScope(entry) === scope
+  );
   const aggregateItems = normalizeResourceTotals(options.resources);
 
   if (existingIndex >= 0) {
@@ -39,6 +55,7 @@ export function addStackedLog(
     entry.time = now;
     entry.text = options.text;
     entry.tone = options.tone ?? entry.tone;
+    entry.scope = scope;
     if (Object.keys(aggregateItems).length > 0) {
       entry.aggregateItems = mergeAggregateItems(getExistingAggregateItems(entry), aggregateItems);
       delete entry.aggregateTotal;
@@ -56,6 +73,7 @@ export function addStackedLog(
     time: now,
     text: options.text,
     tone: options.tone ?? "muted",
+    scope,
     aggregateKey: options.aggregateKey,
     ...(Object.keys(aggregateItems).length > 0
       ? { aggregateItems }
@@ -65,6 +83,26 @@ export function addStackedLog(
         })
   });
   state.log = state.log.slice(0, MAX_LOG_ENTRIES);
+}
+
+export function getLogScope(entry: LogEntry): LogScope {
+  if (entry.scope) {
+    return entry.scope;
+  }
+
+  if (entry.aggregateKey && CHARACTER_AGGREGATE_PREFIXES.some((prefix) => entry.aggregateKey?.startsWith(prefix))) {
+    return "character";
+  }
+
+  if (LEGACY_CHARACTER_TEXT_PREFIXES.some((prefix) => entry.text.startsWith(prefix))) {
+    return "character";
+  }
+
+  if (/\bbreaks(?:\.|;)/.test(entry.text)) {
+    return "character";
+  }
+
+  return DEFAULT_LOG_SCOPE;
 }
 
 function normalizeResourceTotals(resources: Cost | undefined): Partial<Record<ResourceId, number>> {

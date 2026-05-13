@@ -1,27 +1,8 @@
 import { actionDefinitions, getActionDefinition } from "../data/actions";
-import { toolDefinitions } from "../data/craftables";
-import {
-  fishFiletByFishId,
-  fishResourceIds,
-  formatResourceAmount,
-  getResourceLabel,
-  normalizeResourceAmount
-} from "../data/resources";
-import type {
-  ActionId,
-  CharacterLocationId,
-  Cost,
-  GameState,
-  LocationId,
-  ResourceCountDelta,
-  ResourceId,
-  RunningAction,
-  ToolId
-} from "../types";
+import type { ActionId, Cost, GameState, RunningAction } from "../types";
 import {
   addCharacterResources,
   addResources,
-  consumeOneWholeResource,
   depositCharacterResources,
   getCharacterInventoryWeight,
   getCharacterMaxWeight,
@@ -31,58 +12,73 @@ import {
 } from "./inventory";
 import { addLog, addStackedLog } from "./log";
 import { expireCampfire, getActiveCampfireExpiresAt } from "./buildings";
-import { randomFloat, randomInt } from "./math";
 import { isActionUnlocked } from "./progression";
-import { damageTool, equipFreshTool, hasUsableTool } from "./tools";
+import { addActionSkillXp, addTravelSkillXp } from "./skills";
+import {
+  canInsertActionInLoop,
+  clampLoopIndex,
+  formatCharacterLocation,
+  getActionTargetLocation,
+  getActiveActionId,
+  getCharacterLocation,
+  getLoopActionId,
+  getLoopLocation,
+  getLoopTargetLocationId,
+  getNextLoopIndex,
+  getNextLoopIndexAfterCompletedAction,
+  getNextLoopIndexAfterIndex,
+  getRunningActionLoop,
+  getRunningActionLoopLocations,
+  getRunningTargetLocation,
+  getStoppedCharacterLocation,
+  getTravelBackNextLoopIndex,
+  getTravelMs,
+  isCarryAction,
+  setCharacterLocation,
+  type StartActionOptions
+} from "./actionRouting";
+import {
+  getActionLoop,
+  normalizeActionLoopLocations
+} from "./actionLoops";
+import {
+  clearRunningAction,
+  getCharacterName,
+  getCurrentAction,
+  getCurrentActions,
+  getNextRunningAction,
+  setCharacterWorking,
+  setRunningAction,
+  syncCurrentAction,
+  touch
+} from "./actionState";
+import {
+  applyToolWear,
+  completeFishButchering,
+  completeToolCraft,
+  getCraftedToolId,
+  getStackedActionText,
+  getToolRecipe,
+  getToolStockCount,
+  hasCarriedWholeFish,
+  rollRewards,
+  TOOL_CRAFT_ACTIONS,
+  type ToolCraftActionId
+} from "./actionRewards";
+
+export {
+  canInsertActionInSavedLoop,
+  createActionLoop,
+  deleteActionLoop,
+  getActionLoop,
+  getAssignedActionLoop,
+  insertActionInSavedLoop,
+  removeActionFromSavedLoop
+} from "./actionLoops";
+
+export { getCurrentAction, getCurrentActions, syncCurrentAction } from "./actionState";
 
 const MAX_OFFLINE_MS = 2 * 60 * 60 * 1000;
-const LOCATION_TRAVEL_MS: Record<LocationId, number> = {
-  meadow: 10000,
-  river: 15000,
-  forest: 30000,
-  mine: 60000
-};
-
-const RIVER_FISH: Array<{ id: ResourceId; minWeight: number; maxWeight: number }> = [
-  { id: "minnow", minWeight: 0.5, maxWeight: 1.5 },
-  { id: "stoneLoach", minWeight: 1, maxWeight: 3 },
-  { id: "mudskipper", minWeight: 1.5, maxWeight: 4.5 },
-  { id: "brookStickleback", minWeight: 0.5, maxWeight: 2 },
-  { id: "pebblePerch", minWeight: 2, maxWeight: 7.5 }
-];
-const SMALL_GAME: Array<{ id: "rabbit" | "squirrel"; minWeight: number; maxWeight: number }> = [
-  { id: "rabbit", minWeight: 2, maxWeight: 5 },
-  { id: "squirrel", minWeight: 0.5, maxWeight: 2 }
-];
-
-type StartActionOptions = {
-  locationId?: LocationId;
-};
-
-type ActionRewards = {
-  resources: Cost;
-  resourceCounts?: ResourceCountDelta;
-  message: string;
-  tone: "gain" | "craft";
-};
-
-type ToolCraftActionId =
-  | "craftBasket"
-  | "craftFishingPole"
-  | "craftStoneKnife"
-  | "craftStoneAxe"
-  | "craftStonePickAxe"
-  | "craftStoneSpear";
-
-const TOOL_CRAFT_ACTIONS: Array<{ actionId: ToolCraftActionId; toolId: ToolId }> = [
-  { actionId: "craftBasket", toolId: "basket" },
-  { actionId: "craftFishingPole", toolId: "fishingPole" },
-  { actionId: "craftStoneKnife", toolId: "stoneKnife" },
-  { actionId: "craftStoneAxe", toolId: "stoneAxe" },
-  { actionId: "craftStonePickAxe", toolId: "stonePickAxe" },
-  { actionId: "craftStoneSpear", toolId: "stoneSpear" }
-];
-
 export function getLowestQuantityCraftAction(state: GameState, now = Date.now()): ToolCraftActionId | null {
   const candidates = TOOL_CRAFT_ACTIONS.filter(({ actionId }) => {
     return isActionUnlocked(state, actionId, now) && hasCost(state, getActionCost(actionId));
@@ -99,9 +95,46 @@ export function getLowestQuantityCraftAction(state: GameState, now = Date.now())
   }, candidates[0]).actionId;
 }
 
-function getToolStockCount(state: GameState, toolId: ToolId): number {
-  const tool = state.tools[toolId];
-  return (tool?.quantity ?? 0) + (tool?.owned ? 1 : 0);
+export function assignActionLoopToCharacter(
+  state: GameState,
+  loopId: string,
+  characterId = state.selectedCharacterId,
+  now = Date.now()
+): boolean {
+  const loop = getActionLoop(state, loopId);
+  const character = state.characters.find((entry) => entry.id === characterId);
+  if (!loop || !character) {
+    return false;
+  }
+
+  character.actionLoopId = loop.id;
+  return startActionLoop(state, loop.id, characterId, now);
+}
+
+export function startActionLoop(
+  state: GameState,
+  loopId: string,
+  characterId = state.selectedCharacterId,
+  now = Date.now()
+): boolean {
+  const loop = getActionLoop(state, loopId);
+  if (!loop?.actionIds.length) {
+    return false;
+  }
+
+  const seed: RunningAction = {
+    actionId: loop.actionIds[0],
+    characterId,
+    phase: "working",
+    loopActionIds: [...loop.actionIds],
+    loopLocationIds: normalizeActionLoopLocations(loop),
+    loopIndex: 0,
+    startedAt: now,
+    endsAt: now,
+    repeat: true
+  };
+
+  return startLoopActionAtIndex(state, seed, 0, now);
 }
 
 export function getActionCost(actionId: ActionId): Cost {
@@ -126,18 +159,25 @@ export function getActionCost(actionId: ActionId): Cost {
       return getToolRecipe("stonePickAxe");
     case "craftStoneSpear":
       return getToolRecipe("stoneSpear");
+    case "craftLeatherBackpack":
+      return getToolRecipe("leatherBackpack");
     default:
       return {};
   }
 }
 
-export function canStartAction(state: GameState, actionId: ActionId, now = Date.now()): boolean {
+export function canStartAction(
+  state: GameState,
+  actionId: ActionId,
+  now = Date.now(),
+  characterId = state.selectedCharacterId
+): boolean {
   if (actionId === "craftLowestTool") {
     return isActionUnlocked(state, actionId, now) && Boolean(getLowestQuantityCraftAction(state, now));
   }
 
   if (actionId === "butcherFish") {
-    return isActionUnlocked(state, actionId, now) && hasCarriedWholeFish(state);
+    return isActionUnlocked(state, actionId, now) && hasCarriedWholeFish(state, characterId);
   }
   if (actionId === "butcherRabbit") {
     return isActionUnlocked(state, actionId, now) && hasResourceQuantity(state, "rabbit");
@@ -149,24 +189,6 @@ export function canStartAction(state: GameState, actionId: ActionId, now = Date.
   return isActionUnlocked(state, actionId, now) && hasCost(state, getActionCost(actionId));
 }
 
-export function getRunningActionLoop(running: RunningAction): ActionId[] {
-  if (running.loopActionIds?.length) {
-    return [...running.loopActionIds];
-  }
-
-  return running.followUpActionId ? [running.actionId, running.followUpActionId] : [running.actionId];
-}
-
-export function canInsertActionInLoop(running: RunningAction, afterIndex: number, actionId: ActionId): boolean {
-  const loop = getRunningActionLoop(running);
-  const safeAfterIndex = clampLoopIndex(afterIndex, loop);
-  if (actionId === "butcherFish") {
-    return loop[safeAfterIndex] === "fishRiver";
-  }
-
-  return true;
-}
-
 export function insertActionInLoop(
   state: GameState,
   afterIndex: number,
@@ -174,7 +196,7 @@ export function insertActionInLoop(
   options: StartActionOptions = {},
   now = Date.now()
 ): boolean {
-  const running = state.currentAction;
+  const running = getCurrentAction(state);
   if (!running) {
     return false;
   }
@@ -195,13 +217,13 @@ export function insertActionInLoop(
   running.loopLocationIds = locations;
   running.loopIndex = insertIndex <= currentIndex ? currentIndex + 1 : currentIndex;
   delete running.followUpActionId;
-  state.updatedAt = now;
-  state.lastSimulatedAt = now;
+  setRunningAction(state, running);
+  touch(state, now);
   return true;
 }
 
 export function removeActionFromLoop(state: GameState, index: number, now = Date.now()): number {
-  const running = state.currentAction;
+  const running = getCurrentAction(state);
   if (!running) {
     return 0;
   }
@@ -228,8 +250,8 @@ export function removeActionFromLoop(state: GameState, index: number, now = Date
   }
 
   delete running.followUpActionId;
-  state.updatedAt = now;
-  state.lastSimulatedAt = now;
+  setRunningAction(state, running);
+  touch(state, now);
   return Math.max(0, safeIndex - 1);
 }
 
@@ -240,16 +262,17 @@ export function startAction(
   options: StartActionOptions = {}
 ): boolean {
   const definition = getActionDefinition(actionId);
-  if (!definition || !canStartAction(state, actionId, now)) {
+  const characterId = state.selectedCharacterId;
+  if (!definition || !canStartAction(state, actionId, now, characterId)) {
     return false;
   }
 
   const targetLocationId = getActionTargetLocation(actionId, options.locationId);
-  const originLocationId = getSelectedCharacterLocation(state);
+  const originLocationId = getCharacterLocation(state, characterId);
   const travelDuration = getTravelMs(originLocationId, targetLocationId);
-  state.currentAction = {
+  const running: RunningAction = {
     actionId,
-    characterId: state.selectedCharacterId,
+    characterId,
     phase: travelDuration > 0 ? "travelingTo" : "working",
     originLocationId,
     targetLocationId,
@@ -262,66 +285,94 @@ export function startAction(
     repeat: true
   };
   if (travelDuration <= 0) {
-    setCharacterLocation(state, state.selectedCharacterId, targetLocationId);
+    setCharacterLocation(state, characterId, targetLocationId);
   }
-  setCharacterWorking(state, true);
-  state.updatedAt = now;
-  state.lastSimulatedAt = now;
+  setRunningAction(state, running);
+  touch(state, now);
   return true;
 }
 
 export function stopAction(state: GameState, now = Date.now()): void {
-  if (!state.currentAction) {
+  const running = getCurrentAction(state);
+  if (!running) {
     return;
   }
 
-  const definition = getActionDefinition(state.currentAction.actionId);
-  const stoppedLocation = getStoppedCharacterLocation(state.currentAction, getSelectedCharacterLocation(state));
-  setCharacterLocation(state, state.currentAction.characterId, stoppedLocation);
-  const returnedToCamp = stoppedLocation === "camp" ? depositCarriedResources(state, now) : false;
-  state.currentAction = null;
-  setCharacterWorking(state, false);
-  state.updatedAt = now;
-  state.lastSimulatedAt = now;
+  const definition = getActionDefinition(running.actionId);
+  const stoppedLocation = getStoppedCharacterLocation(running, getCharacterLocation(state, running.characterId));
+  setCharacterLocation(state, running.characterId, stoppedLocation);
+
+  if (stoppedLocation !== "camp") {
+    setRunningAction(state, {
+      ...running,
+      phase: "travelingBack",
+      originLocationId: stoppedLocation,
+      targetLocationId: "camp",
+      locationId: stoppedLocation,
+      startedAt: now,
+      endsAt: now + getTravelMs(stoppedLocation, "camp"),
+      repeat: false
+    });
+    touch(state, now);
+    addLog(
+      state,
+      `${getCharacterName(state, running.characterId)} stops ${definition?.verb ?? "working"} at ${formatCharacterLocation(stoppedLocation)} and heads back to camp.`,
+      "muted",
+      now,
+      "character"
+    );
+    return;
+  }
+
+  const returnedToCamp = stoppedLocation === "camp" ? depositCarriedResources(state, now, running.characterId) : false;
+  clearRunningAction(state, running.characterId);
+  touch(state, now);
   addLog(
     state,
     returnedToCamp
-      ? `Cameron stops ${definition?.verb ?? "working"} and returns to camp.`
-      : `Cameron stops ${definition?.verb ?? "working"} at ${formatCharacterLocation(stoppedLocation)}.`,
+      ? `${getCharacterName(state, running.characterId)} stops ${definition?.verb ?? "working"} and returns to camp.`
+      : `${getCharacterName(state, running.characterId)} stops ${definition?.verb ?? "working"} at ${formatCharacterLocation(stoppedLocation)}.`,
     "muted",
-    now
+    now,
+    "character"
   );
 }
 
-export function depositCarriedResources(state: GameState, now = Date.now()): boolean {
-  if (getSelectedCharacterLocation(state) !== "camp") {
+export function depositCarriedResources(
+  state: GameState,
+  now = Date.now(),
+  characterId = state.selectedCharacterId
+): boolean {
+  if (getCharacterLocation(state, characterId) !== "camp") {
     return false;
   }
 
-  const deposited = depositCharacterResources(state);
+  const deposited = depositCharacterResources(state, characterId);
   if (Object.keys(deposited).length <= 0) {
     return false;
   }
 
   addStackedLog(state, {
     aggregateKey: "deposit:camp",
-    text: "Cameron returned resources to camp",
+    text: `${getCharacterName(state, characterId)} returned resources to camp`,
     resources: deposited,
     tone: "gain",
-    now
+    now,
+    scope: "character"
   });
-  state.updatedAt = now;
-  state.lastSimulatedAt = now;
+  touch(state, now);
   return true;
 }
 
 export function simulateUntil(state: GameState, targetTime = Date.now()): void {
   const cappedTarget = Math.min(targetTime, state.lastSimulatedAt + MAX_OFFLINE_MS);
+  syncCurrentAction(state);
 
   let completedCycles = 0;
   while (completedCycles < 500) {
     const nextCampfireAt = getNextCampfireEventAt(state, cappedTarget);
-    const nextActionAt = state.currentAction?.endsAt ?? Number.POSITIVE_INFINITY;
+    const nextRunning = getNextRunningAction(state);
+    const nextActionAt = nextRunning?.endsAt ?? Number.POSITIVE_INFINITY;
 
     if (nextCampfireAt === null && nextActionAt > cappedTarget) {
       break;
@@ -329,16 +380,23 @@ export function simulateUntil(state: GameState, targetTime = Date.now()): void {
 
     if (nextCampfireAt !== null && nextCampfireAt <= nextActionAt) {
       expireCampfire(state, nextCampfireAt);
-      if (state.currentAction && actionNeedsLitCampfire(getActiveActionId(state.currentAction))) {
-        addLog(state, "Cameron stops cooking as the campfire goes out.", "warning", nextCampfireAt);
-        state.currentAction = null;
-        setCharacterWorking(state, false);
+      for (const running of [...getCurrentActions(state)]) {
+        if (actionNeedsLitCampfire(getActiveActionId(running))) {
+          addLog(
+            state,
+            `${getCharacterName(state, running.characterId)} stops cooking as the campfire goes out.`,
+            "warning",
+            nextCampfireAt,
+            "character"
+          );
+          clearRunningAction(state, running.characterId);
+        }
       }
       continue;
     }
 
-    if (state.currentAction && nextActionAt <= cappedTarget) {
-      const running = state.currentAction;
+    if (nextRunning && nextActionAt <= cappedTarget) {
+      const running = nextRunning;
       const completedAt: number = running.endsAt;
       completeRunningAction(state, running, completedAt, cappedTarget);
       completedCycles += 1;
@@ -349,35 +407,41 @@ export function simulateUntil(state: GameState, targetTime = Date.now()): void {
   }
 
   if (targetTime > cappedTarget && completedCycles > 0) {
-    addLog(state, "The saved trail grows quiet after two hours away.", "muted", cappedTarget);
+    addLog(state, "The saved trail grows quiet after two hours away.", "muted", cappedTarget, "character");
   }
 
   state.lastSimulatedAt = targetTime;
   state.updatedAt = targetTime;
-  if (!state.currentAction) {
-    setCharacterWorking(state, false);
+  for (const character of state.characters) {
+    if (!getCurrentAction(state, character.id)) {
+      setCharacterWorking(state, false, character.id);
+    }
   }
+  syncCurrentAction(state);
 }
 
-export function getActionProgress(state: GameState, now = Date.now()): number {
-  if (!state.currentAction) {
+export function getActionProgress(state: GameState, now = Date.now(), characterId = state.selectedCharacterId): number {
+  const running = getCurrentAction(state, characterId);
+  if (!running) {
     return 0;
   }
 
-  const total = state.currentAction.endsAt - state.currentAction.startedAt;
-  return total <= 0 ? 1 : (now - state.currentAction.startedAt) / total;
+  const total = running.endsAt - running.startedAt;
+  return total <= 0 ? 1 : (now - running.startedAt) / total;
 }
 
 function completeRunningAction(state: GameState, running: RunningAction, now: number, targetTime: number): void {
   if (running.phase === "travelingTo") {
+    addTravelSkillXp(state, running.endsAt - running.startedAt, now);
     setCharacterLocation(state, running.characterId, getRunningTargetLocation(running));
     startWorkingCycle(state, running, now);
     return;
   }
 
   if (running.phase === "travelingBack") {
+    addTravelSkillXp(state, running.endsAt - running.startedAt, now);
     setCharacterLocation(state, running.characterId, "camp");
-    depositCarriedResources(state, now);
+    depositCarriedResources(state, now, running.characterId);
 
     if (running.repeat) {
       const nextIndex = getTravelBackNextLoopIndex(running);
@@ -386,13 +450,12 @@ function completeRunningAction(state: GameState, running: RunningAction, now: nu
       }
     }
 
-    if (running.repeat && canStartAction(state, running.actionId, now)) {
+    if (running.repeat && canStartAction(state, running.actionId, now, running.characterId)) {
       startTravelingToLocation(state, running, now);
       return;
     }
 
-    state.currentAction = null;
-    setCharacterWorking(state, false);
+    clearRunningAction(state, running.characterId);
     return;
   }
 
@@ -411,8 +474,9 @@ function completeFollowUpCycle(state: GameState, running: RunningAction, now: nu
     return;
   }
 
-  completeFishButchering(state, now);
-  if (hasCarriedWholeFish(state)) {
+  completeFishButchering(state, running.characterId, getCharacterName(state, running.characterId), now);
+  addActionSkillXp(state, activeActionId, now);
+  if (hasCarriedWholeFish(state, running.characterId)) {
     startFollowUpAction(state, running, running.loopIndex ?? 0, now);
     return;
   }
@@ -423,68 +487,72 @@ function completeFollowUpCycle(state: GameState, running: RunningAction, now: nu
 function completeWorkCycle(state: GameState, running: RunningAction, now: number): void {
   const actionId = getWorkActionId(state, running.actionId, now);
   if (!actionId) {
-    addLog(state, "Cameron lacks the materials to continue.", "warning", now);
-    state.currentAction = null;
-    setCharacterWorking(state, false);
+    addLog(state, `${getCharacterName(state, running.characterId)} lacks the materials to continue.`, "warning", now, "character");
+    clearRunningAction(state, running.characterId);
     return;
   }
 
   const cost = getActionCost(actionId);
   if (!hasCost(state, cost)) {
-    addLog(state, "Cameron lacks the materials to continue.", "warning", now);
-    state.currentAction = null;
-    setCharacterWorking(state, false);
+    addLog(state, `${getCharacterName(state, running.characterId)} lacks the materials to continue.`, "warning", now, "character");
+    clearRunningAction(state, running.characterId);
     return;
   }
 
   payCost(state, cost);
   if (actionId === "butcherFish") {
-    completeFishButchering(state, now);
+    completeFishButchering(state, running.characterId, getCharacterName(state, running.characterId), now);
+    addActionSkillXp(state, actionId, now);
 
-    if (running.repeat && canStartAction(state, actionId, now)) {
+    if (running.repeat && canStartAction(state, actionId, now, running.characterId)) {
       startWorkingCycle(state, running, now);
       return;
     }
 
-    state.currentAction = null;
-    setCharacterWorking(state, false);
+    clearRunningAction(state, running.characterId);
     return;
   }
 
   const craftedToolId = getCraftedToolId(actionId);
   if (craftedToolId) {
-    completeToolCraft(state, craftedToolId, now);
-    if (running.repeat && canStartAction(state, actionId, now)) {
+    completeToolCraft(state, running.characterId, getCharacterName(state, running.characterId), craftedToolId, now);
+    addActionSkillXp(state, actionId, now);
+    if (running.repeat && canStartAction(state, actionId, now, running.characterId)) {
       startWorkingCycle(state, running, now);
       return;
     }
 
-    state.currentAction = null;
-    setCharacterWorking(state, false);
+    clearRunningAction(state, running.characterId);
     return;
   }
 
   const rewards = rollRewards(state, actionId);
   const gatheredResources = isCarryAction(actionId)
-    ? addCharacterResources(state, rewards.resources, rewards.resourceCounts)
+    ? addCharacterResources(state, rewards.resources, rewards.resourceCounts, running.characterId)
     : rewards.resources;
   if (isCarryAction(actionId)) {
-    addCarryLog(state, actionId, gatheredResources, now);
+    addCarryLog(state, running.characterId, actionId, gatheredResources, now);
   } else {
     addResources(state, rewards.resources, rewards.resourceCounts);
     addStackedLog(state, {
-      aggregateKey: `action:${actionId}`,
-      text: getStackedActionText(actionId),
+      aggregateKey: `action:${running.characterId}:${actionId}`,
+      text: getStackedActionText(actionId, getCharacterName(state, running.characterId)),
       resources: rewards.resources,
       tone: rewards.tone,
-      now
+      now,
+      scope: "character"
     });
   }
-  applyToolWear(state, actionId, now);
+  applyToolWear(state, actionId, now, getCharacterName(state, running.characterId));
+  addActionSkillXp(state, actionId, now);
 
-  if (isCarryAction(actionId) && shouldReturnToCamp(rewards.resources, gatheredResources, state)) {
+  if (isCarryAction(actionId) && shouldReturnToCamp(rewards.resources, gatheredResources, state, running.characterId)) {
     const nextIndex = getNextLoopIndex(running);
-    if (actionId === "fishRiver" && getLoopActionId(running, nextIndex) === "butcherFish" && hasCarriedWholeFish(state)) {
+    if (
+      actionId === "fishRiver" &&
+      getLoopActionId(running, nextIndex) === "butcherFish" &&
+      hasCarriedWholeFish(state, running.characterId)
+    ) {
       startFollowUpAction(state, running, nextIndex, now);
       return;
     }
@@ -498,26 +566,24 @@ function completeWorkCycle(state: GameState, running: RunningAction, now: number
     return;
   }
 
-  if (running.repeat && canStartAction(state, actionId, now)) {
+  if (running.repeat && canStartAction(state, actionId, now, running.characterId)) {
     startWorkingCycle(state, running, now);
     return;
   }
 
-  state.currentAction = null;
-  setCharacterWorking(state, false);
+  clearRunningAction(state, running.characterId);
 }
 
 function startWorkingCycle(state: GameState, running: RunningAction, now: number): void {
   const definition = getActionDefinition(running.actionId);
   if (!definition) {
-    state.currentAction = null;
-    setCharacterWorking(state, false);
+    clearRunningAction(state, running.characterId);
     return;
   }
 
   const targetLocationId = getRunningTargetLocation(running);
   setCharacterLocation(state, running.characterId, targetLocationId);
-  state.currentAction = {
+  setRunningAction(state, {
     ...running,
     phase: "working",
     originLocationId: targetLocationId,
@@ -525,7 +591,7 @@ function startWorkingCycle(state: GameState, running: RunningAction, now: number
     locationId: targetLocationId === "camp" ? undefined : targetLocationId,
     startedAt: now,
     endsAt: now + definition.durationMs
-  };
+  });
 }
 
 function startTravelingToLocation(state: GameState, running: RunningAction, now: number): void {
@@ -537,7 +603,7 @@ function startTravelingToLocation(state: GameState, running: RunningAction, now:
     return;
   }
 
-  state.currentAction = {
+  setRunningAction(state, {
     ...running,
     phase: "travelingTo",
     originLocationId,
@@ -545,7 +611,7 @@ function startTravelingToLocation(state: GameState, running: RunningAction, now:
     locationId: targetLocationId === "camp" ? undefined : targetLocationId,
     startedAt: now,
     endsAt: now + travelDuration
-  };
+  });
 }
 
 function startTravelingBackToCamp(
@@ -555,7 +621,7 @@ function startTravelingBackToCamp(
   nextLoopIndex = getNextLoopIndexAfterCompletedAction(running)
 ): void {
   const originLocationId = getRunningTargetLocation(running);
-  state.currentAction = {
+  setRunningAction(state, {
     ...running,
     phase: "travelingBack",
     originLocationId,
@@ -564,7 +630,7 @@ function startTravelingBackToCamp(
     nextLoopIndex,
     startedAt: now,
     endsAt: now + getTravelMs(originLocationId, "camp")
-  };
+  });
 }
 
 function startFollowUpAction(state: GameState, running: RunningAction, loopIndex: number, now: number): void {
@@ -575,7 +641,7 @@ function startFollowUpAction(state: GameState, running: RunningAction, loopIndex
     return;
   }
 
-  state.currentAction = {
+  setRunningAction(state, {
     ...running,
     actionId,
     phase: "followUp",
@@ -584,7 +650,7 @@ function startFollowUpAction(state: GameState, running: RunningAction, loopIndex
     loopIndex,
     startedAt: now,
     endsAt: now + definition.durationMs
-  };
+  });
 }
 
 function startLoopActionAtIndex(state: GameState, running: RunningAction, index: number, now: number): boolean {
@@ -595,7 +661,7 @@ function startLoopActionAtIndex(state: GameState, running: RunningAction, index:
 
   const loopIndex = clampLoopIndex(index, loop);
   const actionId = loop[loopIndex];
-  if (actionId === "butcherFish" || !canStartAction(state, actionId, now)) {
+  if (actionId === "butcherFish" || !canStartAction(state, actionId, now, running.characterId)) {
     const nextIndex = getNextLoopIndexAfterIndex(running, loopIndex);
     return nextIndex !== loopIndex ? startLoopActionAtIndex(state, running, nextIndex, now) : false;
   }
@@ -608,7 +674,7 @@ function startLoopActionAtIndex(state: GameState, running: RunningAction, index:
   const targetLocationId = getLoopTargetLocationId(running, loopIndex);
   const originLocationId = getCharacterLocation(state, running.characterId);
   const travelDuration = getTravelMs(originLocationId, targetLocationId);
-  state.currentAction = {
+  setRunningAction(state, {
     ...running,
     actionId,
     phase: travelDuration > 0 ? "travelingTo" : "working",
@@ -622,115 +688,26 @@ function startLoopActionAtIndex(state: GameState, running: RunningAction, index:
     followUpActionId: undefined,
     startedAt: now,
     endsAt: now + (travelDuration || definition.durationMs)
-  };
+  });
   if (travelDuration <= 0) {
     setCharacterLocation(state, running.characterId, targetLocationId);
   }
   return true;
 }
 
-function addCarryLog(state: GameState, actionId: ActionId, resources: Cost, now: number): void {
+function addCarryLog(state: GameState, characterId: string, actionId: ActionId, resources: Cost, now: number): void {
   if (!Object.values(resources).some((amount) => (amount ?? 0) > 0)) {
     return;
   }
 
   addStackedLog(state, {
-    aggregateKey: `action:${actionId}`,
-    text: getStackedActionText(actionId),
+    aggregateKey: `action:${characterId}:${actionId}`,
+    text: getStackedActionText(actionId, getCharacterName(state, characterId)),
     resources,
     tone: "gain",
-    now
+    now,
+    scope: "character"
   });
-}
-
-function isGatherAction(actionId: ActionId): boolean {
-  return (
-    actionId === "gatherSticks" ||
-    actionId === "gatherStones" ||
-    actionId === "gatherFlaxFibers" ||
-    actionId === "gatherMushrooms" ||
-    actionId === "gatherBerries" ||
-    actionId === "mineCoal" ||
-    actionId === "mineCopper" ||
-    actionId === "mineTin" ||
-    actionId === "fishRiver"
-  );
-}
-
-function isCarryAction(actionId: ActionId): boolean {
-  return isGatherAction(actionId) || actionId === "huntSmallAnimals" || actionId === "chopTrees";
-}
-
-function getLoopLocation(actionId: ActionId, locationId: LocationId | undefined): LocationId | null {
-  return isCarryAction(actionId) ? (locationId ?? "meadow") : null;
-}
-
-function getRunningActionLoopLocations(
-  running: RunningAction,
-  loop = getRunningActionLoop(running)
-): Array<LocationId | null> {
-  if (running.loopLocationIds?.length) {
-    return loop.map((actionId, index) => getLoopLocation(actionId, running.loopLocationIds?.[index] ?? undefined));
-  }
-
-  return loop.map((actionId, index) => {
-    if (index === 0 && isCarryAction(actionId)) {
-      return running.locationId ?? "meadow";
-    }
-
-    return getLoopLocation(actionId, undefined);
-  });
-}
-
-function getLoopLocationId(running: RunningAction, index: number): LocationId | undefined {
-  const loop = getRunningActionLoop(running);
-  const actionId = loop[clampLoopIndex(index, loop)];
-  return getRunningActionLoopLocations(running, loop)[clampLoopIndex(index, loop)] ?? (isCarryAction(actionId) ? "meadow" : undefined);
-}
-
-function getLoopTargetLocationId(running: RunningAction, index: number): CharacterLocationId {
-  const loop = getRunningActionLoop(running);
-  const actionId = loop[clampLoopIndex(index, loop)];
-  return getActionTargetLocation(actionId, getLoopLocationId(running, index));
-}
-
-function getActionTargetLocation(actionId: ActionId, locationId: LocationId | undefined): CharacterLocationId {
-  return isCarryAction(actionId) ? (locationId ?? "meadow") : "camp";
-}
-
-function getRunningTargetLocation(running: RunningAction): CharacterLocationId {
-  return running.targetLocationId ?? running.locationId ?? "camp";
-}
-
-function getSelectedCharacterLocation(state: GameState): CharacterLocationId {
-  return getCharacterLocation(state, state.selectedCharacterId);
-}
-
-function getCharacterLocation(state: GameState, characterId: string): CharacterLocationId {
-  return state.characters.find((character) => character.id === characterId)?.locationId ?? "camp";
-}
-
-function setCharacterLocation(state: GameState, characterId: string, locationId: CharacterLocationId): void {
-  const character = state.characters.find((entry) => entry.id === characterId);
-  if (character) {
-    character.locationId = locationId;
-  }
-}
-
-function getStoppedCharacterLocation(running: RunningAction, currentLocation: CharacterLocationId): CharacterLocationId {
-  if (running.phase === "travelingTo" || running.phase === "travelingBack") {
-    return running.originLocationId ?? currentLocation;
-  }
-
-  return getRunningTargetLocation(running);
-}
-
-function formatCharacterLocation(locationId: CharacterLocationId): string {
-  return locationId === "camp" ? "camp" : `the ${locationId}`;
-}
-
-function getActiveActionId(running: RunningAction): ActionId {
-  return running.phase === "followUp" && running.followUpActionId ? running.followUpActionId : running.actionId;
 }
 
 function actionNeedsLitCampfire(actionId: ActionId): boolean {
@@ -742,177 +719,13 @@ function getNextCampfireEventAt(state: GameState, cappedTarget: number): number 
   return expiresAt && expiresAt <= cappedTarget ? expiresAt : null;
 }
 
-function getLoopActionId(running: RunningAction, index: number): ActionId {
-  const loop = getRunningActionLoop(running);
-  return loop[clampLoopIndex(index, loop)] ?? running.actionId;
-}
-
-function getTravelBackNextLoopIndex(running: RunningAction): number {
-  const loop = getRunningActionLoop(running);
-  return clampLoopIndex(running.nextLoopIndex ?? running.loopIndex ?? 0, loop);
-}
-
-function getNextLoopIndex(running: RunningAction): number {
-  return getNextLoopIndexAfterIndex(running, running.loopIndex ?? 0);
-}
-
-function getNextLoopIndexAfterCompletedAction(running: RunningAction): number {
-  return getNextLoopIndexAfterIndex(running, running.loopIndex ?? 0);
-}
-
-function getNextLoopIndexAfterIndex(running: RunningAction, index: number): number {
-  const loop = getRunningActionLoop(running);
-  if (loop.length <= 1) {
-    return clampLoopIndex(index, loop);
-  }
-
-  let nextIndex = (clampLoopIndex(index, loop) + 1) % loop.length;
-  while (loop[nextIndex] === "butcherFish" && nextIndex !== index) {
-    nextIndex = (nextIndex + 1) % loop.length;
-  }
-
-  return nextIndex;
-}
-
-function clampLoopIndex(index: number, loop: ActionId[]): number {
-  if (!loop.length) {
-    return 0;
-  }
-
-  return Math.min(loop.length - 1, Math.max(0, Math.floor(index)));
-}
-
-function shouldReturnToCamp(rewards: Cost, accepted: Cost, state: GameState): boolean {
+function shouldReturnToCamp(rewards: Cost, accepted: Cost, state: GameState, characterId: string): boolean {
   const rewardedAmount = Object.values(rewards).reduce((total, amount) => total + (amount ?? 0), 0);
   const acceptedAmount = Object.values(accepted).reduce((total, amount) => total + (amount ?? 0), 0);
-  return getCharacterInventoryWeight(state) >= getCharacterMaxWeight(state) || (rewardedAmount > 0 && acceptedAmount < rewardedAmount);
-}
-
-function getLocationTravelMs(locationId: LocationId): number {
-  return LOCATION_TRAVEL_MS[locationId];
-}
-
-function getTravelMs(originLocationId: CharacterLocationId, targetLocationId: CharacterLocationId): number {
-  if (originLocationId === targetLocationId) {
-    return 0;
-  }
-
-  return getTravelLegMs(originLocationId) + getTravelLegMs(targetLocationId);
-}
-
-function getTravelLegMs(locationId: CharacterLocationId): number {
-  return locationId === "camp" ? 0 : getLocationTravelMs(locationId);
-}
-
-function rollRewards(
-  state: GameState,
-  actionId: ActionId
-): ActionRewards {
-  switch (actionId) {
-    case "gatherSticks": {
-      const amount = randomInt(1, 3);
-      return {
-        resources: { stick: amount },
-        message: `Cameron gathers ${amount} ${plural("Stick", amount)}.`,
-        tone: "gain"
-      };
-    }
-    case "gatherStones": {
-      const amount = randomInt(1, 2);
-      return {
-        resources: { stone: amount },
-        message: `Cameron finds ${amount} ${plural("Stone", amount)}.`,
-        tone: "gain"
-      };
-    }
-    case "gatherFlaxFibers": {
-      const amount = randomInt(1, 3);
-      return {
-        resources: { flaxFiber: amount },
-        message: `Cameron pulls ${amount} ${plural("Flax Fiber", amount)} from the brush.`,
-        tone: "gain"
-      };
-    }
-    case "gatherMushrooms": {
-      const amount = randomInt(1, 3);
-      return {
-        resources: { mushroom: amount },
-        message: `Cameron gathers ${amount} ${plural("Mushroom", amount)} from the meadow shade.`,
-        tone: "gain"
-      };
-    }
-    case "gatherBerries": {
-      const amount = randomInt(2, 5);
-      return {
-        resources: { berry: amount },
-        message: `Cameron picks ${amount} ${amount === 1 ? "Berry" : "Berries"} from the brambles.`,
-        tone: "gain"
-      };
-    }
-    case "mineCoal":
-      return mineResource("coal");
-    case "mineCopper":
-      return mineResource("copper");
-    case "mineTin":
-      return mineResource("tin");
-    case "fishRiver":
-      return fishRiver();
-    case "craftLowestTool":
-    case "craftBasket":
-    case "craftFishingPole":
-    case "craftStoneKnife":
-    case "craftStoneAxe":
-    case "craftStonePickAxe":
-    case "craftStoneSpear":
-      return {
-        resources: {},
-        message: "Cameron finishes a tool.",
-        tone: "craft"
-      };
-    case "chopTrees": {
-      const wood = randomInt(2, 4);
-      const sticks = Math.random() < 0.35 ? 1 : 0;
-      return {
-        resources: { wood, stick: sticks },
-        message: `Cameron chops ${wood} ${plural("Wood", wood)}${sticks ? " and saves a usable stick" : ""}.`,
-        tone: "gain"
-      };
-    }
-    case "huntSmallAnimals":
-      return huntSmallAnimal();
-    case "butcherFish":
-      return {
-        resources: {},
-        message: "Cameron butchers carried fish.",
-        tone: "gain"
-      };
-    case "butcherRabbit":
-      return butcherAnimal(state, "rabbit");
-    case "butcherSquirrel":
-      return butcherAnimal(state, "squirrel");
-    case "cookRabbitMeat":
-      return {
-        resources: { cookedRabbitMeat: 1 },
-        message: "Cameron cooks rabbit meat over the coals.",
-        tone: "craft"
-      };
-    case "cookSquirrelMeat":
-      return {
-        resources: { cookedSquirrelMeat: 1 },
-        message: "Cameron cooks squirrel meat over the coals.",
-        tone: "craft"
-      };
-    case "tanHide":
-      return {
-        resources: { leather: 1 },
-        message: "Cameron works a hide into rough leather.",
-        tone: "craft"
-      };
-  }
-}
-
-function getToolRecipe(toolId: ToolId): Cost {
-  return toolDefinitions.find((tool) => tool.id === toolId)?.recipe ?? {};
+  return (
+    getCharacterInventoryWeight(state, characterId) >= getCharacterMaxWeight(state, characterId) ||
+    (rewardedAmount > 0 && acceptedAmount < rewardedAmount)
+  );
 }
 
 function getWorkActionId(state: GameState, actionId: ActionId, now: number): ActionId | null {
@@ -921,263 +734,6 @@ function getWorkActionId(state: GameState, actionId: ActionId, now: number): Act
   }
 
   return actionId;
-}
-
-function getCraftedToolId(actionId: ActionId): ToolId | null {
-  switch (actionId) {
-    case "craftBasket":
-      return "basket";
-    case "craftFishingPole":
-      return "fishingPole";
-    case "craftStoneKnife":
-      return "stoneKnife";
-    case "craftStoneAxe":
-      return "stoneAxe";
-    case "craftStonePickAxe":
-      return "stonePickAxe";
-    case "craftStoneSpear":
-      return "stoneSpear";
-    default:
-      return null;
-  }
-}
-
-function completeToolCraft(state: GameState, toolId: ToolId, now: number): void {
-  const definition = toolDefinitions.find((tool) => tool.id === toolId);
-  if (!definition) {
-    return;
-  }
-
-  state.tools[toolId].quantity += 1;
-  if (!hasUsableTool(state, toolId)) {
-    equipFreshTool(state, toolId);
-  }
-
-  addStackedLog(state, {
-    aggregateKey: `craft:${toolId}`,
-    text: `Cameron crafted ${pluralTool(definition.label)}`,
-    amount: 1,
-    unit: pluralTool(definition.label),
-    tone: "craft",
-    now
-  });
-}
-
-function completeFishButchering(state: GameState, now: number): void {
-  const filets = butcherOneCarriedFish(state);
-  if (!Object.values(filets).some((amount) => (amount ?? 0) > 0)) {
-    return;
-  }
-
-  addStackedLog(state, {
-    aggregateKey: "action:butcherFish",
-    text: "Cameron butchered fish",
-    resources: filets,
-    tone: "gain",
-    now
-  });
-}
-
-function butcherOneCarriedFish(state: GameState): Cost {
-  const filets: Cost = {};
-
-  for (const fishId of fishResourceIds) {
-    const filetId = fishFiletByFishId[fishId];
-    if (!filetId || !hasResourceQuantity(state, fishId, "character")) {
-      continue;
-    }
-
-    const consumedWeight = consumeOneWholeResource(state, fishId, "character");
-    const filetAmount = normalizeResourceAmount(filetId, consumedWeight * 0.5);
-    if (filetAmount <= 0) {
-      return filets;
-    }
-
-    state.characterInventory[filetId] = normalizeResourceAmount(
-      filetId,
-      state.characterInventory[filetId] + filetAmount
-    );
-    filets[filetId] = normalizeResourceAmount(filetId, (filets[filetId] ?? 0) + filetAmount);
-    if (!state.seenResources.includes(filetId)) {
-      state.seenResources.push(filetId);
-    }
-    return filets;
-  }
-
-  return filets;
-}
-
-function hasCarriedWholeFish(state: GameState): boolean {
-  return fishResourceIds.some((fishId) => hasResourceQuantity(state, fishId, "character"));
-}
-
-function fishRiver(): ActionRewards {
-  const fish = RIVER_FISH[randomInt(0, RIVER_FISH.length - 1)];
-  const weight = randomFloat(fish.minWeight, fish.maxWeight, 1);
-  const label = getResourceLabel(fish.id);
-
-  return {
-    resources: { [fish.id]: weight },
-    resourceCounts: { [fish.id]: 1 },
-    message: `Cameron catches a ${formatResourceAmount(fish.id, weight)} lb ${label}.`,
-    tone: "gain"
-  };
-}
-
-function mineResource(resourceId: "coal" | "copper" | "tin"): ActionRewards {
-  const label = getResourceLabel(resourceId);
-
-  return {
-    resources: { [resourceId]: 1 },
-    message: `Cameron mines 1 ${label}.`,
-    tone: "gain"
-  };
-}
-
-function huntSmallAnimal(): ActionRewards {
-  const animal = SMALL_GAME[Math.random() < 0.58 ? 0 : 1];
-  const weight = randomFloat(animal.minWeight, animal.maxWeight, 1);
-  const label = getResourceLabel(animal.id);
-
-  return {
-    resources: { [animal.id]: weight },
-    resourceCounts: { [animal.id]: 1 },
-    message: `Cameron brings back a ${formatResourceAmount(animal.id, weight)} lb ${label}.`,
-    tone: "gain"
-  };
-}
-
-function butcherAnimal(
-  state: GameState,
-  animal: "rabbit" | "squirrel"
-): ActionRewards {
-  const consumedWeight = consumeOneWholeResource(state, animal);
-  if (consumedWeight <= 0) {
-    return {
-      resources: {},
-      message: `Cameron has no ${animal} to butcher.`,
-      tone: "gain"
-    };
-  }
-
-  const meatId: ResourceId = animal === "rabbit" ? "rabbitMeat" : "squirrelMeat";
-  const meat = animal === "rabbit" ? randomInt(1, 2) : 1;
-  const hasKnife = hasUsableTool(state, "stoneKnife");
-  const hideChance = animal === "rabbit" ? 0.65 : 0.42;
-  const boneChance = animal === "rabbit" ? 0.24 : 0.14;
-  const hide = Math.random() < hideChance ? 1 : 0;
-  const bone = Math.random() < boneChance ? 1 : 0;
-  const resources: Cost = {
-    [meatId]: meat,
-    hide: hasKnife ? hide : 0,
-    bone: hasKnife ? bone : 0
-  };
-  const extras = (Object.entries({ hide, bone }) as [ResourceId, number][])
-    .filter(([, amount]) => hasKnife && amount > 0)
-    .map(([id, amount]) => `${amount} ${getResourceLabel(id)}`);
-
-  return {
-    resources,
-    message: `Cameron butchers a ${animal} for ${meat} ${getResourceLabel(meatId)}${
-      extras.length ? `, plus ${extras.join(" and ")}` : ""
-    }.`,
-    tone: "gain"
-  };
-}
-
-function applyToolWear(state: GameState, actionId: ActionId, now: number): void {
-  switch (actionId) {
-    case "fishRiver":
-      damageTool(state, "fishingPole", 1, now);
-      break;
-    case "mineCoal":
-    case "mineCopper":
-    case "mineTin":
-      damageTool(state, "stonePickAxe", 1, now);
-      break;
-    case "chopTrees":
-      damageTool(state, "stoneAxe", 1, now);
-      break;
-    case "huntSmallAnimals":
-      damageTool(state, "stoneSpear", 1, now);
-      break;
-    case "butcherRabbit":
-    case "butcherSquirrel":
-      damageTool(state, "stoneKnife", 1, now);
-      break;
-    default:
-      break;
-  }
-}
-
-function getStackedActionText(actionId: ActionId): string {
-  switch (actionId) {
-    case "gatherSticks":
-      return "Cameron gathered sticks";
-    case "gatherStones":
-      return "Cameron gathered stones";
-    case "gatherFlaxFibers":
-      return "Cameron gathered flax fibers";
-    case "gatherMushrooms":
-      return "Cameron gathered mushrooms";
-    case "gatherBerries":
-      return "Cameron gathered berries";
-    case "mineCoal":
-      return "Cameron mined coal";
-    case "mineCopper":
-      return "Cameron mined copper";
-    case "mineTin":
-      return "Cameron mined tin";
-    case "fishRiver":
-      return "Cameron caught river fish";
-    case "craftBasket":
-      return "Cameron crafted baskets";
-    case "craftLowestTool":
-      return "Cameron balanced tool stock";
-    case "craftFishingPole":
-      return "Cameron crafted fishing poles";
-    case "craftStoneKnife":
-      return "Cameron crafted stone knives";
-    case "craftStoneAxe":
-      return "Cameron crafted stone axes";
-    case "craftStonePickAxe":
-      return "Cameron crafted stone pick axes";
-    case "craftStoneSpear":
-      return "Cameron crafted stone spears";
-    case "chopTrees":
-      return "Cameron chopped trees";
-    case "huntSmallAnimals":
-      return "Cameron hunted small animals";
-    case "butcherFish":
-      return "Cameron butchered fish";
-    case "butcherRabbit":
-      return "Cameron butchered rabbits";
-    case "butcherSquirrel":
-      return "Cameron butchered squirrels";
-    case "cookRabbitMeat":
-      return "Cameron cooked rabbit meat";
-    case "cookSquirrelMeat":
-      return "Cameron cooked squirrel meat";
-    case "tanHide":
-      return "Cameron tanned hide";
-  }
-}
-
-function plural(label: string, amount: number): string {
-  return amount === 1 ? label : `${label}s`;
-}
-
-function pluralTool(label: string): string {
-  return label.endsWith("s") ? label : `${label}s`;
-}
-
-function setCharacterWorking(state: GameState, isWorking: boolean): void {
-  const character = state.characters.find((entry) => entry.id === state.selectedCharacterId);
-  if (!character) {
-    return;
-  }
-
-  character.condition = isWorking ? "working" : "resting";
 }
 
 export const orderedActionIds = actionDefinitions.map((action) => action.id);

@@ -11,6 +11,9 @@ function hasSeenFish(state: GameState): boolean {
   return fishResourceIds.some((fishId) => {
     return (
       state.seenResources.includes(fishId) ||
+      state.characters.some((character) => {
+        return (character.inventory?.[fishId] ?? 0) > 0 || (character.resourceCounts?.[fishId] ?? 0) > 0;
+      }) ||
       state.characterInventory[fishId] > 0 ||
       state.inventory[fishId] > 0 ||
       state.characterResourceCounts[fishId] > 0 ||
@@ -56,6 +59,8 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
       return isCampfireLit(state, now) && state.seenResources.includes("squirrelMeat");
     case "tanHide":
       return state.buildings.tanningRack && state.seenResources.includes("hide");
+    case "craftLeatherBackpack":
+      return state.buildings.tanningRack && state.seenResources.includes("leather");
   }
 }
 
@@ -83,6 +88,8 @@ export function getActionLockReason(state: GameState, actionId: ActionId): strin
       return isCampfireLit(state) ? "Needs Squirrel Meat" : "Needs Lit Campfire";
     case "tanHide":
       return state.buildings.tanningRack ? "Needs Hide" : "Needs Tanning Rack";
+    case "craftLeatherBackpack":
+      return state.buildings.tanningRack ? "Needs Leather" : "Needs Tanning Rack";
     case "craftLowestTool":
       return "Needs Craft Materials";
     default:
@@ -90,7 +97,11 @@ export function getActionLockReason(state: GameState, actionId: ActionId): strin
   }
 }
 
-export function isBuildingVisible(state: GameState, buildingId: BuildingId, now = Date.now()): boolean {
+export function isBuildingVisible(_state: GameState, _buildingId: BuildingId, _now = Date.now()): boolean {
+  return true;
+}
+
+export function isBuildingUnlocked(state: GameState, buildingId: BuildingId, now = Date.now()): boolean {
   switch (buildingId) {
     case "campfire":
       return isCampfireLit(state, now) || hasSeenMeat(state);
@@ -98,5 +109,15 @@ export function isBuildingVisible(state: GameState, buildingId: BuildingId, now 
       return state.buildings.tanningRack || state.seenResources.includes("hide");
     case "hideTent":
       return state.buildings.hideTent || state.seenResources.includes("hide");
+  }
+}
+
+export function getBuildingUnlockReason(_state: GameState, buildingId: BuildingId): string {
+  switch (buildingId) {
+    case "campfire":
+      return "See Rabbit Meat or Squirrel Meat";
+    case "tanningRack":
+    case "hideTent":
+      return "See Hide";
   }
 }

@@ -1,3 +1,4 @@
+import { createEmptyInventory, createEmptyResourceCounts } from "../state/createInitialState";
 import type { BuildingId, GameState } from "../types";
 import { addLog } from "./log";
 
@@ -35,7 +36,9 @@ export function syncPopulationWithHousing(state: GameState, now = Date.now()): b
     name: "Rowan",
     epithet: "Drawn to the second shelter",
     condition: "resting",
-    locationId: "camp"
+    locationId: "camp",
+    inventory: createEmptyInventory(),
+    resourceCounts: createEmptyResourceCounts()
   });
   addLog(state, "Rowan joins the camp after the second hide tent goes up.", "craft", now);
   return true;

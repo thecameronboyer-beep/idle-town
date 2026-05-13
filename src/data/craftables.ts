@@ -46,6 +46,13 @@ export const toolDefinitions: ToolDefinition[] = [
     recipe: { stick: 1, flaxFiber: 3 },
     blurb: "A one-hand woven carrier for hauling more from the wild.",
     maxDurability: 1
+  },
+  {
+    id: "leatherBackpack",
+    label: "Leather Backpack",
+    recipe: { leather: 10 },
+    blurb: "A crude sling pouch for hauling more from the wild.",
+    maxDurability: 1
   }
 ];
 

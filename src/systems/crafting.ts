@@ -4,7 +4,8 @@ import { expireCampfire, isCampfireLit, lightCampfire } from "./buildings";
 import { incrementBuildingCount, setBuildingCount, syncPopulationWithHousing } from "./camp";
 import { describeCost, hasCost, payCost } from "./inventory";
 import { addLog } from "./log";
-import { isBuildingVisible } from "./progression";
+import { isBuildingUnlocked } from "./progression";
+import { addBuildingSkillXp } from "./skills";
 
 export function buildStructure(state: GameState, buildingId: BuildingId, now = Date.now()): boolean {
   expireCampfire(state, now);
@@ -15,7 +16,7 @@ export function buildStructure(state: GameState, buildingId: BuildingId, now = D
     !definition ||
     alreadyBuilt ||
     state.characters.find((character) => character.id === state.selectedCharacterId)?.locationId !== "camp" ||
-    !isBuildingVisible(state, buildingId) ||
+    !isBuildingUnlocked(state, buildingId, now) ||
     !hasCost(state, definition.recipe)
   ) {
     return false;
@@ -36,6 +37,7 @@ export function buildStructure(state: GameState, buildingId: BuildingId, now = D
     setBuildingCount(state, buildingId, 1);
     addLog(state, `Cameron builds a ${definition.label}.`, "craft", now);
   }
+  addBuildingSkillXp(state, buildingId, now);
   touch(state, now);
   return true;
 }

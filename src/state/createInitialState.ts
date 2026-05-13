@@ -1,6 +1,15 @@
 import { baseVisibleResources, resourceOrder } from "../data/resources";
 import { toolDefinitions } from "../data/craftables";
-import type { GameState, Inventory, OwnedBuildingCounts, OwnedBuildings, OwnedTools, ResourceCounts } from "../types";
+import { createEmptySkills } from "../systems/skills";
+import type {
+  ActionLoop,
+  GameState,
+  Inventory,
+  OwnedBuildingCounts,
+  OwnedBuildings,
+  OwnedTools,
+  ResourceCounts
+} from "../types";
 
 export function createEmptyInventory(): Inventory {
   return Object.fromEntries(resourceOrder.map((id) => [id, 0])) as Inventory;
@@ -24,9 +33,20 @@ export function createEmptyBuildingCounts(): OwnedBuildingCounts {
   };
 }
 
+export function createStarterActionLoop(now = Date.now()): ActionLoop {
+  return {
+    id: "loop-forage-sticks",
+    name: "Forage Sticks",
+    actionIds: ["gatherSticks"],
+    locationIds: ["meadow"],
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
 export function createInitialState(now = Date.now()): GameState {
   return {
-    version: 4,
+    version: 6,
     createdAt: now,
     updatedAt: now,
     lastSimulatedAt: now,
@@ -37,7 +57,10 @@ export function createInitialState(now = Date.now()): GameState {
         name: "Cameron",
         epithet: "Alone at the treeline",
         condition: "resting",
-        locationId: "camp"
+        locationId: "camp",
+        inventory: createEmptyInventory(),
+        resourceCounts: createEmptyResourceCounts(),
+        actionLoopId: "loop-forage-sticks"
       }
     ],
     inventory: createEmptyInventory(),
@@ -53,13 +76,17 @@ export function createInitialState(now = Date.now()): GameState {
     buildingCounts: createEmptyBuildingCounts(),
     campfireExpiresAt: null,
     seenResources: [...baseVisibleResources],
+    skills: createEmptySkills(),
+    actionLoops: [createStarterActionLoop(now)],
+    currentActions: [],
     currentAction: null,
     log: [
       {
         id: `${now}-start`,
         time: now,
         text: "Cameron wakes beneath cold branches with empty hands.",
-        tone: "muted"
+        tone: "muted",
+        scope: "camp"
       }
     ]
   };

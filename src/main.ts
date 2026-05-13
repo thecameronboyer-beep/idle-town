@@ -1,9 +1,8 @@
 import "./style.css";
 import { loadGame, resetSave, saveGame } from "./systems/persistence";
-import { getActionProgress, simulateUntil } from "./systems/actions";
+import { getActionProgress, getCurrentAction, getCurrentActions, simulateUntil } from "./systems/actions";
 import { formatDuration } from "./systems/math";
 import { createRenderer } from "./ui/render";
-import { WildernessCanvas } from "./ui/wildernessCanvas";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -12,8 +11,6 @@ if (!app) {
 }
 
 let state = loadGame();
-let wilderness: WildernessCanvas | null = null;
-let wildernessCanvas: HTMLCanvasElement | null = null;
 let testSpeedMultiplier = 1;
 let gameNow = Date.now();
 let lastRealClockAt = gameNow;
@@ -37,15 +34,6 @@ const render = createRenderer(app, {
 function draw(): void {
   const now = syncGameClock();
   render(state, now);
-  const canvas = document.querySelector<HTMLCanvasElement>("#wilderness-canvas");
-  if (canvas && canvas !== wildernessCanvas) {
-    wilderness?.stop();
-    wildernessCanvas = canvas;
-    wilderness = new WildernessCanvas(canvas);
-    wilderness.start();
-  }
-
-  wilderness?.setState(state);
 }
 
 function tick(): void {
@@ -89,29 +77,33 @@ function getRenderSignature(): string {
     characters: state.characters.map((character) => ({
       id: character.id,
       condition: character.condition,
-      locationId: character.locationId
+      locationId: character.locationId,
+      actionLoopId: character.actionLoopId,
+      inventory: character.inventory,
+      resourceCounts: character.resourceCounts
     })),
     tools: state.tools,
     buildings: state.buildings,
     buildingCounts: state.buildingCounts,
     campfireExpiresAt: state.campfireExpiresAt,
     seenResources: state.seenResources,
-    currentAction: state.currentAction
-      ? {
-          actionId: state.currentAction.actionId,
-          phase: state.currentAction.phase,
-          originLocationId: state.currentAction.originLocationId,
-          targetLocationId: state.currentAction.targetLocationId,
-          locationId: state.currentAction.locationId,
-          loopActionIds: state.currentAction.loopActionIds,
-          loopLocationIds: state.currentAction.loopLocationIds,
-          loopIndex: state.currentAction.loopIndex,
-          nextLoopIndex: state.currentAction.nextLoopIndex,
-          followUpActionId: state.currentAction.followUpActionId,
-          startedAt: state.currentAction.startedAt,
-          endsAt: state.currentAction.endsAt
-        }
-      : null,
+    skills: state.skills,
+    actionLoops: state.actionLoops,
+    currentActions: getCurrentActions(state).map((action) => ({
+      actionId: action.actionId,
+      characterId: action.characterId,
+      phase: action.phase,
+      originLocationId: action.originLocationId,
+      targetLocationId: action.targetLocationId,
+      locationId: action.locationId,
+      loopActionIds: action.loopActionIds,
+      loopLocationIds: action.loopLocationIds,
+      loopIndex: action.loopIndex,
+      nextLoopIndex: action.nextLoopIndex,
+      followUpActionId: action.followUpActionId,
+      startedAt: action.startedAt,
+      endsAt: action.endsAt
+    })),
     logHead: state.log[0]?.id ?? "",
     logLength: state.log.length
   });
@@ -121,7 +113,8 @@ function updateLiveActionIndicators(): void {
   const now = syncGameClock();
   updateLiveCampfireIndicators(now);
 
-  if (!state.currentAction) {
+  const running = getCurrentAction(state);
+  if (!running) {
     return;
   }
 
@@ -134,7 +127,7 @@ function updateLiveActionIndicators(): void {
   }
 
   if (remainingElement) {
-    remainingElement.textContent = formatDuration(state.currentAction.endsAt - now);
+    remainingElement.textContent = formatDuration(running.endsAt - now);
   }
 }
 
