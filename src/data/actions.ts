@@ -96,10 +96,17 @@ export const actionDefinitions: ActionDefinition[] = [
   },
   {
     id: "craftStoneKnife",
-    label: "Craft Stone Knife",
-    verb: "crafting a stone knife",
+    label: "Craft Stone Skinning Knife",
+    verb: "crafting a stone skinning knife",
     durationMs: 15000,
-    blurb: "Shape a small edge and bind it to a handle."
+    blurb: "Shape a scraping edge for hide and bone recovery."
+  },
+  {
+    id: "craftStoneDagger",
+    label: "Craft Stone Dagger",
+    verb: "crafting a stone dagger",
+    durationMs: 15000,
+    blurb: "Shape a compact combat blade separate from the skinning knife."
   },
   {
     id: "craftStoneAxe",
@@ -121,6 +128,48 @@ export const actionDefinitions: ActionDefinition[] = [
     verb: "crafting a stone spear",
     durationMs: 15000,
     blurb: "Lash a stone point to a balanced shaft."
+  },
+  {
+    id: "craftWoodenClub",
+    label: "Craft Wooden Club",
+    verb: "crafting a wooden club",
+    durationMs: 16000,
+    blurb: "Shape hardwood into a heavier primitive weapon."
+  },
+  {
+    id: "craftWoodenTwoHandedClub",
+    label: "Craft Wooden 2H Club",
+    verb: "crafting a wooden two-handed club",
+    durationMs: 18000,
+    blurb: "Shape a larger club for slower, stronger blows."
+  },
+  {
+    id: "craftWoodenSword",
+    label: "Craft Wooden Sword",
+    verb: "crafting a wooden sword",
+    durationMs: 17000,
+    blurb: "Harden and bind a wooden blade for controlled combat."
+  },
+  {
+    id: "craftWoodenTwoHandedSword",
+    label: "Craft Wooden 2H Sword",
+    verb: "crafting a wooden two-handed sword",
+    durationMs: 20000,
+    blurb: "Shape a long wooden blade that favors power over speed."
+  },
+  {
+    id: "craftShortBow",
+    label: "Craft Short Bow",
+    verb: "crafting a short bow",
+    durationMs: 20000,
+    blurb: "Bend wood and flax fiber into a simple ranged weapon."
+  },
+  {
+    id: "craftWoodenTotem",
+    label: "Craft Wooden Totem",
+    verb: "carving a wooden totem",
+    durationMs: 19000,
+    blurb: "Carve a wooden focus for steadier primitive combat."
   },
   {
     id: "chopTrees",

@@ -47,6 +47,13 @@ export type ToolId =
   | "stoneAxe"
   | "stoneSpear"
   | "stoneKnife"
+  | "stoneDagger"
+  | "woodenSword"
+  | "woodenTwoHandedSword"
+  | "woodenClub"
+  | "woodenTwoHandedClub"
+  | "shortBow"
+  | "woodenTotem"
   | "stonePickAxe"
   | "copperPickaxe"
   | "copperHatchet"
@@ -81,9 +88,16 @@ export type ActionId =
   | "craftBasket"
   | "craftFishingPole"
   | "craftStoneKnife"
+  | "craftStoneDagger"
   | "craftStoneAxe"
   | "craftStonePickAxe"
   | "craftStoneSpear"
+  | "craftWoodenSword"
+  | "craftWoodenTwoHandedSword"
+  | "craftWoodenClub"
+  | "craftWoodenTwoHandedClub"
+  | "craftShortBow"
+  | "craftWoodenTotem"
   | "chopTrees"
   | "huntSmallAnimals"
   | "butcherFish"
@@ -134,6 +148,17 @@ export type SkillId =
 export type Inventory = Record<ResourceId, number>;
 export type ResourceCounts = Record<ResourceId, number>;
 export type ResourceCountDelta = Partial<Record<ResourceId, number>>;
+
+export type ToolRole = "mining" | "woodcutting" | "butchering" | "fishing" | "hunting";
+export type ToolTier = "primitive" | "copper" | "bronze";
+export type WeaponRange = "melee" | "ranged" | "focus";
+
+export interface WeaponStats {
+  damage: number;
+  speed: number;
+  hands: 1 | 2;
+  range: WeaponRange;
+}
 
 export type LocationId = "meadow" | "river" | "forest" | "mine";
 export type CharacterLocationId = "camp" | LocationId;
