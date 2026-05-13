@@ -2,6 +2,16 @@ import { getActionDefinition } from "../data/actions";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
 import { getSmithingRecipe, metalworkingActionIds, smeltingActionIds, smithingActionIds } from "../data/smithing";
 import {
+  getTextileRecipe,
+  textileActionIds,
+  textileFiberActionIds,
+  textileRettingActionIds,
+  textileSewingActionIds,
+  textileSpinningActionIds,
+  textileToolingActionIds,
+  textileWeavingActionIds
+} from "../data/textiles";
+import {
   formatResourceAmount,
   getResourceLabel,
   isWholeCountResource,
@@ -102,6 +112,7 @@ import {
   skillDefinitions
 } from "../systems/skills";
 import { getFurnaceFuelStatus, getSmithingRecipeOutputText, isSmeltingAction } from "../systems/smithing";
+import { getTextileRecipeOutputText } from "../systems/textiles";
 import { getMaxToolDurability } from "../systems/tools";
 import type {
   ActionId,
@@ -120,6 +131,7 @@ import type {
 type ActionFilterId =
   | "crafting"
   | "smithing"
+  | "textiles"
   | "foraging"
   | "mining"
   | "fishing"
@@ -228,6 +240,11 @@ const actionFilters: ActionFilter[] = [
     actionIds: [...smithingActionIds]
   },
   {
+    id: "textiles",
+    label: "Textiles",
+    actionIds: [...textileActionIds]
+  },
+  {
     id: "butchering",
     label: "Butchering",
     actionIds: ["butcherFish", "butcherRabbit", "butcherSquirrel"]
@@ -253,7 +270,7 @@ const actionCategories: ActionCategory[] = [
   {
     id: "processing",
     label: "Processing",
-    filterIds: ["crafting", "smithing", "butchering", "cooking", "leatherworking"]
+    filterIds: ["crafting", "smithing", "textiles", "butchering", "cooking", "leatherworking"]
   },
   {
     id: "camp",
@@ -265,6 +282,7 @@ const actionCategories: ActionCategory[] = [
 const filterSkillIds: Record<ActionFilterId, SkillId> = {
   crafting: "crafting",
   smithing: "smithing",
+  textiles: "textiles",
   foraging: "foraging",
   mining: "mining",
   fishing: "fishing",
@@ -277,7 +295,7 @@ const filterSkillIds: Record<ActionFilterId, SkillId> = {
 
 const characterSkillGroups: SkillGroup[] = [
   { label: "Gather", skillIds: ["foraging", "mining", "fishing", "woodcutting", "hunting"] },
-  { label: "Process", skillIds: ["crafting", "smithing", "butchering", "cooking", "leatherworking"] },
+  { label: "Process", skillIds: ["crafting", "smithing", "textiles", "butchering", "cooking", "leatherworking"] },
   { label: "Combat", skillIds: [] },
   { label: "Other", skillIds: ["construction", "agility"] }
 ];
@@ -1422,6 +1440,9 @@ function renderActionPanel(
   if (filter.id === "smithing") {
     return renderSmithingActionPanel(state, actionIds, actionLoopTarget, now);
   }
+  if (filter.id === "textiles") {
+    return renderTextileActionPanel(state, actionIds, actionLoopTarget, now);
+  }
 
   return `
       <section class="action-panel" data-editor-id="action-panel-${activeActionFilter}" data-editor-label="${filter.label} action panel" data-editor-files="src/ui/render.ts, src/style.css">
@@ -1590,6 +1611,197 @@ function renderSmithingRecipeCard(state: GameState, actionId: ActionId, actionLo
       ${renderActionTooltip(definition.label, tooltipRows, statusText)}
     </button>
   `;
+}
+
+function renderTextileActionPanel(
+  state: GameState,
+  actionIds: ActionId[],
+  actionLoopTarget: ActionLoopTarget,
+  now: number
+): string {
+  const rettingIds = actionIds.filter((actionId) => textileRettingActionIds.some((id) => id === actionId));
+  const fiberIds = actionIds.filter((actionId) => textileFiberActionIds.some((id) => id === actionId));
+  const spinningIds = actionIds.filter((actionId) => textileSpinningActionIds.some((id) => id === actionId));
+  const weavingIds = actionIds.filter((actionId) => textileWeavingActionIds.some((id) => id === actionId));
+  const toolingIds = actionIds.filter((actionId) => textileToolingActionIds.some((id) => id === actionId));
+  const sewingIds = actionIds.filter((actionId) => textileSewingActionIds.some((id) => id === actionId));
+
+  return `
+    <section class="action-panel textile-action-panel" data-editor-id="action-panel-textiles" data-editor-label="Textiles action panel" data-editor-files="src/ui/render.ts, src/style.css">
+      <div class="smithing-panel-card textile-panel-card">
+        <div class="smithing-status-grid textile-status-grid">
+          <div class="smithing-status-item">
+            <span>Flax Chain</span>
+            <strong>${getTextileChainStatus(state)}</strong>
+          </div>
+          <div class="smithing-status-item">
+            <span>Stations</span>
+            <strong>${getTextileStationStatus(state)}</strong>
+          </div>
+          <div class="smithing-status-item">
+            <span>Needles</span>
+            <strong>${getTextileNeedleStatus(state)}</strong>
+          </div>
+        </div>
+        ${renderTextileActiveWork(state, now)}
+        ${renderTextileRecipeSection(state, "Flax Prep", [...rettingIds, ...fiberIds], actionLoopTarget)}
+        ${renderTextileRecipeSection(state, "Spinning", spinningIds, actionLoopTarget)}
+        ${renderTextileRecipeSection(state, "Weaving", weavingIds, actionLoopTarget)}
+        ${renderTextileRecipeSection(state, "Needles", toolingIds, actionLoopTarget)}
+        ${renderTextileRecipeSection(state, "Sewing", sewingIds, actionLoopTarget)}
+      </div>
+    </section>
+  `;
+}
+
+function renderTextileActiveWork(state: GameState, now: number): string {
+  const running = getCurrentAction(state);
+  const activeActionId = running ? getActiveActionId(running) : null;
+  const recipe = activeActionId ? getTextileRecipe(activeActionId) : undefined;
+  if (!running || !recipe) {
+    return `
+      <div class="smithing-active-row idle textile-active-row">
+        <span>No active textile work</span>
+        <strong>Chain idle</strong>
+      </div>
+    `;
+  }
+
+  const progress = clamp(getActionProgress(state, now), 0, 1);
+
+  return `
+    <div class="smithing-active-row textile-active-row">
+      <span>Active textile work</span>
+      <strong>${recipe.label}</strong>
+      <div class="progress-track smithing-progress-track">
+        <span data-textile-action-progress style="transform: scaleX(${progress.toFixed(4)})"></span>
+        <em data-textile-action-remaining>${formatDuration(running.endsAt - now)}</em>
+      </div>
+    </div>
+  `;
+}
+
+function renderTextileRecipeSection(
+  state: GameState,
+  label: string,
+  actionIds: ActionId[],
+  actionLoopTarget: ActionLoopTarget
+): string {
+  if (!actionIds.length) {
+    return "";
+  }
+
+  return `
+    <div class="smithing-recipe-section textile-recipe-section">
+      <div class="section-heading">
+        <span>${label}</span>
+      </div>
+      <div class="smithing-recipe-grid textile-recipe-grid">
+        ${actionIds.map((actionId) => renderTextileRecipeCard(state, actionId, actionLoopTarget)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderTextileRecipeCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
+  const definition = getActionDefinition(actionId);
+  const recipe = getTextileRecipe(actionId);
+  if (!definition || !recipe) {
+    return "";
+  }
+
+  const unlocked = isActionUnlocked(state, actionId);
+  const cost = getActionCost(actionId);
+  const canStart = canStartAction(state, actionId);
+  const targetLoop = actionLoopTarget ? getActionLoop(state, actionLoopTarget.loopId) : null;
+  const running = getCurrentAction(state);
+  const assigningLoopAction = Boolean(actionLoopTarget && targetLoop);
+  const canAssignFollowUp = Boolean(
+    assigningLoopAction && targetLoop && actionLoopTarget && canInsertActionInSavedLoop(targetLoop, actionLoopTarget.afterIndex, actionId)
+  );
+  const active = running ? getActiveActionId(running) === actionId : false;
+  const disabled = assigningLoopAction ? !canAssignFollowUp : !canStart || active;
+  const missingCostText = getMissingCostText(state, cost);
+  const lockReason = canStart ? "" : unlocked ? missingCostText : getActionLockReason(state, actionId);
+  const statusText = assigningLoopAction
+    ? canAssignFollowUp
+      ? "Set as action loop step"
+      : "Not valid for this loop"
+    : active
+      ? "Running"
+      : !canStart && lockReason
+        ? lockReason
+        : "Ready";
+  const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
+  const tooltipRows = getActionTooltipRows(actionId, definition.durationMs);
+
+  return `
+    <button
+      class="smithing-recipe-card textile-recipe-card ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}"
+      type="button"
+      data-command="start-action"
+      data-id="${actionId}"
+      data-editor-id="textile-recipe-${actionId}"
+      data-editor-label="Textile recipe: ${definition.label}"
+      data-editor-files="src/ui/render.ts, src/style.css"
+      data-disabled="${disabled}"
+      data-tooltip-source
+      aria-disabled="${disabled}"
+      aria-label="${buttonLabel} ${definition.label}"
+    >
+      <span class="smithing-recipe-icon" aria-hidden="true">${renderActionIcon(actionId)}</span>
+      <span class="smithing-recipe-copy">
+        <strong>${definition.label}</strong>
+        <small>${statusText}</small>
+      </span>
+      <span class="smithing-recipe-meta">
+        <b>${getTextileRecipeOutputText(recipe)}</b>
+        <small>${describeCost(cost)}</small>
+      </span>
+      ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+    </button>
+  `;
+}
+
+function getTextileChainStatus(state: GameState): string {
+  if (state.seenResources.includes("linenCloth") || state.inventory.linenCloth > 0) {
+    return "Cloth";
+  }
+  if (state.seenResources.includes("linenThread") || state.inventory.linenThread > 0) {
+    return "Thread";
+  }
+  if (state.seenResources.includes("flaxFiber") || state.inventory.flaxFiber > 0) {
+    return "Fiber";
+  }
+  if (state.seenResources.includes("rettedFlax") || state.inventory.rettedFlax > 0) {
+    return "Retted";
+  }
+  return state.seenResources.includes("flaxPlant") || state.inventory.flaxPlant > 0 ? "Fresh flax" : "Find flax";
+}
+
+function getTextileStationStatus(state: GameState): string {
+  const hasWheel = state.buildings.primitiveSpinningWheel;
+  const hasLoom = state.buildings.primitiveLoom;
+  if (hasWheel && hasLoom) {
+    return "Wheel + Loom";
+  }
+  if (hasWheel) {
+    return "Wheel built";
+  }
+  if (hasLoom) {
+    return "Loom built";
+  }
+  return "Hand work";
+}
+
+function getTextileNeedleStatus(state: GameState): string {
+  const copper = Math.max(0, Math.floor(state.inventory.copperNeedle ?? 0));
+  const bronze = Math.max(0, Math.floor(state.inventory.bronzeNeedle ?? 0));
+  if (copper || bronze) {
+    return `Copper ${copper} / Bronze ${bronze}`;
+  }
+
+  return "None";
 }
 
 function renderCurrentActionPanel(state: GameState, now: number): string {
@@ -2257,6 +2469,19 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
       { label: "Unlock", value: smithingRecipe.unlockHint }
     ];
   }
+  const textileRecipe = getTextileRecipe(actionId);
+  if (textileRecipe) {
+    const stationText = textileRecipe.requiredBuildings?.length
+      ? textileRecipe.requiredBuildings.map((buildingId) => getBuildingLabel(buildingId)).join(", ")
+      : "Camp";
+    return [
+      ...rows,
+      { label: "Station", value: stationText },
+      { label: "Uses", value: describeCost(textileRecipe.cost) },
+      { label: "Makes", value: getTextileRecipeOutputText(textileRecipe) },
+      { label: "Unlock", value: textileRecipe.unlockHint }
+    ];
+  }
 
   switch (actionId) {
     case "gatherSticks":
@@ -2511,6 +2736,10 @@ function getBuildingButtonLabel(state: GameState, buildingId: BuildingId, now: n
   }
 
   return isBuildingBuilt(state, buildingId, now) ? "Built" : "Build";
+}
+
+function getBuildingLabel(buildingId: BuildingId): string {
+  return buildingDefinitions.find((building) => building.id === buildingId)?.label ?? buildingId;
 }
 
 function getBuildingStatusText(
@@ -3349,7 +3578,12 @@ function formatLogResource(resourceId: ResourceId, amount: number): string {
     case "cookedRabbitMeat":
     case "cookedSquirrelMeat":
     case "leather":
+    case "rettedFlax":
+    case "linenThread":
+    case "linenCloth":
       return label;
+    case "flaxPlant":
+      return "Flax Plants";
     case "flaxFiber":
       return "Flax Fibers";
     case "berry":
@@ -3362,6 +3596,20 @@ function formatLogResource(resourceId: ResourceId, amount: number): string {
     case "pot":
     case "ladle":
       return label;
+    case "copperNeedle":
+      return "Copper Needles";
+    case "bronzeNeedle":
+      return "Bronze Needles";
+    case "clothWrap":
+      return "Cloth Wraps";
+    case "linenBandage":
+      return "Linen Bandages";
+    case "simplePouch":
+      return "Simple Pouches";
+    case "linenHood":
+      return "Linen Hoods";
+    case "linenShirt":
+      return "Linen Shirts";
     default:
       return `${label}s`;
   }

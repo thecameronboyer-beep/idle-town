@@ -123,6 +123,8 @@ function updateLiveActionIndicators(): void {
   const remainingElement = document.querySelector<HTMLElement>("[data-action-remaining]");
   const smithingProgressElement = document.querySelector<HTMLElement>("[data-smithing-action-progress]");
   const smithingRemainingElement = document.querySelector<HTMLElement>("[data-smithing-action-remaining]");
+  const textileProgressElement = document.querySelector<HTMLElement>("[data-textile-action-progress]");
+  const textileRemainingElement = document.querySelector<HTMLElement>("[data-textile-action-remaining]");
 
   if (progressElement) {
     progressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
@@ -138,6 +140,14 @@ function updateLiveActionIndicators(): void {
 
   if (smithingRemainingElement) {
     smithingRemainingElement.textContent = formatDuration(running.endsAt - now);
+  }
+
+  if (textileProgressElement) {
+    textileProgressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
+  }
+
+  if (textileRemainingElement) {
+    textileRemainingElement.textContent = formatDuration(running.endsAt - now);
   }
 }
 
