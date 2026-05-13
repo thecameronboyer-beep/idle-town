@@ -1,10 +1,21 @@
-import { getSmithingRecipe, isSmithingActionId, type SmithingActionId } from "../data/smithing";
+import { getSmithingRecipe, isSmithingActionId, smeltingActionIds, type SmithingActionId } from "../data/smithing";
 import type { GameState, ResourceId } from "../types";
 
 const COPPER_TOOL_IDS = ["copperPickaxe", "copperHatchet", "copperKnife"];
 
 export function hasCrudeStoneFurnace(state: GameState): boolean {
   return Boolean(state.buildings.crudeStoneFurnace);
+}
+
+export function getFurnaceFuelStatus(state: GameState): { furnaceBuilt: boolean; coal: number } {
+  return {
+    furnaceBuilt: hasCrudeStoneFurnace(state),
+    coal: Math.max(0, Math.floor(state.inventory.coal ?? 0))
+  };
+}
+
+export function isSmeltingAction(actionId: string): actionId is SmithingActionId {
+  return smeltingActionIds.some((id) => id === actionId);
 }
 
 export function isSmithingRecipeUnlocked(state: GameState, actionId: string): boolean {
