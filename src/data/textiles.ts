@@ -2,6 +2,8 @@ import type { ActionId, BuildingId, Cost, ResourceId } from "../types";
 
 export type TextileRecipeKind = "retting" | "fiber" | "spinning" | "weaving" | "tooling" | "sewing";
 
+export const sewingNeedleResourceIds = ["copperNeedle", "bronzeNeedle"] as const satisfies readonly ResourceId[];
+
 export interface TextileRecipeDefinition {
   actionId: ActionId;
   label: string;
@@ -107,6 +109,12 @@ export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
 ];
 
 export const textileActionIds: ActionId[] = textileRecipeDefinitions.map((recipe) => recipe.actionId);
+export const textileRettingActionIds = getTextileActionIdsByKind("retting");
+export const textileFiberActionIds = getTextileActionIdsByKind("fiber");
+export const textileSpinningActionIds = getTextileActionIdsByKind("spinning");
+export const textileWeavingActionIds = getTextileActionIdsByKind("weaving");
+export const textileToolingActionIds = getTextileActionIdsByKind("tooling");
+export const textileSewingActionIds = getTextileActionIdsByKind("sewing");
 
 export function getTextileRecipe(actionId: string): TextileRecipeDefinition | undefined {
   return textileRecipeDefinitions.find((recipe) => recipe.actionId === actionId);
@@ -114,4 +122,8 @@ export function getTextileRecipe(actionId: string): TextileRecipeDefinition | un
 
 export function isTextileActionId(actionId: string): actionId is ActionId {
   return textileRecipeDefinitions.some((recipe) => recipe.actionId === actionId);
+}
+
+function getTextileActionIdsByKind(kind: TextileRecipeKind): ActionId[] {
+  return textileRecipeDefinitions.filter((recipe) => recipe.kind === kind).map((recipe) => recipe.actionId);
 }
