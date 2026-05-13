@@ -1,4 +1,5 @@
 import { toolDefinitions } from "../data/craftables";
+import { getSmithingRecipe } from "../data/smithing";
 import {
   fishFiletByFishId,
   fishResourceIds,
@@ -66,6 +67,15 @@ export function rollRewards(
   state: GameState,
   actionId: ActionId
 ): ActionRewards {
+  const smithingRecipe = getSmithingRecipe(actionId);
+  if (smithingRecipe) {
+    return {
+      resources: smithingRecipe.output ?? {},
+      message: `Cameron finishes ${smithingRecipe.label.toLowerCase()}.`,
+      tone: "craft"
+    };
+  }
+
   switch (actionId) {
     case "gatherSticks": {
       const amount = randomInt(1, 3);
@@ -168,6 +178,12 @@ export function rollRewards(
         tone: "craft"
       };
   }
+
+  return {
+    resources: {},
+    message: "Cameron finishes the work.",
+    tone: "craft"
+  };
 }
 
 export function getCraftedToolId(actionId: ActionId): ToolId | null {
@@ -265,6 +281,11 @@ export function applyToolWear(state: GameState, actionId: ActionId, now: number,
 }
 
 export function getStackedActionText(actionId: ActionId, characterName = "Cameron"): string {
+  const smithingRecipe = getSmithingRecipe(actionId);
+  if (smithingRecipe) {
+    return `${characterName} completed ${smithingRecipe.label.toLowerCase()}`;
+  }
+
   switch (actionId) {
     case "gatherSticks":
       return `${characterName} gathered sticks`;
@@ -317,6 +338,8 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
     case "tanHide":
       return `${characterName} tanned hide`;
   }
+
+  return `${characterName} completed work`;
 }
 
 function butcherOneCarriedFish(state: GameState, characterId: string): Cost {

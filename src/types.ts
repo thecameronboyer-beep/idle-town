@@ -68,7 +68,17 @@ export type ActionId =
   | "cookRabbitMeat"
   | "cookSquirrelMeat"
   | "tanHide"
-  | "craftLeatherBackpack";
+  | "craftLeatherBackpack"
+  | "smeltCopperBar"
+  | "smeltBronzeBar"
+  | "craftPot"
+  | "craftLadle"
+  | "craftCopperPickaxe"
+  | "craftCopperHatchet"
+  | "craftCopperKnife"
+  | "craftBronzePickaxe"
+  | "craftBronzeHatchet"
+  | "craftBronzeKnife";
 
 export type SkillId =
   | "foraging"

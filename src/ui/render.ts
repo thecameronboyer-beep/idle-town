@@ -1,5 +1,6 @@
 import { getActionDefinition } from "../data/actions";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
+import { getSmithingRecipe } from "../data/smithing";
 import {
   formatResourceAmount,
   getResourceLabel,
@@ -2000,6 +2001,20 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [squirrelIconUrl];
     case "tanHide":
       return [hideIconUrl];
+    case "smeltCopperBar":
+      return [copperIconUrl, coalIconUrl];
+    case "smeltBronzeBar":
+      return [copperIconUrl, tinIconUrl];
+    case "craftPot":
+    case "craftLadle":
+    case "craftCopperPickaxe":
+    case "craftCopperHatchet":
+    case "craftCopperKnife":
+      return [copperIconUrl];
+    case "craftBronzePickaxe":
+    case "craftBronzeHatchet":
+    case "craftBronzeKnife":
+      return [copperIconUrl, tinIconUrl];
   }
 }
 
@@ -2023,6 +2038,18 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
     { label: "Speed", value: formatDuration(durationMs) },
     { label: "Skill", value: `${getSkillDefinition(skillId).label} +${formatSkillXp(getActionSkillXp(actionId))} XP` }
   ];
+  const smithingRecipe = getSmithingRecipe(actionId);
+  if (smithingRecipe) {
+    return [
+      ...rows,
+      { label: "Uses", value: describeCost(smithingRecipe.cost) },
+      {
+        label: "Makes",
+        value: smithingRecipe.toolId ? smithingRecipe.label.replace("Craft ", "1 ") : describeCost(smithingRecipe.output ?? {})
+      },
+      { label: "Unlock", value: smithingRecipe.unlockHint }
+    ];
+  }
 
   switch (actionId) {
     case "gatherSticks":
@@ -2119,6 +2146,8 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
     case "tanHide":
       return [...rows, { label: "Uses", value: "1 Hide" }, { label: "Makes", value: "1 Leather" }];
   }
+
+  return rows;
 }
 
 function renderBuildingPanel(state: GameState, now: number): string {

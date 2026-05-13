@@ -1,4 +1,5 @@
 import type { ActionDefinition } from "../types";
+import { smithingRecipeDefinitions } from "./smithing";
 
 export const actionDefinitions: ActionDefinition[] = [
   {
@@ -175,7 +176,14 @@ export const actionDefinitions: ActionDefinition[] = [
     verb: "crafting a leather backpack",
     durationMs: 15000,
     blurb: "Knot a crude leather sling pouch with a drawstring."
-  }
+  },
+  ...smithingRecipeDefinitions.map((recipe): ActionDefinition => ({
+    id: recipe.actionId,
+    label: recipe.label,
+    verb: recipe.verb,
+    durationMs: recipe.durationMs,
+    blurb: recipe.blurb
+  }))
 ];
 
 export function getActionDefinition(id: string): ActionDefinition | undefined {

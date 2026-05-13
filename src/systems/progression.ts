@@ -1,4 +1,5 @@
 import { fishResourceIds } from "../data/resources";
+import { getSmithingRecipe } from "../data/smithing";
 import type { ActionId, BuildingId, GameState } from "../types";
 import { isCampfireLit } from "./buildings";
 import { hasUsableTool } from "./tools";
@@ -23,6 +24,10 @@ function hasSeenFish(state: GameState): boolean {
 }
 
 export function isActionUnlocked(state: GameState, actionId: ActionId, now = Date.now()): boolean {
+  if (getSmithingRecipe(actionId)) {
+    return false;
+  }
+
   switch (actionId) {
     case "gatherSticks":
     case "gatherStones":
@@ -62,6 +67,8 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
     case "craftLeatherBackpack":
       return state.buildings.tanningRack && state.seenResources.includes("leather");
   }
+
+  return false;
 }
 
 export function getActionLockReason(state: GameState, actionId: ActionId): string {
