@@ -122,6 +122,18 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "A small sewn linen pouch for organizing camp goods."
   },
   {
+    id: "linenHood",
+    label: "Linen Hood",
+    group: "crafted",
+    blurb: "A simple sewn hood for future clothing systems."
+  },
+  {
+    id: "linenShirt",
+    label: "Linen Shirt",
+    group: "crafted",
+    blurb: "A plain linen shirt, ready for later equipment and quality systems."
+  },
+  {
     id: "pot",
     label: "Pot",
     group: "crafted",

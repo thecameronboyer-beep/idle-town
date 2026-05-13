@@ -144,6 +144,32 @@ export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
     unlockHint: "Craft Copper Needle or Bronze Needle",
     requiredSeenResources: ["linenCloth"],
     requiredAnyResources: [...sewingNeedleResourceIds]
+  },
+  {
+    actionId: "sewLinenHood",
+    label: "Sew Linen Hood",
+    verb: "sewing a linen hood",
+    kind: "sewing",
+    durationMs: 24000,
+    cost: { linenCloth: 2, linenThread: 2 },
+    output: { linenHood: 1 },
+    blurb: "Cut and sew a simple linen hood from woven cloth panels.",
+    unlockHint: "Craft Copper Needle or Bronze Needle",
+    requiredSeenResources: ["linenCloth"],
+    requiredAnyResources: [...sewingNeedleResourceIds]
+  },
+  {
+    actionId: "sewLinenShirt",
+    label: "Sew Linen Shirt",
+    verb: "sewing a linen shirt",
+    kind: "sewing",
+    durationMs: 30000,
+    cost: { linenCloth: 4, linenThread: 3 },
+    output: { linenShirt: 1 },
+    blurb: "Stitch linen panels into a simple shirt for future clothing systems.",
+    unlockHint: "Craft Copper Needle or Bronze Needle",
+    requiredSeenResources: ["linenCloth"],
+    requiredAnyResources: [...sewingNeedleResourceIds]
   }
 ];
 

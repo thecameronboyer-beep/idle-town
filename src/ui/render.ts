@@ -2205,6 +2205,8 @@ function getActionIconUrls(actionId: ActionId): string[] {
     case "sewClothWrap":
     case "sewLinenBandage":
     case "sewSimplePouch":
+    case "sewLinenHood":
+    case "sewLinenShirt":
       return [flaxFiberIconUrl];
     case "smeltCopperBar":
       return [copperIconUrl, coalIconUrl];
