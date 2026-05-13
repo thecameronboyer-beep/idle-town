@@ -173,6 +173,66 @@ export type CombatClassId =
   | "caster"
   | "rogue";
 
+export interface CombatClassProgress {
+  level: number;
+  xp: number;
+  totalXp: number;
+}
+
+export type CombatClassProgressMap = Record<CombatClassId, CombatClassProgress>;
+
+export interface CharacterCombatStats {
+  hp: number;
+  maxHp: number;
+  mana: number;
+  maxMana: number;
+}
+
+export type CombatUnitKind = "party" | "enemy";
+
+export interface CombatUnit {
+  id: string;
+  kind: CombatUnitKind;
+  name: string;
+  hp: number;
+  maxHp: number;
+  mana: number;
+  maxMana: number;
+  x: number;
+  y: number;
+  damage: number;
+  attackRange: number;
+  nextActAt: number;
+  characterId?: string;
+  enemyId?: EnemyId;
+  classId?: CombatClassId;
+  weaponId?: ToolId;
+}
+
+export interface CombatEncounter {
+  id: string;
+  locationId: CombatLocationId;
+  startedAt: number;
+  updatedAt: number;
+  wave: number;
+  defeatedEnemies: number;
+  units: CombatUnit[];
+  message: string;
+}
+
+export interface CombatLogEntry {
+  id: string;
+  time: number;
+  text: string;
+  tone: "muted" | "gain" | "warning";
+}
+
+export interface CombatState {
+  selectedLocationId: CombatLocationId;
+  encounter: CombatEncounter | null;
+  log: CombatLogEntry[];
+}
+
 export type LocationId = "meadow" | "river" | "forest" | "mine";
 export type CharacterLocationId = "camp" | LocationId;
 
@@ -215,6 +275,8 @@ export interface Character {
   epithet: string;
   condition: "alone" | "working" | "resting";
   locationId: CharacterLocationId;
+  combat: CharacterCombatStats;
+  classProgress: CombatClassProgressMap;
   inventory: Inventory;
   resourceCounts: ResourceCounts;
   actionLoopId?: string;
@@ -261,7 +323,7 @@ export interface LogEntry {
 }
 
 export interface GameState {
-  version: 8;
+  version: 9;
   createdAt: number;
   updatedAt: number;
   lastSimulatedAt: number;
@@ -277,6 +339,7 @@ export interface GameState {
   campfireExpiresAt: number | null;
   seenResources: ResourceId[];
   skills: Skills;
+  combat: CombatState;
   actionLoops: ActionLoop[];
   currentActions: RunningAction[];
   currentAction: RunningAction | null;

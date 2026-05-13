@@ -1,8 +1,13 @@
 import { baseVisibleResources, resourceOrder } from "../data/resources";
+import { combatClassIds } from "../data/combat";
 import { toolDefinitions } from "../data/craftables";
 import { createEmptySkills } from "../systems/skills";
 import type {
   ActionLoop,
+  CharacterCombatStats,
+  CombatClassProgress,
+  CombatClassProgressMap,
+  CombatState,
   GameState,
   Inventory,
   OwnedBuildingCounts,
@@ -47,9 +52,40 @@ export function createStarterActionLoop(now = Date.now()): ActionLoop {
   };
 }
 
+export function createInitialCharacterCombatStats(): CharacterCombatStats {
+  return {
+    hp: 34,
+    maxHp: 34,
+    mana: 10,
+    maxMana: 10
+  };
+}
+
+export function createInitialCombatClassProgress(): CombatClassProgress {
+  return {
+    level: 1,
+    xp: 0,
+    totalXp: 0
+  };
+}
+
+export function createEmptyCombatClassProgressMap(): CombatClassProgressMap {
+  return Object.fromEntries(
+    combatClassIds.map((classId) => [classId, createInitialCombatClassProgress()])
+  ) as CombatClassProgressMap;
+}
+
+export function createInitialCombatState(): CombatState {
+  return {
+    selectedLocationId: "ruins",
+    encounter: null,
+    log: []
+  };
+}
+
 export function createInitialState(now = Date.now()): GameState {
   return {
-    version: 8,
+    version: 9,
     createdAt: now,
     updatedAt: now,
     lastSimulatedAt: now,
@@ -61,6 +97,8 @@ export function createInitialState(now = Date.now()): GameState {
         epithet: "Alone at the treeline",
         condition: "resting",
         locationId: "camp",
+        combat: createInitialCharacterCombatStats(),
+        classProgress: createEmptyCombatClassProgressMap(),
         inventory: createEmptyInventory(),
         resourceCounts: createEmptyResourceCounts(),
         actionLoopId: "loop-forage-sticks"
@@ -83,6 +121,7 @@ export function createInitialState(now = Date.now()): GameState {
     campfireExpiresAt: null,
     seenResources: [...baseVisibleResources],
     skills: createEmptySkills(),
+    combat: createInitialCombatState(),
     actionLoops: [createStarterActionLoop(now)],
     currentActions: [],
     currentAction: null,

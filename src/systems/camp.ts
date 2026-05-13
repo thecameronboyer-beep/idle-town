@@ -1,4 +1,9 @@
-import { createEmptyInventory, createEmptyResourceCounts } from "../state/createInitialState";
+import {
+  createEmptyCombatClassProgressMap,
+  createEmptyInventory,
+  createEmptyResourceCounts,
+  createInitialCharacterCombatStats
+} from "../state/createInitialState";
 import type { BuildingId, GameState } from "../types";
 import { addLog } from "./log";
 
@@ -37,6 +42,8 @@ export function syncPopulationWithHousing(state: GameState, now = Date.now()): b
     epithet: "Drawn to the second shelter",
     condition: "resting",
     locationId: "camp",
+    combat: createInitialCharacterCombatStats(),
+    classProgress: createEmptyCombatClassProgressMap(),
     inventory: createEmptyInventory(),
     resourceCounts: createEmptyResourceCounts()
   });

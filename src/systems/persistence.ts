@@ -1,17 +1,32 @@
 import { actionDefinitions } from "../data/actions";
+import { combatClassIds, combatEnemyIds, combatLocationIds } from "../data/combat";
 import { toolDefinitions } from "../data/craftables";
 import { wholeCountResourceIds } from "../data/resources";
 import {
   createEmptyBuildingCounts,
+  createEmptyCombatClassProgressMap,
   createEmptyInventory,
   createEmptyResourceCounts,
   createEmptyTools,
+  createInitialCharacterCombatStats,
+  createInitialCombatState,
   createInitialState
 } from "../state/createInitialState";
 import type {
   ActionId,
   ActionLoop,
   CharacterLocationId,
+  CharacterCombatStats,
+  CombatClassId,
+  CombatClassProgress,
+  CombatClassProgressMap,
+  CombatEncounter,
+  CombatLocationId,
+  CombatLogEntry,
+  CombatState,
+  CombatUnit,
+  CombatUnitKind,
+  EnemyId,
   GameState,
   Inventory,
   LocationId,
@@ -29,7 +44,7 @@ import { normalizeInventory } from "./inventory";
 import { normalizeSkills } from "./skills";
 
 const SAVE_KEY = "idle-town:first-survival-slice:v1";
-const CURRENT_SAVE_VERSION = 8;
+const CURRENT_SAVE_VERSION = 9;
 const LEGACY_CAMPFIRE_DURATION_MS = 15 * 60 * 1000;
 const WHOLE_RESOURCE_AVERAGE_WEIGHTS: Partial<Record<ResourceId, number>> = {
   minnow: 1,
@@ -92,6 +107,7 @@ export function loadGame(): GameState {
       characters,
       seenResources: parsed.seenResources?.length ? parsed.seenResources : fallback.seenResources,
       skills: normalizeSkills(parsed.skills),
+      combat: normalizeCombatState(parsed.combat, fallback.combat, characters),
       actionLoops,
       currentActions,
       currentAction: currentActions.find((action) => action.characterId === selectedCharacterId) ?? currentActions[0] ?? null,
@@ -165,11 +181,169 @@ function normalizeCharacters(
       ...fallbackCharacter,
       ...candidate,
       locationId: isCharacterLocationId(candidate.locationId) ? candidate.locationId : fallbackCharacter.locationId,
+      combat: normalizeCharacterCombat(candidate.combat, fallbackCharacter.combat),
+      classProgress: normalizeCombatClassProgressMap(candidate.classProgress),
       inventory,
       resourceCounts,
       actionLoopId: typeof candidate.actionLoopId === "string" ? candidate.actionLoopId : fallbackCharacter.actionLoopId
     };
   });
+}
+
+function normalizeCharacterCombat(
+  rawCombat: unknown,
+  fallbackCombat: CharacterCombatStats = createInitialCharacterCombatStats()
+): CharacterCombatStats {
+  if (!rawCombat || typeof rawCombat !== "object") {
+    return fallbackCombat;
+  }
+
+  const candidate = rawCombat as Partial<CharacterCombatStats>;
+  const maxHp = clampNumber(candidate.maxHp, 1, 999);
+  const maxMana = clampNumber(candidate.maxMana, 0, 999);
+  return {
+    maxHp,
+    hp: clampNumber(candidate.hp, 0, maxHp),
+    maxMana,
+    mana: clampNumber(candidate.mana, 0, maxMana)
+  };
+}
+
+function normalizeCombatClassProgressMap(rawProgress: unknown): CombatClassProgressMap {
+  const progress = createEmptyCombatClassProgressMap();
+  if (!rawProgress || typeof rawProgress !== "object") {
+    return progress;
+  }
+
+  const savedProgress = rawProgress as Partial<Record<CombatClassId, Partial<CombatClassProgress>>>;
+  for (const classId of combatClassIds) {
+    progress[classId] = normalizeCombatClassProgress(savedProgress[classId]);
+  }
+  return progress;
+}
+
+function normalizeCombatClassProgress(rawProgress: Partial<CombatClassProgress> | undefined): CombatClassProgress {
+  if (!rawProgress || typeof rawProgress !== "object") {
+    return {
+      level: 1,
+      xp: 0,
+      totalXp: 0
+    };
+  }
+
+  const xp = clampNumber(rawProgress.xp, 0, Number.MAX_SAFE_INTEGER);
+  return {
+    level: clampNumber(rawProgress.level, 1, 1000),
+    xp,
+    totalXp: Math.max(xp, clampNumber(rawProgress.totalXp, 0, Number.MAX_SAFE_INTEGER))
+  };
+}
+
+function normalizeCombatState(
+  rawCombat: unknown,
+  fallbackCombat: CombatState = createInitialCombatState(),
+  characters: GameState["characters"]
+): CombatState {
+  if (!rawCombat || typeof rawCombat !== "object") {
+    return fallbackCombat;
+  }
+
+  const candidate = rawCombat as Partial<CombatState>;
+  return {
+    selectedLocationId: isCombatLocationId(candidate.selectedLocationId)
+      ? candidate.selectedLocationId
+      : fallbackCombat.selectedLocationId,
+    encounter: normalizeCombatEncounter(candidate.encounter, characters),
+    log: normalizeCombatLog(candidate.log)
+  };
+}
+
+function normalizeCombatEncounter(
+  rawEncounter: unknown,
+  characters: GameState["characters"]
+): CombatEncounter | null {
+  if (!rawEncounter || typeof rawEncounter !== "object") {
+    return null;
+  }
+
+  const candidate = rawEncounter as Partial<CombatEncounter>;
+  if (!isCombatLocationId(candidate.locationId) || typeof candidate.id !== "string") {
+    return null;
+  }
+
+  const units = Array.isArray(candidate.units)
+    ? candidate.units
+        .map((unit) => normalizeCombatUnit(unit, characters))
+        .filter((unit): unit is CombatUnit => Boolean(unit))
+    : [];
+
+  return {
+    id: candidate.id,
+    locationId: candidate.locationId,
+    startedAt: clampNumber(candidate.startedAt, 0, Number.MAX_SAFE_INTEGER),
+    updatedAt: clampNumber(candidate.updatedAt, 0, Number.MAX_SAFE_INTEGER),
+    wave: clampNumber(candidate.wave, 1, 999),
+    defeatedEnemies: clampNumber(candidate.defeatedEnemies, 0, Number.MAX_SAFE_INTEGER),
+    units,
+    message: typeof candidate.message === "string" ? candidate.message : ""
+  };
+}
+
+function normalizeCombatUnit(rawUnit: unknown, characters: GameState["characters"]): CombatUnit | null {
+  if (!rawUnit || typeof rawUnit !== "object") {
+    return null;
+  }
+
+  const candidate = rawUnit as Partial<CombatUnit>;
+  if (!isCombatUnitKind(candidate.kind) || typeof candidate.id !== "string" || typeof candidate.name !== "string") {
+    return null;
+  }
+
+  if (candidate.kind === "party" && !characters.some((character) => character.id === candidate.characterId)) {
+    return null;
+  }
+
+  if (candidate.kind === "enemy" && !isEnemyId(candidate.enemyId)) {
+    return null;
+  }
+
+  const maxHp = clampNumber(candidate.maxHp, 1, 999);
+  const maxMana = clampNumber(candidate.maxMana, 0, 999);
+  return {
+    id: candidate.id,
+    kind: candidate.kind,
+    name: candidate.name,
+    hp: clampNumber(candidate.hp, 0, maxHp),
+    maxHp,
+    mana: clampNumber(candidate.mana, 0, maxMana),
+    maxMana,
+    x: clampNumber(candidate.x, 0, 99),
+    y: clampNumber(candidate.y, 0, 99),
+    damage: clampNumber(candidate.damage, 0, 999),
+    attackRange: clampNumber(candidate.attackRange, 1, 99),
+    nextActAt: clampNumber(candidate.nextActAt, 0, Number.MAX_SAFE_INTEGER),
+    characterId: typeof candidate.characterId === "string" ? candidate.characterId : undefined,
+    enemyId: isEnemyId(candidate.enemyId) ? candidate.enemyId : undefined,
+    classId: isCombatClassId(candidate.classId) ? candidate.classId : undefined,
+    weaponId: candidate.weaponId
+  };
+}
+
+function normalizeCombatLog(rawLog: unknown): CombatLogEntry[] {
+  if (!Array.isArray(rawLog)) {
+    return [];
+  }
+
+  return rawLog
+    .filter((entry): entry is Partial<CombatLogEntry> => Boolean(entry && typeof entry === "object"))
+    .map((entry, index) => ({
+      id: typeof entry.id === "string" ? entry.id : `combat-log-${index + 1}`,
+      time: clampNumber(entry.time, 0, Number.MAX_SAFE_INTEGER),
+      text: typeof entry.text === "string" ? entry.text : "",
+      tone: isCombatLogTone(entry.tone) ? entry.tone : "muted"
+    }))
+    .filter((entry) => entry.text)
+    .slice(0, 20);
 }
 
 function normalizeActionLoops(
@@ -281,6 +455,26 @@ function isCharacterLocationId(value: unknown): value is CharacterLocationId {
 
 function isLocationId(value: unknown): value is LocationId {
   return value === "meadow" || value === "river" || value === "forest" || value === "mine";
+}
+
+function isCombatLocationId(value: unknown): value is CombatLocationId {
+  return typeof value === "string" && combatLocationIds.some((locationId) => locationId === value);
+}
+
+function isEnemyId(value: unknown): value is EnemyId {
+  return typeof value === "string" && combatEnemyIds.some((enemyId) => enemyId === value);
+}
+
+function isCombatClassId(value: unknown): value is CombatClassId {
+  return typeof value === "string" && combatClassIds.some((classId) => classId === value);
+}
+
+function isCombatUnitKind(value: unknown): value is CombatUnitKind {
+  return value === "party" || value === "enemy";
+}
+
+function isCombatLogTone(value: unknown): value is CombatLogEntry["tone"] {
+  return value === "muted" || value === "gain" || value === "warning";
 }
 
 function migrateCampfireTimer(state: GameState, savedVersion: number): void {
@@ -405,6 +599,15 @@ function normalizeTools(savedTools: unknown): OwnedTools {
   }
 
   return tools;
+}
+
+function clampNumber(value: unknown, min: number, max: number): number {
+  const numberValue = Number(value ?? min);
+  if (!Number.isFinite(numberValue)) {
+    return min;
+  }
+
+  return Math.min(max, Math.max(min, Math.floor(numberValue)));
 }
 
 export function saveGame(state: GameState): void {
