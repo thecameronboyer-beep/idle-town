@@ -248,7 +248,7 @@ const actionFilters: ActionFilter[] = [
   },
   {
     id: "textiles",
-    label: "Textiles",
+    label: "Tailoring",
     actionIds: [...textileActionIds]
   },
   {
@@ -1684,7 +1684,7 @@ function renderTextileActionPanel(
   const sewingIds = actionIds.filter((actionId) => textileSewingActionIds.some((id) => id === actionId));
 
   return `
-    <section class="action-panel textile-action-panel" data-editor-id="action-panel-textiles" data-editor-label="Textiles action panel" data-editor-files="src/ui/render.ts, src/style.css">
+    <section class="action-panel textile-action-panel" data-editor-id="action-panel-textiles" data-editor-label="Tailoring action panel" data-editor-files="src/ui/render.ts, src/style.css">
       <div class="smithing-panel-card textile-panel-card">
         <div class="smithing-status-grid textile-status-grid">
           <div class="smithing-status-item">
@@ -1718,7 +1718,7 @@ function renderTextileActiveWork(state: GameState, now: number): string {
   if (!running || !recipe) {
     return `
       <div class="smithing-active-row idle textile-active-row">
-        <span>No active textile work</span>
+        <span>No active tailoring work</span>
         <strong>Chain idle</strong>
       </div>
     `;
@@ -1728,7 +1728,7 @@ function renderTextileActiveWork(state: GameState, now: number): string {
 
   return `
     <div class="smithing-active-row textile-active-row">
-      <span>Active textile work</span>
+      <span>Active tailoring work</span>
       <strong>${recipe.label}</strong>
       <div class="progress-track smithing-progress-track">
         <span data-textile-action-progress style="transform: scaleX(${progress.toFixed(4)})"></span>
@@ -1799,7 +1799,7 @@ function renderTextileRecipeCard(state: GameState, actionId: ActionId, actionLoo
       data-command="start-action"
       data-id="${actionId}"
       data-editor-id="textile-recipe-${actionId}"
-      data-editor-label="Textile recipe: ${definition.label}"
+      data-editor-label="Tailoring recipe: ${definition.label}"
       data-editor-files="src/ui/render.ts, src/style.css"
       data-disabled="${disabled}"
       data-tooltip-source
