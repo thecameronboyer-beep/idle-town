@@ -1166,7 +1166,7 @@ h3 {
   grid-template-columns: 3.1rem minmax(0, 1fr);
   grid-template-rows: auto auto;
   gap: 0.38rem 0.65rem;
-  min-height: 7.25rem;
+  min-height: 8rem;
   padding: 0.62rem;
   overflow: visible;
   text-align: left;
@@ -1240,11 +1240,14 @@ h3 {
 
 .smithing-recipe-copy strong,
 .smithing-recipe-copy small,
-.smithing-recipe-meta b,
-.smithing-recipe-meta small {
+.smithing-recipe-meta b {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.smithing-recipe-meta small {
+  overflow-wrap: anywhere;
 }
 
 .smithing-recipe-copy strong {
@@ -1272,6 +1275,7 @@ h3 {
   color: var(--muted);
   font-size: 0.68rem;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .location-tabs {

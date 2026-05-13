@@ -76,7 +76,7 @@ export function getSmithingRecipeOutputText(actionId: SmithingActionId): string 
     return "";
   }
 
-  return recipe.toolId ? recipe.label.replace("Craft ", "1 ") : recipe.label.replace("Smelt ", "1 ");
+  return recipe.label.replace(/^(Craft|Smelt) /, "1 ");
 }
 
 function hasPotAndLadle(state: GameState): boolean {
