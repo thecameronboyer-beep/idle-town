@@ -98,6 +98,12 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "A simple metal needle for first linen sewing."
   },
   {
+    id: "bronzeNeedle",
+    label: "Bronze Needle",
+    group: "crafted",
+    blurb: "A stronger needle for steady linen sewing work."
+  },
+  {
     id: "pot",
     label: "Pot",
     group: "crafted",
