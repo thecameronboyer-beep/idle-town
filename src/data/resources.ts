@@ -92,6 +92,12 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "A harder alloy bar for sturdier tools."
   },
   {
+    id: "copperNeedle",
+    label: "Copper Needle",
+    group: "crafted",
+    blurb: "A simple metal needle for first linen sewing."
+  },
+  {
     id: "pot",
     label: "Pot",
     group: "crafted",

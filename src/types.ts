@@ -14,6 +14,7 @@ export type ResourceId =
   | "tin"
   | "copperBar"
   | "bronzeBar"
+  | "copperNeedle"
   | "pot"
   | "ladle"
   | "rabbit"
