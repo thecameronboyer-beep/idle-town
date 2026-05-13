@@ -187,6 +187,11 @@ export function rollRewards(
 }
 
 export function getCraftedToolId(actionId: ActionId): ToolId | null {
+  const smithingRecipe = getSmithingRecipe(actionId);
+  if (smithingRecipe?.toolId) {
+    return smithingRecipe.toolId;
+  }
+
   switch (actionId) {
     case "craftBasket":
       return "basket";
