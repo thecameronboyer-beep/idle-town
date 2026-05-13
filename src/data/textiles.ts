@@ -29,6 +29,18 @@ export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
     blurb: "Soak and wait out whole flax stalks until the fibers loosen from the woody stem.",
     unlockHint: "Gather Flax Plant",
     requiredSeenResources: ["flaxPlant"]
+  },
+  {
+    actionId: "separateFlaxFiber",
+    label: "Separate Flax Fiber",
+    verb: "breaking flax",
+    kind: "fiber",
+    durationMs: 30000,
+    cost: { rettedFlax: 2 },
+    output: { flaxFiber: 3 },
+    blurb: "Break, scrape, and comb retted stalks into clean flax fiber.",
+    unlockHint: "Ret Flax",
+    requiredSeenResources: ["rettedFlax"]
   }
 ];
 
