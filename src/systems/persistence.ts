@@ -321,6 +321,7 @@ function normalizeCombatUnit(rawUnit: unknown, characters: GameState["characters
     y: clampNumber(candidate.y, 0, 99),
     damage: clampNumber(candidate.damage, 0, 999),
     attackRange: clampNumber(candidate.attackRange, 1, 99),
+    actEveryMs: clampNumber(candidate.actEveryMs, 500, 60_000),
     nextActAt: clampNumber(candidate.nextActAt, 0, Number.MAX_SAFE_INTEGER),
     characterId: typeof candidate.characterId === "string" ? candidate.characterId : undefined,
     enemyId: isEnemyId(candidate.enemyId) ? candidate.enemyId : undefined,

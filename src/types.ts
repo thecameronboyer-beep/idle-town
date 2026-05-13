@@ -202,6 +202,7 @@ export interface CombatUnit {
   y: number;
   damage: number;
   attackRange: number;
+  actEveryMs: number;
   nextActAt: number;
   characterId?: string;
   enemyId?: EnemyId;
