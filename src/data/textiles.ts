@@ -41,6 +41,18 @@ export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
     blurb: "Break, scrape, and comb retted stalks into clean flax fiber.",
     unlockHint: "Ret Flax",
     requiredSeenResources: ["rettedFlax"]
+  },
+  {
+    actionId: "handSpinLinenThread",
+    label: "Hand Spin Linen Thread",
+    verb: "hand-spinning thread",
+    kind: "spinning",
+    durationMs: 26000,
+    cost: { flaxFiber: 1 },
+    output: { linenThread: 1 },
+    blurb: "Twist clean flax fiber into usable linen thread by hand.",
+    unlockHint: "Separate Flax Fiber",
+    requiredSeenResources: ["flaxFiber"]
   }
 ];
 

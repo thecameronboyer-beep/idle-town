@@ -81,6 +81,7 @@ export type ActionId =
   | "craftLeatherBackpack"
   | "retFlax"
   | "separateFlaxFiber"
+  | "handSpinLinenThread"
   | "smeltCopperBar"
   | "smeltBronzeBar"
   | "craftPot"
