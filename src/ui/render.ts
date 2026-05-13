@@ -1187,7 +1187,7 @@ function renderCharacterSelectCard(state: GameState, character: GameState["chara
       <span class="character-select-copy">
         <strong>${character.name}</strong>
         <small>${character.epithet}</small>
-        <small>${loadout.classLabel} · ${loadout.weaponLabel}</small>
+        <small>${loadout.classLabel} - ${loadout.weaponLabel}</small>
         <em>${getCharacterStatusText(state, character)}</em>
       </span>
       <span class="character-select-badge">${selected ? "Selected" : "Select"}</span>
@@ -1292,7 +1292,7 @@ function renderPartyMember(state: GameState, character: GameState["characters"][
         <span class="portrait small" aria-hidden="true">${getCharacterInitials(character.name)}</span>
         <span>
           <strong>${character.name}</strong>
-          <small>${loadout.classLabel} · ${status}</small>
+          <small>${loadout.classLabel} - ${status}</small>
         </span>
       </div>
       ${renderVitalsBar("HP", hp, hpMax, "hp")}
@@ -1462,7 +1462,7 @@ function renderCombatRosterUnit(unit: CombatUnit, now: number): string {
     <article class="combat-roster-unit ${unit.kind}">
       <div>
         <strong>${unit.name}</strong>
-        <small>${classLabel} · ${actionText}</small>
+        <small>${classLabel} - ${actionText}</small>
       </div>
       ${renderVitalsBar("HP", unit.hp, unit.maxHp, "hp")}
       ${unit.maxMana > 0 ? renderVitalsBar("Mana", unit.mana, unit.maxMana, "mana") : ""}
@@ -1748,7 +1748,7 @@ function renderSkillButton(state: GameState, filter: ActionFilter, activeActionF
     ? currentActionLabel
     : progress.canPrestige
       ? "Prestige ready"
-      : `Lv ${skill.level} · ${formatSkillXp(progress.xpIntoLevel)}/${formatSkillXp(progress.xpForLevel)} XP`;
+      : `Lv ${skill.level} - ${formatSkillXp(progress.xpIntoLevel)}/${formatSkillXp(progress.xpForLevel)} XP`;
 
   return `
     <button
@@ -3289,7 +3289,7 @@ function renderSkillRow(state: GameState, skillId: SkillId): string {
       </div>
       <div class="skill-row-meta">
         <span>${progressLabel}</span>
-        <span>${prestigeLabel} · Cap ${progress.cap}</span>
+        <span>${prestigeLabel} - Cap ${progress.cap}</span>
       </div>
       ${
         progress.canPrestige
@@ -3332,7 +3332,7 @@ function renderCombatClassRow(state: GameState, classId: (typeof combatClassDefi
       <div class="skill-row-heading">
         <span>
           <strong>${definition.label}</strong>
-          <small>${definition.weaponLabel} · Total ${formatCombatClassXp(progress.totalXp)} XP</small>
+          <small>${definition.weaponLabel} - Total ${formatCombatClassXp(progress.totalXp)} XP</small>
         </span>
         <span class="skill-level-pill">Lv ${progress.level}</span>
       </div>

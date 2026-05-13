@@ -174,6 +174,10 @@ export function canStartAction(
   now = Date.now(),
   characterId = state.selectedCharacterId
 ): boolean {
+  if (isCharacterInCombat(state, characterId)) {
+    return false;
+  }
+
   if (actionId === "craftLowestTool") {
     return isActionUnlocked(state, actionId, now) && Boolean(getLowestQuantityCraftAction(state, now));
   }
@@ -189,6 +193,12 @@ export function canStartAction(
   }
 
   return isActionUnlocked(state, actionId, now) && hasCost(state, getActionCost(actionId));
+}
+
+function isCharacterInCombat(state: GameState, characterId: string): boolean {
+  return Boolean(
+    state.combat?.encounter?.units.some((unit) => unit.kind === "party" && unit.characterId === characterId)
+  );
 }
 
 export function insertActionInLoop(
