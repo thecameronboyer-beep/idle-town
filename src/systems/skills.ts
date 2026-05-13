@@ -71,6 +71,7 @@ const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
   separateFlaxFiber: { skillId: "textiles", xp: 260 },
   handSpinLinenThread: { skillId: "textiles", xp: 190 },
   spinLinenThread: { skillId: "textiles", xp: 420 },
+  weaveLinenCloth: { skillId: "textiles", xp: 520 },
   smeltCopperBar: { skillId: "smithing", xp: 260 },
   smeltBronzeBar: { skillId: "smithing", xp: 420 },
   craftPot: { skillId: "smithing", xp: 220 },

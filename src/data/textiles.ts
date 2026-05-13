@@ -66,6 +66,19 @@ export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
     unlockHint: "Build Primitive Spinning Wheel",
     requiredBuildings: ["primitiveSpinningWheel"],
     requiredSeenResources: ["flaxFiber"]
+  },
+  {
+    actionId: "weaveLinenCloth",
+    label: "Weave Linen Cloth",
+    verb: "weaving linen cloth",
+    kind: "weaving",
+    durationMs: 36000,
+    cost: { linenThread: 4 },
+    output: { linenCloth: 1 },
+    blurb: "Work linen thread across the loom into a sturdy cloth panel.",
+    unlockHint: "Build Primitive Loom",
+    requiredBuildings: ["primitiveLoom"],
+    requiredSeenResources: ["linenThread"]
   }
 ];
 

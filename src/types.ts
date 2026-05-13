@@ -90,6 +90,7 @@ export type ActionId =
   | "separateFlaxFiber"
   | "handSpinLinenThread"
   | "spinLinenThread"
+  | "weaveLinenCloth"
   | "smeltCopperBar"
   | "smeltBronzeBar"
   | "craftPot"
