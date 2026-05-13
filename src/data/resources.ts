@@ -104,6 +104,18 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "A stronger needle for steady linen sewing work."
   },
   {
+    id: "clothWrap",
+    label: "Cloth Wrap",
+    group: "crafted",
+    blurb: "A simple folded linen wrap for bundling small supplies."
+  },
+  {
+    id: "linenBandage",
+    label: "Linen Bandage",
+    group: "crafted",
+    blurb: "Clean linen strips prepared for future medical use."
+  },
+  {
     id: "pot",
     label: "Pot",
     group: "crafted",

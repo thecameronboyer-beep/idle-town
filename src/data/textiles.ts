@@ -105,6 +105,32 @@ export const textileRecipeDefinitions: TextileRecipeDefinition[] = [
     blurb: "Shape a harder bronze needle for steadier sewing work.",
     unlockHint: "Smelt Bronze Bar",
     requiredSeenResources: ["bronzeBar"]
+  },
+  {
+    actionId: "sewClothWrap",
+    label: "Sew Cloth Wrap",
+    verb: "sewing a cloth wrap",
+    kind: "sewing",
+    durationMs: 14000,
+    cost: { linenCloth: 1, linenThread: 1 },
+    output: { clothWrap: 1 },
+    blurb: "Hem a small linen wrap for tying and protecting loose goods.",
+    unlockHint: "Craft Copper Needle or Bronze Needle",
+    requiredSeenResources: ["linenCloth"],
+    requiredAnyResources: [...sewingNeedleResourceIds]
+  },
+  {
+    actionId: "sewLinenBandage",
+    label: "Sew Linen Bandage",
+    verb: "sewing a linen bandage",
+    kind: "sewing",
+    durationMs: 12000,
+    cost: { linenCloth: 1 },
+    output: { linenBandage: 1 },
+    blurb: "Cut and stitch clean linen into simple bandage strips.",
+    unlockHint: "Craft Copper Needle or Bronze Needle",
+    requiredSeenResources: ["linenCloth"],
+    requiredAnyResources: [...sewingNeedleResourceIds]
   }
 ];
 
