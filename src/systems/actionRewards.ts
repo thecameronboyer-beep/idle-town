@@ -14,6 +14,7 @@ import {
   getCharacterInventory,
   hasResourceQuantity
 } from "./inventory";
+import { rollGatheringTable } from "./gathering";
 import { addStackedLog } from "./log";
 import { randomFloat, randomInt } from "./math";
 import {
@@ -113,19 +114,19 @@ export function rollRewards(
         tone: "gain"
       };
     }
-    case "gatherMushrooms": {
-      const amount = randomInt(1, 3);
+    case "gatherMeadowIngredients": {
+      const gathered = rollGatheringTable("meadow");
       return {
-        resources: { mushroom: amount },
-        message: `Cameron gathers ${amount} ${plural("Mushroom", amount)} from the meadow shade.`,
+        resources: gathered.resources,
+        message: gathered.message,
         tone: "gain"
       };
     }
-    case "gatherBerries": {
-      const amount = randomInt(2, 5);
+    case "gatherWater": {
+      const amount = randomInt(1, 3);
       return {
-        resources: { berry: amount },
-        message: `Cameron picks ${amount} ${amount === 1 ? "Berry" : "Berries"} from the brambles.`,
+        resources: { water: amount },
+        message: `Cameron fills ${amount} ${amount === 1 ? "skin" : "skins"} of river water.`,
         tone: "gain"
       };
     }
@@ -140,6 +141,18 @@ export function rollRewards(
     case "craftLowestTool":
     case "craftLeatherBackpack":
       break;
+    case "craftCrudeBowl":
+      return {
+        resources: { crudeBowl: 1 },
+        message: "Cameron shapes a crude bowl for camp meals.",
+        tone: "craft"
+      };
+    case "craftCrudeWoodenSpoon":
+      return {
+        resources: { crudeWoodenSpoon: 1 },
+        message: "Cameron carves a crude wooden spoon.",
+        tone: "craft"
+      };
     case "chopTrees": {
       const toolTier = getToolTierForRole(state, "woodcutting");
       const woodBonus = toolTier >= 3 ? 1 : toolTier >= 2 && Math.random() < 0.5 ? 1 : 0;
@@ -303,10 +316,10 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
       return `${characterName} gathered flax plants`;
     case "gatherFlaxFibers":
       return `${characterName} gathered flax fibers`;
-    case "gatherMushrooms":
-      return `${characterName} gathered mushrooms`;
-    case "gatherBerries":
-      return `${characterName} gathered berries`;
+    case "gatherMeadowIngredients":
+      return `${characterName} gathered meadow ingredients`;
+    case "gatherWater":
+      return `${characterName} gathered water`;
     case "mineCoal":
       return `${characterName} mined coal`;
     case "mineCopper":
@@ -317,6 +330,10 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
       return `${characterName} caught river fish`;
     case "craftLowestTool":
       return `${characterName} balanced tool stock`;
+    case "craftCrudeBowl":
+      return `${characterName} crafted crude bowls`;
+    case "craftCrudeWoodenSpoon":
+      return `${characterName} crafted crude wooden spoons`;
     case "craftLeatherBackpack":
       return `${characterName} crafted leather backpacks`;
     case "chopTrees":
