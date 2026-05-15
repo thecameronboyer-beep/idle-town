@@ -1,4 +1,4 @@
-import"./modulepreload-polyfill-CSRv37U6.js";var e=`idle-town-design-mode-edits-v1`,t=document.querySelector(`#design-root`);if(!t)throw Error(`Design mode root was not found.`);var n=t;function r(e){let t=n.querySelector(e);if(!t)throw Error(`Design mode control was not found: ${e}`);return t}n.innerHTML=`
+import"./modulepreload-polyfill-Cf3xff8G.js";var e=`idle-town-design-mode-edits-v1`,t=document.querySelector(`#design-root`);if(!t)throw Error(`Design mode root was not found.`);var n=t;function r(e){let t=n.querySelector(e);if(!t)throw Error(`Design mode control was not found: ${e}`);return t}n.innerHTML=`
   <div class="design-app">
     <header class="design-topbar">
       <div class="brand">
