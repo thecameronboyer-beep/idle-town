@@ -472,7 +472,6 @@ const emptySlotLabels: Partial<Record<ToolId, string>> = {
 };
 
 const resourceSlotImages: Partial<Record<ResourceId, string>> = {
-  berry: berryIconUrl,
   blueberries: berryIconUrl,
   bone: boneIconUrl,
   brookStickleback: brookSticklebackIconUrl,
@@ -499,7 +498,6 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   minnow: minnowIconUrl,
   mint: flaxFiberIconUrl,
   mudskipper: mudskipperIconUrl,
-  mushroom: mushroomIconUrl,
   pebblePerch: pebblePerchIconUrl,
   rabbit: rabbitIconUrl,
   rabbitStew: rabbitIconUrl,
@@ -4283,8 +4281,6 @@ function formatLogResource(resourceId: ResourceId, amount: number): string {
       return "Flax Plants";
     case "flaxFiber":
       return "Flax Fibers";
-    case "berry":
-      return "Berries";
     case "coal":
     case "copper":
     case "tin":
