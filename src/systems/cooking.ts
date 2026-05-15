@@ -72,7 +72,21 @@ export function getCookingProgress(entry: CookingQueueEntry, now = Date.now()): 
 }
 
 export function getAvailableCookingRecipes(_state: GameState): CookingRecipeDefinition[] {
-  return cookingRecipeDefinitions;
+  return [...cookingRecipeDefinitions].sort((left, right) => {
+    return left.levelRequirement - right.levelRequirement || left.name.localeCompare(right.name);
+  });
+}
+
+export function discoverCookingRecipes(state: GameState): CookingRecipeId[] {
+  const discovered = cookingRecipeDefinitions
+    .filter((recipe) => isCookingRecipeDiscoverable(state, recipe))
+    .map((recipe) => recipe.id);
+
+  for (const recipeId of discovered) {
+    rememberKnownRecipe(state, recipeId);
+  }
+
+  return discovered;
 }
 
 export function canQueueCookingRecipe(
@@ -129,6 +143,7 @@ export function getCookingRecipeRequirementText(recipe: CookingRecipeDefinition)
 }
 
 function startNextCookingEntry(state: GameState, now: number): void {
+  discoverCookingRecipes(state);
   if (getActiveCookingEntry(state) || !isCampfireLit(state, now)) {
     return;
   }
@@ -225,6 +240,20 @@ function rememberKnownRecipe(state: GameState, recipeId: CookingRecipeId): void 
   if (!state.cooking.knownRecipeIds.includes(recipeId)) {
     state.cooking.knownRecipeIds.push(recipeId);
   }
+}
+
+function isCookingRecipeDiscoverable(state: GameState, recipe: CookingRecipeDefinition): boolean {
+  if (state.cooking.knownRecipeIds.includes(recipe.id)) {
+    return true;
+  }
+
+  if (state.skills.cooking.level < recipe.levelRequirement) {
+    return false;
+  }
+
+  return recipe.ingredients.some((ingredient) => {
+    return Boolean(ingredient.resourceId && state.seenResources.includes(ingredient.resourceId));
+  });
 }
 
 function touch(state: GameState, now: number): void {
