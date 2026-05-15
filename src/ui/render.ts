@@ -1,5 +1,6 @@
 import { getActionDefinition } from "../data/actions";
 import { combatClassDefinitions, getCombatEnemyDefinition, getCombatLocationDefinition } from "../data/combat";
+import { getCookingRecipeCost } from "../data/cooking";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
 import { getSmithingRecipe, metalworkingActionIds, smeltingActionIds, smithingActionIds } from "../data/smithing";
 import {
@@ -127,10 +128,24 @@ import {
 import { getFurnaceFuelStatus, getSmithingRecipeOutputText, isSmeltingAction } from "../systems/smithing";
 import { getTextileRecipeOutputText } from "../systems/textiles";
 import { getBestUsableToolForRole, getMaxToolDurability } from "../systems/tools";
+import {
+  canQueueCookingRecipe,
+  getActiveCookingEntry,
+  getAvailableCookingRecipes,
+  getCookingProgress,
+  getCookingRecipeLockReason,
+  getCookingRecipeOutputText,
+  getCookingRecipeRequirementText,
+  queueCookingRecipe
+} from "../systems/cooking";
+import { getGatheringTableSummary } from "../systems/gathering";
+import { canEatFood, eatFood, getEatFoodLockReason, getFoodEffectPreview, isEdibleFood } from "../systems/needs";
 import type {
   ActionId,
   BuildingId,
   CharacterLocationId,
+  CookingRecipeDefinition,
+  CookingRecipeId,
   CombatUnit,
   GameState,
   Inventory,
@@ -213,7 +228,7 @@ const actionFilters: ActionFilter[] = [
   {
     id: "foraging",
     label: "Forage",
-    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxPlants", "gatherFlaxFibers", "gatherMushrooms", "gatherBerries"]
+    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxPlants", "gatherFlaxFibers", "gatherMeadowIngredients", "gatherWater"]
   },
   {
     id: "fishing",
@@ -241,6 +256,8 @@ const actionFilters: ActionFilter[] = [
     actionIds: [
       "craftLowestTool",
       "craftBasket",
+      "craftCrudeBowl",
+      "craftCrudeWoodenSpoon",
       "craftFishingPole",
       "craftStoneKnife",
       "craftStoneDagger",
@@ -273,7 +290,7 @@ const actionFilters: ActionFilter[] = [
   {
     id: "cooking",
     label: "Cooking",
-    actionIds: ["cookRabbitMeat", "cookSquirrelMeat"]
+    actionIds: []
   },
   {
     id: "leatherworking",
@@ -326,13 +343,13 @@ const locationDefinitions: LocationDefinition[] = [
     id: "meadow",
     label: "Meadow",
     iconUrl: meadowLocationIconUrl,
-    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxPlants", "gatherMushrooms", "gatherBerries"]
+    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxPlants", "gatherMeadowIngredients"]
   },
   {
     id: "river",
     label: "River",
     iconUrl: riverLocationIconUrl,
-    actionIds: ["gatherStones", "gatherFlaxFibers"]
+    actionIds: ["gatherStones", "gatherFlaxFibers", "gatherWater"]
   },
   {
     id: "forest",
@@ -455,6 +472,7 @@ const emptySlotLabels: Partial<Record<ToolId, string>> = {
 
 const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   berry: berryIconUrl,
+  blueberries: berryIconUrl,
   bone: boneIconUrl,
   brookStickleback: brookSticklebackIconUrl,
   brookSticklebackFilet: fishFiletIconUrl,
@@ -465,17 +483,41 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   pebblePerchFilet: fishFiletIconUrl,
   stoneLoachFilet: fishFiletIconUrl,
   flaxFiber: flaxFiberIconUrl,
+  chamomile: flaxFiberIconUrl,
+  clover: flaxFiberIconUrl,
+  crudeBowl: woodIconUrl,
+  crudeWoodenSpoon: woodIconUrl,
+  dandelionGreens: flaxFiberIconUrl,
+  dirtyBowl: woodIconUrl,
+  elderflowers: flaxFiberIconUrl,
+  fennel: flaxFiberIconUrl,
+  hearthcap: mushroomIconUrl,
   hide: hideIconUrl,
+  lavender: flaxFiberIconUrl,
+  meadowStew: mushroomIconUrl,
   minnow: minnowIconUrl,
+  mint: flaxFiberIconUrl,
   mudskipper: mudskipperIconUrl,
   mushroom: mushroomIconUrl,
   pebblePerch: pebblePerchIconUrl,
   rabbit: rabbitIconUrl,
+  rabbitStew: rabbitIconUrl,
+  roseHips: berryIconUrl,
+  rootStew: mushroomIconUrl,
+  sorrel: flaxFiberIconUrl,
+  squirrelHerbStew: squirrelIconUrl,
   squirrel: squirrelIconUrl,
+  strawberries: berryIconUrl,
   stick: stickIconUrl,
   stone: stoneIconUrl,
   stoneLoach: stoneLoachIconUrl,
   tin: tinIconUrl,
+  water: riverLocationIconUrl,
+  wildCarrot: flaxFiberIconUrl,
+  wildGarlic: flaxFiberIconUrl,
+  wildGarlicRabbitStew: rabbitIconUrl,
+  wildOnion: flaxFiberIconUrl,
+  yarrow: flaxFiberIconUrl,
   wood: woodIconUrl
 };
 
@@ -911,6 +953,14 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "build-structure" && id) {
       buildStructure(state, id as BuildingId, handlers.getNow());
+    }
+
+    if (command === "queue-cooking" && id) {
+      queueCookingRecipe(state, id as CookingRecipeId, handlers.getNow());
+    }
+
+    if (command === "eat-food" && id) {
+      eatFood(state, id as ResourceId, handlers.getNow());
     }
 
     if (command === "prestige-skill" && isSkillId(id)) {
@@ -1786,6 +1836,9 @@ function renderActionPanel(
   if (filter.id === "textiles") {
     return renderTextileActionPanel(state, actionIds, actionLoopTarget, now);
   }
+  if (filter.id === "cooking") {
+    return renderCookingActionPanel(state, now);
+  }
 
   return `
       <section class="action-panel" data-editor-id="action-panel-${activeActionFilter}" data-editor-label="${filter.label} action panel" data-editor-files="src/ui/render.ts, src/style.css">
@@ -2102,6 +2155,158 @@ function renderTextileRecipeCard(state: GameState, actionId: ActionId, actionLoo
         <small>${describeCost(cost)}</small>
       </span>
       ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+    </button>
+  `;
+}
+
+function renderCookingActionPanel(state: GameState, now: number): string {
+  const recipes = getAvailableCookingRecipes(state);
+  const stews = recipes.filter((recipe) => recipe.tags.includes("stew"));
+  const cookingSkill = state.skills.cooking;
+
+  return `
+    <section class="action-panel cooking-action-panel" data-editor-id="action-panel-cooking" data-editor-label="Cooking recipe panel" data-editor-files="src/ui/render.ts, src/style.css">
+      <div class="smithing-panel-card cooking-panel-card">
+        <div class="smithing-status-grid cooking-status-grid">
+          <div class="smithing-status-item">
+            <span>Station</span>
+            <strong>${isCampfireLit(state, now) ? "Campfire lit" : "Needs fire"}</strong>
+          </div>
+          <div class="smithing-status-item">
+            <span>Cooking</span>
+            <strong>Lv ${cookingSkill.level}</strong>
+          </div>
+          <div class="smithing-status-item">
+            <span>Queue</span>
+            <strong>${state.cooking.queue.length}</strong>
+          </div>
+        </div>
+        ${renderCookingActiveWork(state, now)}
+        ${renderCookingQueue(state, now)}
+        ${renderCookingRecipeSection(state, "Stews", stews, now)}
+      </div>
+    </section>
+  `;
+}
+
+function renderCookingActiveWork(state: GameState, now: number): string {
+  const active = getActiveCookingEntry(state);
+  const activeRecipe = active ? getAvailableCookingRecipes(state).find((recipe) => recipe.id === active.recipeId) : undefined;
+  if (!active || !activeRecipe) {
+    return `
+      <div class="smithing-active-row idle cooking-active-row">
+        <span>No active cooking</span>
+        <strong>${state.cooking.queue.length ? "Waiting for campfire" : "Queue idle"}</strong>
+      </div>
+    `;
+  }
+
+  const progress = clamp(getCookingProgress(active, now), 0, 1);
+  const remainingMs = Math.max(0, (active.endsAt ?? now) - now);
+
+  return `
+    <div class="smithing-active-row cooking-active-row">
+      <span>Active cooking</span>
+      <strong>${activeRecipe.name}</strong>
+      <div class="progress-track smithing-progress-track">
+        <span data-cooking-action-progress style="transform: scaleX(${progress.toFixed(4)})"></span>
+        <em data-cooking-action-remaining>${formatDuration(remainingMs)}</em>
+      </div>
+    </div>
+  `;
+}
+
+function renderCookingQueue(state: GameState, now: number): string {
+  const waitingEntries = state.cooking.queue.filter((entry) => entry.startedAt === null || entry.endsAt === null);
+  if (!waitingEntries.length) {
+    return "";
+  }
+
+  return `
+    <div class="cooking-queue-panel">
+      <div class="section-heading">
+        <span>Queued</span>
+      </div>
+      <div class="cooking-queue-list">
+        ${waitingEntries
+          .map((entry) => {
+            const recipe = getAvailableCookingRecipes(state).find((candidate) => candidate.id === entry.recipeId);
+            return `
+              <div class="cooking-queue-row">
+                <strong>${recipe?.name ?? entry.recipeId}</strong>
+                <small>${isCampfireLit(state, now) ? "Waiting turn" : "Needs lit campfire"}</small>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderCookingRecipeSection(
+  state: GameState,
+  label: string,
+  recipes: CookingRecipeDefinition[],
+  now: number
+): string {
+  if (!recipes.length) {
+    return "";
+  }
+
+  return `
+    <div class="smithing-recipe-section cooking-recipe-section">
+      <div class="section-heading">
+        <span>${label}</span>
+      </div>
+      <div class="smithing-recipe-grid cooking-recipe-grid">
+        ${recipes.map((recipe) => renderCookingRecipeCard(state, recipe, now)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderCookingRecipeCard(state: GameState, recipe: CookingRecipeDefinition, now: number): string {
+  const canQueue = canQueueCookingRecipe(state, recipe, now);
+  const lockReason = getCookingRecipeLockReason(state, recipe, now);
+  const disabled = !canQueue;
+  const cost = getCookingRecipeCost(recipe);
+  const tooltipRows: ActionTooltipRow[] = [
+    { label: "Station", value: "Campfire" },
+    { label: "Speed", value: formatDuration(recipe.cookTimeMs) },
+    { label: "Skill", value: `Cooking +${formatSkillXp(recipe.xpReward)} XP` },
+    { label: "Level", value: `Cooking Lv ${recipe.levelRequirement}` },
+    { label: "Uses", value: getCookingRecipeRequirementText(recipe) },
+    { label: "Makes", value: getCookingRecipeOutputText(recipe) },
+    { label: "Nutrition", value: `${recipe.nutrition.hunger ?? 0} hunger` },
+    { label: "Failure", value: `${Math.round(recipe.failureChance * 100)}% base chance later` }
+  ];
+  const statusText = canQueue ? "Ready" : lockReason;
+
+  return `
+    <button
+      class="smithing-recipe-card cooking-recipe-card ${!canQueue ? "locked" : ""}"
+      type="button"
+      data-command="queue-cooking"
+      data-id="${recipe.id}"
+      data-editor-id="cooking-recipe-${recipe.id}"
+      data-editor-label="Cooking recipe: ${recipe.name}"
+      data-editor-files="src/ui/render.ts, src/style.css"
+      data-disabled="${disabled}"
+      data-tooltip-source
+      aria-disabled="${disabled}"
+      aria-label="${canQueue ? "Queue" : "Locked"} ${recipe.name}"
+    >
+      <span class="smithing-recipe-icon" aria-hidden="true"><span class="action-card-glyph">ST</span></span>
+      <span class="smithing-recipe-copy">
+        <strong>${recipe.name}</strong>
+        <small>${statusText}</small>
+      </span>
+      <span class="smithing-recipe-meta">
+        <b>${getCookingRecipeOutputText(recipe)}</b>
+        <small>${describeCost(cost)}</small>
+      </span>
+      ${renderActionTooltip(recipe.name, tooltipRows, statusText)}
     </button>
   `;
 }
@@ -2489,7 +2694,7 @@ function getActionStartLocation(actionId: ActionId, activeLocation: LocationId):
     return "meadow";
   }
 
-  if (actionId === "fishRiver") {
+  if (actionId === "fishRiver" || actionId === "gatherWater") {
     return "river";
   }
 
@@ -2714,10 +2919,10 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [flaxFiberIconUrl];
     case "gatherFlaxFibers":
       return [flaxFiberIconUrl];
-    case "gatherMushrooms":
-      return [mushroomIconUrl];
-    case "gatherBerries":
-      return [berryIconUrl];
+    case "gatherMeadowIngredients":
+      return [mushroomIconUrl, berryIconUrl];
+    case "gatherWater":
+      return [riverLocationIconUrl];
     case "mineCoal":
       return [coalIconUrl];
     case "mineCopper":
@@ -2728,6 +2933,10 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [minnowIconUrl];
     case "craftLowestTool":
       return [craftMaterialsBundleButtonUrl];
+    case "craftCrudeBowl":
+      return [woodIconUrl, stoneIconUrl];
+    case "craftCrudeWoodenSpoon":
+      return [woodIconUrl];
     case "craftLeatherBackpack":
       return [leatherBackpackEquippedSlotUrl];
     case "chopTrees":
@@ -2866,10 +3075,15 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
       return [...rows, { label: "Pickup", value: "2-4 Flax Plants" }, { label: "Each", value: "1 weight" }];
     case "gatherFlaxFibers":
       return [...rows, { label: "Pickup", value: "1-3 Flax Fibers" }, { label: "Each", value: "1 weight" }];
-    case "gatherMushrooms":
-      return [...rows, { label: "Pickup", value: "1-3 Mushrooms" }, { label: "Each", value: "0.1 weight" }];
-    case "gatherBerries":
-      return [...rows, { label: "Pickup", value: "2-5 Berries" }, { label: "Each", value: "0.1 weight" }];
+    case "gatherMeadowIngredients":
+      return [
+        ...rows,
+        { label: "Table", value: getGatheringTableSummary("meadow") },
+        { label: "Pickup", value: "1-2 weighted ingredient rolls" },
+        { label: "Kinds", value: "Herbs, flowers, berries, roots, vegetables, seasonings" }
+      ];
+    case "gatherWater":
+      return [...rows, { label: "Pickup", value: "1-3 Water" }, { label: "Place", value: "River" }];
     case "mineCoal":
       return [
         ...rows,
@@ -2919,6 +3133,10 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
       ];
     case "craftBasket":
       return [...rows, { label: "Makes", value: "1 Basket" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
+    case "craftCrudeBowl":
+      return [...rows, { label: "Makes", value: "1 Crude Bowl" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
+    case "craftCrudeWoodenSpoon":
+      return [...rows, { label: "Makes", value: "1 Crude Wooden Spoon" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftFishingPole":
       return [...rows, { label: "Makes", value: "1 Fishing Pole" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftLeatherBackpack":
@@ -2996,10 +3214,51 @@ function renderCampInventoryPanel(state: GameState): string {
             <div class="camp-inventory-content">
               ${Object.entries(groups).map(([group, ids]) => renderResourceGroup(state, group, ids)).join("")}
               ${renderToolInventory(state)}
+              ${renderFoodUsePanel(state)}
             </div>
           `
           : `<div class="empty-line">No supplies stored yet.</div>`
       }
+    </div>
+  `;
+}
+
+function renderFoodUsePanel(state: GameState): string {
+  const foods = resourceOrder.filter((resourceId) => state.inventory[resourceId] > 0 && isEdibleFood(resourceId));
+  if (!foods.length) {
+    return "";
+  }
+
+  return `
+    <section class="resource-group food-use-panel" data-editor-id="food-use-panel" data-editor-label="Food use panel" data-editor-files="src/ui/render.ts, src/style.css">
+      <h3>Food</h3>
+      <div class="food-use-list">
+        ${foods.map((resourceId) => renderFoodUseRow(state, resourceId)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderFoodUseRow(state: GameState, resourceId: ResourceId): string {
+  const lockReason = getEatFoodLockReason(state, resourceId);
+  const canEat = canEatFood(state, resourceId);
+  const effect = getFoodEffectPreview(resourceId);
+
+  return `
+    <div class="food-use-row">
+      <span>
+        <strong>${getResourceLabel(resourceId)}</strong>
+        <small>${canEat ? `Restores ${effect.hunger} hunger` : lockReason}</small>
+      </span>
+      <button
+        type="button"
+        data-command="eat-food"
+        data-id="${resourceId}"
+        data-disabled="${!canEat}"
+        aria-disabled="${!canEat}"
+      >
+        Eat
+      </button>
     </div>
   `;
 }
@@ -3201,6 +3460,7 @@ function renderCharacterStatsPanel(state: GameState): string {
     { label: "Action Loop", value: assignedLoop?.name ?? "None" },
     { label: "Class", value: loadout.classLabel },
     { label: "Weapon", value: loadout.weaponLabel },
+    { label: "Hunger", value: `${Math.round(selectedCharacter.needs.hunger)} / ${Math.round(selectedCharacter.needs.maxHunger)}` },
     { label: "HP", value: `${Math.round(combatStats.hp)} / ${Math.round(combatStats.maxHp)}` },
     { label: "Mana", value: `${Math.round(combatStats.mana)} / ${Math.round(combatStats.maxMana)}` },
     ...getEquipmentSummaryStats(state)
@@ -4027,6 +4287,14 @@ function formatLogResource(resourceId: ResourceId, amount: number): string {
       return "Copper Needles";
     case "bronzeNeedle":
       return "Bronze Needles";
+    case "water":
+      return "Water";
+    case "crudeBowl":
+      return "Crude Bowls";
+    case "dirtyBowl":
+      return "Dirty Bowls";
+    case "crudeWoodenSpoon":
+      return "Crude Wooden Spoons";
     case "clothWrap":
       return "Cloth Wraps";
     case "linenBandage":
@@ -4038,7 +4306,7 @@ function formatLogResource(resourceId: ResourceId, amount: number): string {
     case "linenShirt":
       return "Linen Shirts";
     default:
-      return `${label}s`;
+      return label.endsWith("s") ? label : `${label}s`;
   }
 }
 
@@ -4054,6 +4322,14 @@ function labelGroup(group: string): string {
       return "Fish";
     case "crafted":
       return "Worked";
+    case "ingredients":
+      return "Ingredients";
+    case "food":
+      return "Food";
+    case "liquids":
+      return "Liquids";
+    case "utensils":
+      return "Utensils";
     default:
       return group;
   }

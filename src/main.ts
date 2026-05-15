@@ -2,7 +2,7 @@ import "./style.css";
 import { loadGame, resetSave, saveGame } from "./systems/persistence";
 import { getActionProgress, getCurrentAction, getCurrentActions, simulateUntil } from "./systems/actions";
 import { simulateCombatUntil } from "./systems/combat";
-import { simulateCookingUntil } from "./systems/cooking";
+import { getActiveCookingEntry, getCookingProgress, simulateCookingUntil } from "./systems/cooking";
 import { formatDuration } from "./systems/math";
 import { createRenderer } from "./ui/render";
 
@@ -122,41 +122,54 @@ function updateLiveActionIndicators(): void {
   const now = syncGameClock();
   updateLiveCampfireIndicators(now);
 
-  const running = getCurrentAction(state);
-  if (!running) {
-    return;
-  }
-
-  const progress = Math.min(1, Math.max(0, getActionProgress(state, now)));
   const progressElement = document.querySelector<HTMLElement>("[data-action-progress]");
   const remainingElement = document.querySelector<HTMLElement>("[data-action-remaining]");
   const smithingProgressElement = document.querySelector<HTMLElement>("[data-smithing-action-progress]");
   const smithingRemainingElement = document.querySelector<HTMLElement>("[data-smithing-action-remaining]");
   const textileProgressElement = document.querySelector<HTMLElement>("[data-textile-action-progress]");
   const textileRemainingElement = document.querySelector<HTMLElement>("[data-textile-action-remaining]");
+  const cookingProgressElement = document.querySelector<HTMLElement>("[data-cooking-action-progress]");
+  const cookingRemainingElement = document.querySelector<HTMLElement>("[data-cooking-action-remaining]");
+  const running = getCurrentAction(state);
 
-  if (progressElement) {
-    progressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
+  if (running) {
+    const progress = Math.min(1, Math.max(0, getActionProgress(state, now)));
+
+    if (progressElement) {
+      progressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
+    }
+
+    if (remainingElement) {
+      remainingElement.textContent = formatDuration(running.endsAt - now);
+    }
+
+    if (smithingProgressElement) {
+      smithingProgressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
+    }
+
+    if (smithingRemainingElement) {
+      smithingRemainingElement.textContent = formatDuration(running.endsAt - now);
+    }
+
+    if (textileProgressElement) {
+      textileProgressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
+    }
+
+    if (textileRemainingElement) {
+      textileRemainingElement.textContent = formatDuration(running.endsAt - now);
+    }
   }
 
-  if (remainingElement) {
-    remainingElement.textContent = formatDuration(running.endsAt - now);
-  }
+  const activeCooking = getActiveCookingEntry(state);
+  if (activeCooking) {
+    const cookingProgress = getCookingProgress(activeCooking, now);
+    if (cookingProgressElement) {
+      cookingProgressElement.style.transform = `scaleX(${cookingProgress.toFixed(4)})`;
+    }
 
-  if (smithingProgressElement) {
-    smithingProgressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
-  }
-
-  if (smithingRemainingElement) {
-    smithingRemainingElement.textContent = formatDuration(running.endsAt - now);
-  }
-
-  if (textileProgressElement) {
-    textileProgressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
-  }
-
-  if (textileRemainingElement) {
-    textileRemainingElement.textContent = formatDuration(running.endsAt - now);
+    if (cookingRemainingElement) {
+      cookingRemainingElement.textContent = formatDuration((activeCooking.endsAt ?? now) - now);
+    }
   }
 }
 

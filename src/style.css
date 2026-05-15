@@ -1640,6 +1640,68 @@ h3 {
   line-height: 1.2;
 }
 
+.cooking-panel-card {
+  width: min(100%, 62rem);
+}
+
+.cooking-active-row:not(.idle) {
+  border-color: rgba(214, 164, 81, 0.38);
+  background:
+    linear-gradient(90deg, rgba(115, 168, 160, 0.14), rgba(214, 164, 81, 0.1)),
+    rgba(17, 18, 14, 0.68);
+}
+
+.cooking-queue-panel {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.cooking-queue-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.45rem;
+}
+
+.cooking-queue-row {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.55rem;
+  border: 1px solid rgba(236, 229, 213, 0.12);
+  border-radius: 8px;
+  background: rgba(7, 8, 6, 0.28);
+}
+
+.cooking-queue-row strong,
+.cooking-queue-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cooking-queue-row strong {
+  color: #f4e6c8;
+  font-size: 0.82rem;
+}
+
+.cooking-queue-row small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.cooking-recipe-grid {
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.cooking-recipe-card .smithing-recipe-meta small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+}
+
 .location-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -2288,6 +2350,42 @@ h3 {
   color: var(--amber);
   font-size: 1.2rem;
   text-align: right;
+}
+
+.food-use-panel {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.food-use-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.food-use-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.55rem;
+  border: 1px solid rgba(236, 229, 213, 0.12);
+  border-radius: 8px;
+  background: rgba(17, 18, 14, 0.56);
+}
+
+.food-use-row strong,
+.food-use-row small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.food-use-row button {
+  min-height: 34px;
+  padding: 0.34rem 0.58rem;
+  font-size: 0.72rem;
 }
 
 .equipment-screen {
