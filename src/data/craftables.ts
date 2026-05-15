@@ -262,7 +262,7 @@ export const buildingDefinitions: CraftableDefinition<BuildingId>[] = [
   },
   {
     id: "crudeStoneFurnace",
-    label: "Crude Stone Furnace",
+    label: "Stone Furnace",
     recipe: { stone: 16, stick: 6, wood: 4 },
     blurb: "A low stone furnace hot enough for first smelting."
   },

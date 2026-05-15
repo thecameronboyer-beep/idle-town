@@ -67,6 +67,7 @@ import stoneSpearEmptySlotUrl from "../assets/items/stone-spear-empty-slot.png";
 import stoneSpearEquippedSlotUrl from "../assets/items/stone-spear-equipped-slot.png";
 import stoneIconUrl from "../assets/items/stone-icon.png";
 import stoneLoachIconUrl from "../assets/items/stone-loach-icon.png";
+import stoneFurnaceUrl from "../assets/buildings/stone-furnace-2x2.png";
 import shortBowEquippedSlotUrl from "../assets/items/short-bow-equipped-slot.png";
 import tinIconUrl from "../assets/items/tin-icon.png";
 import hideTentUrl from "../assets/buildings/hide-tent-2x2.png";
@@ -2177,7 +2178,7 @@ function renderSmithingFurnaceStatus(fuel: ReturnType<typeof getFurnaceFuelStatu
     <div class="smithing-status-grid">
       <div class="smithing-status-item">
         <span>Furnace</span>
-        <strong>${fuel.furnaceBuilt ? "Crude Stone Furnace" : "Not built"}</strong>
+        <strong>${fuel.furnaceBuilt ? "Stone Furnace" : "Not built"}</strong>
       </div>
       <div class="smithing-status-item">
         <span>Coal</span>
@@ -3816,6 +3817,7 @@ function getBuildingImageUrl(state: GameState, buildingId: BuildingId, now: numb
     case "hideTent":
       return hideTentUrl;
     case "crudeStoneFurnace":
+      return stoneFurnaceUrl;
     case "primitiveSpinningWheel":
     case "primitiveLoom":
       return campfireUnlitUrl;

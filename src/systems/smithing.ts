@@ -49,7 +49,7 @@ export function getSmithingRecipeLockReason(state: GameState, actionId: string):
 
   switch (actionId) {
     case "smeltCopperBar":
-      return hasCrudeStoneFurnace(state) ? "" : "Needs Crude Stone Furnace";
+      return hasCrudeStoneFurnace(state) ? "" : "Needs Stone Furnace";
     case "craftPot":
     case "craftLadle":
       return hasSeenOrOwnedResource(state, "copperBar") ? "" : "Smelt Copper Bar";
@@ -59,7 +59,7 @@ export function getSmithingRecipeLockReason(state: GameState, actionId: string):
       return hasPotAndLadle(state) ? "" : "Craft Pot and Ladle";
     case "smeltBronzeBar":
       return !hasCrudeStoneFurnace(state)
-        ? "Needs Crude Stone Furnace"
+        ? "Needs Stone Furnace"
         : hasAnyCopperTool(state)
           ? ""
           : "Craft a Copper Tool";

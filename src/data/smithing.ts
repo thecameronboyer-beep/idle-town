@@ -44,7 +44,7 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     cost: { copper: 2, coal: 1 },
     output: { copperBar: 1 },
     blurb: "Refine soft copper ore into a first workable bar.",
-    unlockHint: "Build Crude Stone Furnace"
+    unlockHint: "Build Stone Furnace"
   },
   {
     actionId: "smeltBronzeBar",

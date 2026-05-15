@@ -64,7 +64,7 @@ function getBuildingLabel(buildingId: BuildingId): string {
     case "hideTent":
       return "Hide Tent";
     case "crudeStoneFurnace":
-      return "Crude Stone Furnace";
+      return "Stone Furnace";
     case "primitiveSpinningWheel":
       return "Primitive Spinning Wheel";
     case "primitiveLoom":
