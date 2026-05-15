@@ -1,47 +1,39 @@
-export type ResourceId =
-  | "stick"
-  | "stone"
-  | "flaxPlant"
-  | "rettedFlax"
-  | "flaxFiber"
-  | "linenThread"
-  | "linenCloth"
-  | "mushroom"
-  | "berry"
-  | "wood"
-  | "coal"
-  | "copper"
-  | "tin"
-  | "copperBar"
-  | "bronzeBar"
-  | "copperNeedle"
-  | "bronzeNeedle"
-  | "clothWrap"
-  | "linenBandage"
-  | "simplePouch"
-  | "linenHood"
-  | "linenShirt"
-  | "pot"
-  | "ladle"
-  | "rabbit"
-  | "squirrel"
-  | "rabbitMeat"
-  | "squirrelMeat"
-  | "cookedRabbitMeat"
-  | "cookedSquirrelMeat"
-  | "hide"
-  | "bone"
-  | "leather"
-  | "minnow"
-  | "stoneLoach"
-  | "mudskipper"
-  | "brookStickleback"
-  | "pebblePerch"
-  | "minnowFilet"
-  | "stoneLoachFilet"
-  | "mudskipperFilet"
-  | "brookSticklebackFilet"
-  | "pebblePerchFilet";
+export type ResourceId = string;
+
+export type ResourceGroup =
+  | "resources"
+  | "animals"
+  | "fish"
+  | "hunted"
+  | "crafted"
+  | "ingredients"
+  | "food"
+  | "liquids"
+  | "utensils";
+
+export type ItemRarity = "common" | "uncommon" | "rare" | "special";
+export type IngredientCategory = "meat" | "herb" | "flower" | "berry" | "root" | "vegetable" | "seasoning";
+
+export interface ResourceNutrition {
+  hunger?: number;
+  hydration?: number;
+}
+
+export interface ResourceSpoilageHooks {
+  perishable: boolean;
+  shelfLifeMs?: number;
+}
+
+export interface ResourceQualityHooks {
+  enabled: boolean;
+  baseQuality?: number;
+}
+
+export interface ResourceCookingData {
+  ingredientCategory?: IngredientCategory;
+  tags: string[];
+  compatibility?: string[];
+}
 
 export type ToolId =
   | "stoneAxe"
@@ -78,14 +70,16 @@ export type ActionId =
   | "gatherStones"
   | "gatherFlaxPlants"
   | "gatherFlaxFibers"
-  | "gatherMushrooms"
-  | "gatherBerries"
+  | "gatherMeadowIngredients"
+  | "gatherWater"
   | "mineCoal"
   | "mineCopper"
   | "mineTin"
   | "fishRiver"
   | "craftLowestTool"
   | "craftBasket"
+  | "craftCrudeBowl"
+  | "craftCrudeWoodenSpoon"
   | "craftFishingPole"
   | "craftStoneKnife"
   | "craftStoneDagger"
@@ -188,6 +182,11 @@ export interface CharacterCombatStats {
   maxMana: number;
 }
 
+export interface CharacterNeeds {
+  hunger: number;
+  maxHunger: number;
+}
+
 export type CombatUnitKind = "party" | "enemy";
 
 export interface CombatUnit {
@@ -277,6 +276,7 @@ export interface Character {
   condition: "alone" | "working" | "resting";
   locationId: CharacterLocationId;
   combat: CharacterCombatStats;
+  needs: CharacterNeeds;
   classProgress: CombatClassProgressMap;
   inventory: Inventory;
   resourceCounts: ResourceCounts;
@@ -323,8 +323,62 @@ export interface LogEntry {
   aggregateItems?: Partial<Record<ResourceId, number>>;
 }
 
+export type CookingStationId = "campfire";
+export type CookingRecipeId = string;
+
+export interface CookingIngredientRequirement {
+  resourceId?: ResourceId;
+  category?: IngredientCategory;
+  tags?: string[];
+  amount: number;
+  role?: "meat" | "plant" | "liquid" | "vessel" | "seasoning";
+  consumed?: boolean;
+  optional?: boolean;
+}
+
+export interface CookingRecipeOutput {
+  resourceId: ResourceId;
+  amount: number;
+  chance?: number;
+}
+
+export interface CookingRecipeNutrition {
+  hunger?: number;
+  hydration?: number;
+}
+
+export interface CookingRecipeDefinition {
+  id: CookingRecipeId;
+  name: string;
+  ingredients: CookingIngredientRequirement[];
+  station: CookingStationId;
+  cookTimeMs: number;
+  outputs: CookingRecipeOutput[];
+  xpReward: number;
+  levelRequirement: number;
+  tags: string[];
+  nutrition: CookingRecipeNutrition;
+  failureChance: number;
+  modifiers?: string[];
+}
+
+export interface CookingQueueEntry {
+  id: string;
+  recipeId: CookingRecipeId;
+  stationId: CookingStationId;
+  queuedAt: number;
+  startedAt: number | null;
+  endsAt: number | null;
+}
+
+export interface CookingState {
+  queue: CookingQueueEntry[];
+  knownRecipeIds: CookingRecipeId[];
+  completedRecipeCounts: Partial<Record<CookingRecipeId, number>>;
+}
+
 export interface GameState {
-  version: 9;
+  version: 10;
   createdAt: number;
   updatedAt: number;
   lastSimulatedAt: number;
@@ -340,6 +394,7 @@ export interface GameState {
   campfireExpiresAt: number | null;
   seenResources: ResourceId[];
   skills: Skills;
+  cooking: CookingState;
   combat: CombatState;
   actionLoops: ActionLoop[];
   currentActions: RunningAction[];
@@ -350,8 +405,16 @@ export interface GameState {
 export interface ResourceDefinition {
   id: ResourceId;
   label: string;
-  group: "resources" | "animals" | "fish" | "hunted" | "crafted";
+  group: ResourceGroup;
   blurb: string;
+  stackSize?: number;
+  weight?: number;
+  value?: number;
+  rarity?: ItemRarity;
+  nutrition?: ResourceNutrition;
+  spoilage?: ResourceSpoilageHooks;
+  quality?: ResourceQualityHooks;
+  cooking?: ResourceCookingData;
 }
 
 export interface CraftableDefinition<TId extends string> {
