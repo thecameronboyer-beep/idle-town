@@ -2,6 +2,7 @@ import "./style.css";
 import { loadGame, resetSave, saveGame } from "./systems/persistence";
 import { getActionProgress, getCurrentAction, getCurrentActions, simulateUntil } from "./systems/actions";
 import { simulateCombatUntil } from "./systems/combat";
+import { simulateCookingUntil } from "./systems/cooking";
 import { formatDuration } from "./systems/math";
 import { createRenderer } from "./ui/render";
 
@@ -41,6 +42,7 @@ function tick(): void {
   const now = syncGameClock();
   const beforeSignature = getRenderSignature();
   simulateUntil(state, now);
+  simulateCookingUntil(state, now);
   simulateCombatUntil(state, now);
   const afterSignature = getRenderSignature();
 
@@ -80,6 +82,7 @@ function getRenderSignature(): string {
       id: character.id,
       condition: character.condition,
       locationId: character.locationId,
+      needs: character.needs,
       actionLoopId: character.actionLoopId,
       combat: character.combat,
       classProgress: character.classProgress,
@@ -92,6 +95,7 @@ function getRenderSignature(): string {
     campfireExpiresAt: state.campfireExpiresAt,
     seenResources: state.seenResources,
     skills: state.skills,
+    cooking: state.cooking,
     combat: state.combat,
     actionLoops: state.actionLoops,
     currentActions: getCurrentActions(state).map((action) => ({
