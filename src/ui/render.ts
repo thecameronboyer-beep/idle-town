@@ -2279,6 +2279,7 @@ function renderCookingRecipeCard(state: GameState, recipe: CookingRecipeDefiniti
     { label: "Uses", value: getCookingRecipeRequirementText(recipe) },
     { label: "Makes", value: getCookingRecipeOutputText(recipe) },
     { label: "Nutrition", value: `${recipe.nutrition.hunger ?? 0} hunger` },
+    { label: "Eating", value: "Stews need a Crude Wooden Spoon" },
     { label: "Failure", value: `${Math.round(recipe.failureChance * 100)}% base chance later` }
   ];
   const statusText = canQueue ? "Ready" : lockReason;

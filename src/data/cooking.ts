@@ -238,7 +238,6 @@ function createStewRecipe(config: StewRecipeConfig): CookingRecipeDefinition {
     ingredients: [
       { resourceId: "water", amount: 1, role: "liquid" },
       { resourceId: "crudeBowl", amount: 1, role: "vessel" },
-      { resourceId: "crudeWoodenSpoon", amount: 1, role: "vessel", consumed: false },
       ...config.ingredients.map((ingredient) => ({
         resourceId: ingredient.id,
         amount: ingredient.amount ?? 1,
