@@ -159,6 +159,10 @@ export function getActionCost(actionId: ActionId): Cost {
       return { rabbitMeat: 1 };
     case "cookSquirrelMeat":
       return { squirrelMeat: 1 };
+    case "craftCrudeBowl":
+      return { wood: 1, flaxFiber: 1, stone: 1 };
+    case "craftCrudeWoodenSpoon":
+      return { wood: 1 };
     case "tanHide":
       return { hide: 1 };
     case "craftLowestTool":
