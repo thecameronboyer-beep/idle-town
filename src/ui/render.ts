@@ -2163,6 +2163,7 @@ function renderCookingActionPanel(state: GameState, now: number): string {
   const recipes = getAvailableCookingRecipes(state);
   const stews = recipes.filter((recipe) => recipe.tags.includes("stew"));
   const cookingSkill = state.skills.cooking;
+  const cookingProgress = getSkillProgress(cookingSkill);
 
   return `
     <section class="action-panel cooking-action-panel" data-editor-id="action-panel-cooking" data-editor-label="Cooking recipe panel" data-editor-files="src/ui/render.ts, src/style.css">
@@ -2174,7 +2175,7 @@ function renderCookingActionPanel(state: GameState, now: number): string {
           </div>
           <div class="smithing-status-item">
             <span>Cooking</span>
-            <strong>Lv ${cookingSkill.level}</strong>
+            <strong>Lv ${cookingSkill.level} (${formatSkillXp(cookingProgress.xpIntoLevel)}/${formatSkillXp(cookingProgress.xpForLevel)})</strong>
           </div>
           <div class="smithing-status-item">
             <span>Queue</span>
