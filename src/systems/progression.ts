@@ -67,7 +67,6 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
     case "gatherFlaxFibers":
     case "gatherMeadowIngredients":
     case "gatherWater":
-    case "craftCrudeBowl":
     case "craftCrudeWoodenSpoon":
       return true;
     case "fishRiver":

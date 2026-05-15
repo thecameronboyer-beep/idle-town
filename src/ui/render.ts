@@ -265,7 +265,6 @@ const actionFilters: ActionFilter[] = [
     actionIds: [
       "craftLowestTool",
       "craftBasket",
-      "craftCrudeBowl",
       "craftCrudeWoodenSpoon",
       "craftFishingPole",
       "craftWoodenBowl",
@@ -508,7 +507,6 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   flaxFiber: flaxFiberIconUrl,
   chamomile: flaxFiberIconUrl,
   clover: flaxFiberIconUrl,
-  crudeBowl: woodIconUrl,
   crudeWoodenSpoon: woodIconUrl,
   dandelionGreens: flaxFiberIconUrl,
   dirtyBowl: woodIconUrl,
@@ -2971,8 +2969,6 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [minnowIconUrl];
     case "craftLowestTool":
       return [craftMaterialsBundleButtonUrl];
-    case "craftCrudeBowl":
-      return [woodIconUrl, stoneIconUrl];
     case "craftCrudeWoodenSpoon":
       return [woodIconUrl];
     case "craftWoodenBowl":
@@ -3173,8 +3169,6 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
       ];
     case "craftBasket":
       return [...rows, { label: "Makes", value: "1 Basket" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
-    case "craftCrudeBowl":
-      return [...rows, { label: "Makes", value: "1 Crude Bowl" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftCrudeWoodenSpoon":
       return [...rows, { label: "Makes", value: "1 Crude Wooden Spoon" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftFishingPole":
@@ -4327,8 +4321,6 @@ function formatLogResource(resourceId: ResourceId, amount: number): string {
       return "Bronze Needles";
     case "water":
       return "Water";
-    case "crudeBowl":
-      return "Crude Bowls";
     case "dirtyBowl":
       return "Dirty Bowls";
     case "crudeWoodenSpoon":

@@ -54,8 +54,15 @@ export const resourceDefinitions: ResourceDefinition[] = [
   {
     id: "woodenBowl",
     label: "Wooden Bowl",
-    group: "crafted",
-    blurb: "A hand-carved bowl for simple camp meals."
+    group: "utensils",
+    blurb: "A hand-carved wooden bowl for simple camp meals.",
+    stackSize: 20,
+    weight: 0.5,
+    value: 3,
+    rarity: "common",
+    spoilage: { perishable: false },
+    quality: { enabled: false, baseQuality: 1 },
+    cooking: { tags: ["bowl", "vessel", "primitive"], compatibility: ["stew"] }
   },
   {
     id: "coal",
@@ -154,19 +161,6 @@ export const resourceDefinitions: ResourceDefinition[] = [
     spoilage: { perishable: false },
     quality: { enabled: false, baseQuality: 1 },
     cooking: { tags: ["water", "liquid", "stew-base"], compatibility: ["stew", "brew"] }
-  },
-  {
-    id: "crudeBowl",
-    label: "Crude Bowl",
-    group: "utensils",
-    blurb: "A rough camp bowl. Clay will be better later, but this holds stew for now.",
-    stackSize: 20,
-    weight: 0.5,
-    value: 3,
-    rarity: "common",
-    spoilage: { perishable: false },
-    quality: { enabled: false, baseQuality: 1 },
-    cooking: { tags: ["bowl", "vessel", "primitive"], compatibility: ["stew"] }
   },
   {
     id: "dirtyBowl",

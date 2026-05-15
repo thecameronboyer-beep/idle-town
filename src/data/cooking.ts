@@ -237,7 +237,7 @@ function createStewRecipe(config: StewRecipeConfig): CookingRecipeDefinition {
     cookTimeMs: config.cookTimeMs ?? 24_000,
     ingredients: [
       { resourceId: "water", amount: 1, role: "liquid" },
-      { resourceId: "crudeBowl", amount: 1, role: "vessel" },
+      { resourceId: "woodenBowl", amount: 1, role: "vessel" },
       ...config.ingredients.map((ingredient) => ({
         resourceId: ingredient.id,
         amount: ingredient.amount ?? 1,
