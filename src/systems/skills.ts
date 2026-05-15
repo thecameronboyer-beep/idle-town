@@ -1,4 +1,5 @@
 import type { ActionId, BuildingId, GameState, SkillId, SkillPrestigeBonus, SkillState, Skills } from "../types";
+import { applyTestRewardMultiplierToAmount } from "./debugModifiers";
 
 export const MAX_SKILL_LEVEL = 1000;
 export const PRESTIGE_INTERVAL = 100;
@@ -210,7 +211,7 @@ export function addCookingSkillXp(state: GameState, amount: number, now = Date.n
 }
 
 export function addSkillXp(state: GameState, skillId: SkillId, amount: number, now = Date.now()): void {
-  const gained = Math.max(0, Math.floor(amount));
+  const gained = Math.max(0, Math.floor(applyTestRewardMultiplierToAmount(amount)));
   if (gained <= 0) {
     return;
   }
@@ -230,11 +231,11 @@ export function getSkillIdForAction(actionId: ActionId): SkillId {
 }
 
 export function getActionSkillXp(actionId: ActionId): number {
-  return ACTION_SKILL_XP[actionId].xp;
+  return applyTestRewardMultiplierToAmount(ACTION_SKILL_XP[actionId].xp);
 }
 
 export function getBuildingSkillXp(buildingId: BuildingId): number {
-  return BUILDING_SKILL_XP[buildingId];
+  return applyTestRewardMultiplierToAmount(BUILDING_SKILL_XP[buildingId]);
 }
 
 export function formatSkillXp(value: number): string {

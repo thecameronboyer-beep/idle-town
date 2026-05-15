@@ -8,6 +8,7 @@ import {
 import { getResourceLabel } from "../data/resources";
 import type { CookingQueueEntry, CookingRecipeDefinition, CookingRecipeId, CookingStationId, Cost, GameState, ResourceId } from "../types";
 import { getActiveCampfireExpiresAt, isCampfireLit } from "./buildings";
+import { applyTestRewardMultiplierToResourceDelta } from "./debugModifiers";
 import { addResources, describeCost, hasCost, payCost } from "./inventory";
 import { addLog, addStackedLog } from "./log";
 import { addCookingSkillXp } from "./skills";
@@ -128,7 +129,8 @@ export function getCookingRecipeLockReason(
 }
 
 export function getCookingRecipeOutputText(recipe: CookingRecipeDefinition): string {
-  return recipe.outputs.map((output) => `${output.amount} ${getResourceLabel(output.resourceId)}`).join(", ");
+  const outputs = applyTestRewardMultiplierToResourceDelta(getCookingRecipeOutputs(recipe));
+  return Object.entries(outputs).map(([resourceId, amount]) => `${amount} ${getResourceLabel(resourceId as ResourceId)}`).join(", ");
 }
 
 export function getCookingRecipeRequirementText(recipe: CookingRecipeDefinition): string {
@@ -186,7 +188,7 @@ function completeCookingEntry(state: GameState, entry: CookingQueueEntry, now: n
     return;
   }
 
-  const outputs = getCookingRecipeOutputs(recipe);
+  const outputs = applyTestRewardMultiplierToResourceDelta(getCookingRecipeOutputs(recipe));
   addResources(state, outputs);
   addCookingSkillXp(state, recipe.xpReward, now);
   state.cooking.completedRecipeCounts[recipe.id] = (state.cooking.completedRecipeCounts[recipe.id] ?? 0) + 1;

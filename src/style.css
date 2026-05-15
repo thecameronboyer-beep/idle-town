@@ -124,9 +124,15 @@ button:disabled {
   gap: 0.65rem;
 }
 
-.test-speed-button {
+.test-reward-controls {
+  display: flex;
   flex: 0 0 auto;
-  min-width: 3rem;
+  gap: 0.35rem;
+}
+
+.test-reward-button {
+  flex: 0 0 auto;
+  min-width: 3.2rem;
   padding: 0.34rem 0.48rem;
   border-color: rgba(214, 164, 81, 0.42);
   color: #f0d6a4;
@@ -135,7 +141,7 @@ button:disabled {
   line-height: 1;
 }
 
-.test-speed-button.active {
+.test-reward-button.active {
   border-color: rgba(217, 105, 63, 0.78);
   color: #ffe3a6;
   background:
@@ -2867,8 +2873,12 @@ h3 {
     font-size: 0.64rem;
   }
 
-  .test-speed-button {
-    min-width: 2.65rem;
+  .test-reward-controls {
+    gap: 0.28rem;
+  }
+
+  .test-reward-button {
+    min-width: 2.75rem;
     padding: 0.35rem 0.42rem;
   }
 

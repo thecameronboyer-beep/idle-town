@@ -18,6 +18,11 @@ import { rollGatheringTable } from "./gathering";
 import { addStackedLog } from "./log";
 import { randomFloat, randomInt } from "./math";
 import {
+  applyTestRewardMultiplierToResourceCounts,
+  applyTestRewardMultiplierToResourceDelta,
+  getTestRewardMultiplier
+} from "./debugModifiers";
+import {
   damageBestToolForRole,
   equipFreshTool,
   getCombatPowerForRole,
@@ -61,6 +66,13 @@ export function getToolStockCount(state: GameState, toolId: ToolId): number {
 }
 
 export function rollRewards(
+  state: GameState,
+  actionId: ActionId
+): ActionRewards {
+  return applyRewardMultiplier(rollBaseRewards(state, actionId));
+}
+
+function rollBaseRewards(
   state: GameState,
   actionId: ActionId
 ): ActionRewards {
@@ -381,7 +393,7 @@ function butcherOneCarriedFish(state: GameState, characterId: string): Cost {
     }
 
     const consumedWeight = consumeOneWholeResource(state, fishId, "character", characterId);
-    const filetAmount = normalizeResourceAmount(filetId, consumedWeight * 0.5);
+    const filetAmount = normalizeResourceAmount(filetId, consumedWeight * 0.5 * getTestRewardMultiplier());
     if (filetAmount <= 0) {
       return filets;
     }
@@ -398,6 +410,16 @@ function butcherOneCarriedFish(state: GameState, characterId: string): Cost {
   }
 
   return filets;
+}
+
+function applyRewardMultiplier(rewards: ActionRewards): ActionRewards {
+  return {
+    ...rewards,
+    resources: applyTestRewardMultiplierToResourceDelta(rewards.resources),
+    resourceCounts: rewards.resourceCounts
+      ? applyTestRewardMultiplierToResourceCounts(rewards.resourceCounts)
+      : undefined
+  };
 }
 
 function fishRiver(): ActionRewards {

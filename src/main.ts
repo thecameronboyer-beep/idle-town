@@ -3,6 +3,10 @@ import { loadGame, resetSave, saveGame } from "./systems/persistence";
 import { getActionProgress, getCurrentAction, getCurrentActions, simulateUntil } from "./systems/actions";
 import { simulateCombatUntil } from "./systems/combat";
 import { discoverCookingRecipes, getActiveCookingEntry, getCookingProgress, simulateCookingUntil } from "./systems/cooking";
+import {
+  setTestRewardMultiplier as setGlobalTestRewardMultiplier,
+  type TestRewardMultiplier
+} from "./systems/debugModifiers";
 import { formatDuration } from "./systems/math";
 import { createRenderer } from "./ui/render";
 
@@ -13,9 +17,9 @@ if (!app) {
 }
 
 let state = loadGame();
-let testSpeedMultiplier = 1;
-let gameNow = Date.now();
-let lastRealClockAt = gameNow;
+let testRewardMultiplier: TestRewardMultiplier = 1;
+let gameNow = Math.max(Date.now(), state.lastSimulatedAt);
+let lastRealClockAt = Date.now();
 
 const render = createRenderer(app, {
   requestRender: () => draw(),
@@ -26,10 +30,10 @@ const render = createRenderer(app, {
     draw();
   },
   getNow: () => syncGameClock(),
-  getTestSpeedMultiplier: () => testSpeedMultiplier,
-  toggleTestSpeed: () => {
-    syncGameClock();
-    testSpeedMultiplier = testSpeedMultiplier === 10 ? 1 : 10;
+  getTestRewardMultiplier: () => testRewardMultiplier,
+  setTestRewardMultiplier: (multiplier) => {
+    testRewardMultiplier = testRewardMultiplier === multiplier ? 1 : multiplier;
+    setGlobalTestRewardMultiplier(testRewardMultiplier);
   }
 });
 
@@ -188,14 +192,15 @@ function updateLiveCampfireIndicators(now: number): void {
 function syncGameClock(): number {
   const realNow = Date.now();
   const elapsed = Math.max(0, realNow - lastRealClockAt);
-  gameNow += elapsed * testSpeedMultiplier;
+  gameNow += elapsed;
   lastRealClockAt = realNow;
   return gameNow;
 }
 
 function resetGameClock(): void {
-  gameNow = Date.now();
-  lastRealClockAt = gameNow;
+  const now = Date.now();
+  gameNow = now;
+  lastRealClockAt = now;
 }
 
 function animateLiveActionIndicators(): void {

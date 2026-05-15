@@ -652,8 +652,8 @@ type RenderHandlers = {
   persist: () => void;
   reset: () => void;
   getNow: () => number;
-  getTestSpeedMultiplier: () => number;
-  toggleTestSpeed: () => void;
+  getTestRewardMultiplier: () => 1 | 10 | 100;
+  setTestRewardMultiplier: (multiplier: 10 | 100) => void;
 };
 
 export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (state: GameState, now?: number) => void {
@@ -688,8 +688,8 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       return;
     }
 
-    if (command === "toggle-test-speed") {
-      handlers.toggleTestSpeed();
+    if (command === "set-test-reward-multiplier" && (id === "10" || id === "100")) {
+      handlers.setTestRewardMultiplier(Number(id) as 10 | 100);
       handlers.requestRender();
       return;
     }
@@ -1084,7 +1084,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       selectedLoopId,
       selectedLoopIndex,
       now,
-      handlers.getTestSpeedMultiplier()
+      handlers.getTestRewardMultiplier()
     );
     activeTooltipSlot = null;
     restoreScrollPositions(root, scrollPositions);
@@ -1108,7 +1108,7 @@ function renderApp(
   selectedLoopId: string | null,
   selectedLoopIndex: number,
   now: number,
-  testSpeedMultiplier: number
+  testRewardMultiplier: 1 | 10 | 100
 ): string {
   return `
     <div class="game-shell" data-editor-id="game-shell" data-editor-label="Game shell" data-editor-files="src/ui/render.ts, src/style.css">
@@ -1122,7 +1122,7 @@ function renderApp(
         combatPanelVisible,
         settingsPanelVisible,
         actionLoopsPanelVisible,
-        testSpeedMultiplier
+        testRewardMultiplier
       )}
       <main class="main-panel" data-editor-id="main-panel" data-editor-label="Main game panel" data-editor-files="src/ui/render.ts, src/style.css">
         ${renderCurrentActionPanel(state, now)}
@@ -1159,7 +1159,7 @@ function renderCharacterSidebar(
   combatPanelVisible: boolean,
   settingsPanelVisible: boolean,
   actionLoopsPanelVisible: boolean,
-  testSpeedMultiplier: number
+  testRewardMultiplier: 1 | 10 | 100
 ): string {
   const selectedCharacter = getSelectedCharacter(state);
   const condition = getCharacterStatusText(state, selectedCharacter);
@@ -1178,7 +1178,7 @@ function renderCharacterSidebar(
         <div class="kicker">Idle Town</div>
         <div class="brand-heading">
           <h1>First Fire</h1>
-          ${renderTestSpeedButton(testSpeedMultiplier)}
+          ${renderTestRewardControls(testRewardMultiplier)}
         </div>
       </div>
       <button
@@ -1268,19 +1268,25 @@ function renderCharacterSelectCard(state: GameState, character: GameState["chara
   `;
 }
 
-function renderTestSpeedButton(testSpeedMultiplier: number): string {
-  const active = testSpeedMultiplier === 10;
-
+function renderTestRewardControls(testRewardMultiplier: 1 | 10 | 100): string {
+  const multipliers = [10, 100] as const;
   return `
-    <button
-      class="test-speed-button ${active ? "active" : ""}"
-      type="button"
-      data-command="toggle-test-speed"
-      aria-pressed="${active}"
-      title="Toggle 10x test speed"
-    >
-      10x
-    </button>
+    <div class="test-reward-controls" aria-label="Test reward multiplier">
+      ${multipliers
+        .map((multiplier) => `
+          <button
+            class="test-reward-button ${testRewardMultiplier === multiplier ? "active" : ""}"
+            type="button"
+            data-command="set-test-reward-multiplier"
+            data-id="${multiplier}"
+            aria-pressed="${testRewardMultiplier === multiplier}"
+            title="${multiplier}x resources and XP"
+          >
+            ${multiplier}x
+          </button>
+        `)
+        .join("")}
+    </div>
   `;
 }
 
