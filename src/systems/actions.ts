@@ -736,8 +736,8 @@ function getNextCampfireEventAt(state: GameState, cappedTarget: number): number 
 }
 
 function shouldReturnToCamp(rewards: Cost, accepted: Cost, state: GameState, characterId: string): boolean {
-  const rewardedAmount = Object.values(rewards).reduce((total, amount) => total + (amount ?? 0), 0);
-  const acceptedAmount = Object.values(accepted).reduce((total, amount) => total + (amount ?? 0), 0);
+  const rewardedAmount = Object.values(rewards).reduce((total: number, amount) => total + (amount ?? 0), 0);
+  const acceptedAmount = Object.values(accepted).reduce((total: number, amount) => total + (amount ?? 0), 0);
   return (
     getCharacterInventoryWeight(state, characterId) >= getCharacterMaxWeight(state, characterId) ||
     (rewardedAmount > 0 && acceptedAmount < rewardedAmount)

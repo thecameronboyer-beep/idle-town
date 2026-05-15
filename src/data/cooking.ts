@@ -242,7 +242,7 @@ function createStewRecipe(config: StewRecipeConfig): CookingRecipeDefinition {
       ...config.ingredients.map((ingredient) => ({
         resourceId: ingredient.id,
         amount: ingredient.amount ?? 1,
-        role: ingredient.role === "seasoning" ? "seasoning" : ingredient.role
+        role: ingredient.role
       }))
     ],
     outputs,

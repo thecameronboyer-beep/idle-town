@@ -2,6 +2,7 @@ import {
   createEmptyCombatClassProgressMap,
   createEmptyInventory,
   createEmptyResourceCounts,
+  createInitialCharacterNeeds,
   createInitialCharacterCombatStats
 } from "../state/createInitialState";
 import type { BuildingId, GameState } from "../types";
@@ -43,6 +44,7 @@ export function syncPopulationWithHousing(state: GameState, now = Date.now()): b
     condition: "resting",
     locationId: "camp",
     combat: createInitialCharacterCombatStats(),
+    needs: createInitialCharacterNeeds(),
     classProgress: createEmptyCombatClassProgressMap(),
     inventory: createEmptyInventory(),
     resourceCounts: createEmptyResourceCounts()
