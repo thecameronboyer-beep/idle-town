@@ -44,6 +44,9 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
   if (actionId === "craftLowestTool" || primitiveToolCraftActionIds.includes(actionId)) {
     return true;
   }
+  if (actionId === "craftWoodenBowl") {
+    return true;
+  }
 
   switch (actionId) {
     case "gatherSticks":
@@ -119,6 +122,8 @@ export function getActionLockReason(state: GameState, actionId: ActionId): strin
       return state.buildings.tanningRack ? "Needs Leather" : "Needs Tanning Rack";
     case "craftLowestTool":
       return "Needs Craft Materials";
+    case "craftWoodenBowl":
+      return "Needs Wood";
     default:
       return "";
   }

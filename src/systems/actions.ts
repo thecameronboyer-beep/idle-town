@@ -155,6 +155,8 @@ export function getActionCost(actionId: ActionId): Cost {
   }
 
   switch (actionId) {
+    case "craftWoodenBowl":
+      return { wood: 1 };
     case "cookRabbitMeat":
       return { rabbitMeat: 1 };
     case "cookSquirrelMeat":

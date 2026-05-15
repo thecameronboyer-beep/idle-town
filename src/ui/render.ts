@@ -50,6 +50,7 @@ import squirrelIconUrl from "../assets/items/squirrel-icon.png";
 import stickIconUrl from "../assets/items/stick-icon.png";
 import stoneAxeEmptySlotUrl from "../assets/items/stone-axe-empty-slot.png";
 import stoneAxeEquippedSlotUrl from "../assets/items/stone-axe-equipped-slot.png";
+import stoneDaggerEquippedSlotUrl from "../assets/items/stone-dagger-equipped-slot.png";
 import stoneKnifeEquippedSlotUrl from "../assets/items/stone-knife-equipped-slot.png";
 import stoneKnifeEmptySlotUrl from "../assets/items/stone-knife-empty-slot.png";
 import stonePickAxeEmptySlotUrl from "../assets/items/stone-pick-axe-empty-slot.png";
@@ -58,9 +59,16 @@ import stoneSpearEmptySlotUrl from "../assets/items/stone-spear-empty-slot.png";
 import stoneSpearEquippedSlotUrl from "../assets/items/stone-spear-equipped-slot.png";
 import stoneIconUrl from "../assets/items/stone-icon.png";
 import stoneLoachIconUrl from "../assets/items/stone-loach-icon.png";
+import shortBowEquippedSlotUrl from "../assets/items/short-bow-equipped-slot.png";
 import tinIconUrl from "../assets/items/tin-icon.png";
 import hideTentUrl from "../assets/buildings/hide-tent-2x2.png";
 import tanningRackUrl from "../assets/buildings/tanning-rack-2x2.png";
+import woodenBowlIconUrl from "../assets/items/wooden-bowl-icon.png";
+import woodenClubEquippedSlotUrl from "../assets/items/wooden-club-equipped-slot.png";
+import woodenSwordEquippedSlotUrl from "../assets/items/wooden-sword-equipped-slot.png";
+import woodenTotemEquippedSlotUrl from "../assets/items/wooden-totem-equipped-slot.png";
+import woodenTwoHandedClubEquippedSlotUrl from "../assets/items/wooden-two-handed-club-equipped-slot.png";
+import woodenTwoHandedSwordEquippedSlotUrl from "../assets/items/wooden-two-handed-sword-equipped-slot.png";
 import woodIconUrl from "../assets/items/wood-icon.png";
 import { getCampfireRemainingMs, isCampfireLit } from "../systems/buildings";
 import { getBuildingCount, getPopulationCapacity, getPopulationCount } from "../systems/camp";
@@ -242,6 +250,7 @@ const actionFilters: ActionFilter[] = [
       "craftLowestTool",
       "craftBasket",
       "craftFishingPole",
+      "craftWoodenBowl",
       "craftStoneKnife",
       "craftStoneDagger",
       "craftStoneAxe",
@@ -424,17 +433,31 @@ const equippedSlotImages: Partial<Record<ToolId, string>> = {
   fishingPole: fishingPoleEquippedSlotUrl,
   leatherBackpack: leatherBackpackEquippedSlotUrl,
   stoneKnife: stoneKnifeEquippedSlotUrl,
+  stoneDagger: stoneDaggerEquippedSlotUrl,
   stoneAxe: stoneAxeEquippedSlotUrl,
   stonePickAxe: stonePickAxeEquippedSlotUrl,
-  stoneSpear: stoneSpearEquippedSlotUrl
+  stoneSpear: stoneSpearEquippedSlotUrl,
+  woodenClub: woodenClubEquippedSlotUrl,
+  woodenTwoHandedClub: woodenTwoHandedClubEquippedSlotUrl,
+  woodenSword: woodenSwordEquippedSlotUrl,
+  woodenTwoHandedSword: woodenTwoHandedSwordEquippedSlotUrl,
+  shortBow: shortBowEquippedSlotUrl,
+  woodenTotem: woodenTotemEquippedSlotUrl
 };
 const emptySlotImages: Partial<Record<ToolId, string>> = {
   basket: basketEmptySlotUrl,
   fishingPole: fishingPoleEmptySlotUrl,
   stoneKnife: stoneKnifeEmptySlotUrl,
+  stoneDagger: stoneDaggerEquippedSlotUrl,
   stoneAxe: stoneAxeEmptySlotUrl,
   stonePickAxe: stonePickAxeEmptySlotUrl,
-  stoneSpear: stoneSpearEmptySlotUrl
+  stoneSpear: stoneSpearEmptySlotUrl,
+  woodenClub: woodenClubEquippedSlotUrl,
+  woodenTwoHandedClub: woodenTwoHandedClubEquippedSlotUrl,
+  woodenSword: woodenSwordEquippedSlotUrl,
+  woodenTwoHandedSword: woodenTwoHandedSwordEquippedSlotUrl,
+  shortBow: shortBowEquippedSlotUrl,
+  woodenTotem: woodenTotemEquippedSlotUrl
 };
 const emptySlotLabels: Partial<Record<ToolId, string>> = {
   basket: "Basket",
@@ -476,6 +499,7 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   stone: stoneIconUrl,
   stoneLoach: stoneLoachIconUrl,
   tin: tinIconUrl,
+  woodenBowl: woodenBowlIconUrl,
   wood: woodIconUrl
 };
 
@@ -2728,6 +2752,8 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [minnowIconUrl];
     case "craftLowestTool":
       return [craftMaterialsBundleButtonUrl];
+    case "craftWoodenBowl":
+      return [woodenBowlIconUrl];
     case "craftLeatherBackpack":
       return [leatherBackpackEquippedSlotUrl];
     case "chopTrees":
