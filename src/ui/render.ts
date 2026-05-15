@@ -2,7 +2,14 @@ import { getActionDefinition } from "../data/actions";
 import { combatClassDefinitions, getCombatEnemyDefinition, getCombatLocationDefinition } from "../data/combat";
 import { getCookingRecipeCost } from "../data/cooking";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
-import { getSmithingRecipe, metalworkingActionIds, smeltingActionIds, smithingActionIds } from "../data/smithing";
+import {
+  getSmithingRecipe,
+  metalworkingActionIds,
+  smeltingActionIds,
+  smithingActionIds,
+  type SmithingMaterialId,
+  type SmithingProductCategory
+} from "../data/smithing";
 import {
   getTextileRecipe,
   textileActionIds,
@@ -343,6 +350,17 @@ const characterSkillGroups: SkillGroup[] = [
   { label: "Other", skillIds: ["construction", "agility"] }
 ];
 
+const smithingMaterialLabels: Record<SmithingMaterialId, string> = {
+  copper: "Copper Bar",
+  bronze: "Bronze Bar"
+};
+
+const smithingProductCategories: Array<{ id: SmithingProductCategory; label: string }> = [
+  { id: "tool", label: "Tool" },
+  { id: "weapon", label: "Weapon" },
+  { id: "armor", label: "Armor" }
+];
+
 const locationDefinitions: LocationDefinition[] = [
   {
     id: "meadow",
@@ -630,6 +648,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
   let activeActionFilter: ActionFilterId = "foraging";
   let activeLocation: LocationId = "meadow";
   let activeCharacterDetailTab: CharacterDetailTab = "inventory";
+  let selectedSmithingMaterial: SmithingMaterialId = "copper";
   let campLogVisible = false;
   let partyPanelVisible = false;
   let characterPanelVisible = false;
@@ -687,6 +706,12 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       activeActionFilter = id;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "select-smithing-material" && isSmithingMaterialId(id)) {
+      selectedSmithingMaterial = id;
       handlers.requestRender();
       return;
     }
@@ -1049,6 +1074,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       activeActionCategory,
       activeCharacterDetailTab,
       activeLocation,
+      selectedSmithingMaterial,
       campLogVisible,
       partyPanelVisible,
       characterPanelVisible,
@@ -1073,6 +1099,7 @@ function renderApp(
   activeActionCategory: ActionCategoryId,
   activeCharacterDetailTab: CharacterDetailTab,
   activeLocation: LocationId,
+  selectedSmithingMaterial: SmithingMaterialId,
   campLogVisible: boolean,
   partyPanelVisible: boolean,
   characterPanelVisible: boolean,
@@ -1117,7 +1144,15 @@ function renderApp(
             ? renderPartyPanel(state)
             : campLogVisible
               ? renderMainLogPanel(state)
-              : renderWorkArea(state, activeActionCategory, activeActionFilter, activeLocation, actionLoopTarget, now)
+              : renderWorkArea(
+                  state,
+                  activeActionCategory,
+                  activeActionFilter,
+                  activeLocation,
+                  selectedSmithingMaterial,
+                  actionLoopTarget,
+                  now
+                )
         }
       </main>
     </div>
@@ -1564,6 +1599,7 @@ function renderWorkArea(
   activeActionCategory: ActionCategoryId,
   activeActionFilter: ActionFilterId,
   activeLocation: LocationId,
+  selectedSmithingMaterial: SmithingMaterialId,
   actionLoopTarget: ActionLoopTarget,
   now: number
 ): string {
@@ -1579,7 +1615,7 @@ function renderWorkArea(
   return `
       <div class="work-area">
       ${renderActionCategoryPanel(state, activeActionCategory, activeActionFilter)}
-      ${renderActionStack(state, activeActionFilter, activeLocation, actionLoopTarget, now)}
+      ${renderActionStack(state, activeActionFilter, activeLocation, selectedSmithingMaterial, actionLoopTarget, now)}
     </div>
   `;
 }
@@ -1642,6 +1678,7 @@ function renderActionStack(
   state: GameState,
   activeActionFilter: ActionFilterId,
   activeLocation: LocationId,
+  selectedSmithingMaterial: SmithingMaterialId,
   actionLoopTarget: ActionLoopTarget,
   now: number
 ): string {
@@ -1650,7 +1687,7 @@ function renderActionStack(
   return `
     <div class="action-stack">
       ${renderWorkLocationPanel(filter, activeLocation)}
-      ${renderActionPanel(state, activeActionFilter, activeLocation, actionLoopTarget, now)}
+      ${renderActionPanel(state, activeActionFilter, activeLocation, selectedSmithingMaterial, actionLoopTarget, now)}
     </div>
   `;
 }
@@ -1700,6 +1737,7 @@ function renderActionPanel(
   state: GameState,
   activeActionFilter: ActionFilterId,
   activeLocation: LocationId,
+  selectedSmithingMaterial: SmithingMaterialId,
   actionLoopTarget: ActionLoopTarget,
   now: number
 ): string {
@@ -1713,7 +1751,7 @@ function renderActionPanel(
     return renderCraftingActionPanel(state, actionIds, actionLoopTarget);
   }
   if (filter.id === "smithing") {
-    return renderSmithingActionPanel(state, actionIds, actionLoopTarget, now);
+    return renderSmithingActionPanel(state, actionIds, selectedSmithingMaterial, actionLoopTarget, now);
   }
   if (filter.id === "textiles") {
     return renderTextileActionPanel(state, actionIds, actionLoopTarget, now);
@@ -1754,35 +1792,60 @@ function renderCraftingActionPanel(
 function renderSmithingActionPanel(
   state: GameState,
   actionIds: ActionId[],
+  selectedSmithingMaterial: SmithingMaterialId,
   actionLoopTarget: ActionLoopTarget,
   now: number
 ): string {
   const smeltingIds = actionIds.filter((actionId) => smeltingActionIds.some((id) => id === actionId));
   const smithingIds = actionIds.filter((actionId) => metalworkingActionIds.some((id) => id === actionId));
   const fuel = getFurnaceFuelStatus(state);
+  const activeMaterial = resolveSelectedSmithingMaterial(selectedSmithingMaterial, smeltingIds);
 
   return `
     <section class="action-panel smithing-action-panel" data-editor-id="action-panel-smithing" data-editor-label="Smithing action panel" data-editor-files="src/ui/render.ts, src/style.css">
       <div class="smithing-panel-card">
-        <div class="smithing-status-grid">
-          <div class="smithing-status-item">
-            <span>Furnace</span>
-            <strong>${fuel.furnaceBuilt ? "Crude Stone Furnace" : "Not built"}</strong>
+        <div class="smithing-workbench">
+          <div class="smithing-furnace-column">
+            ${renderSmithingFurnaceStatus(fuel)}
+            ${renderSmithingActiveSmelt(state, now)}
           </div>
-          <div class="smithing-status-item">
-            <span>Coal</span>
-            <strong>${fuel.coal}</strong>
-          </div>
-          <div class="smithing-status-item">
-            <span>Fuel</span>
-            <strong>${fuel.furnaceBuilt ? (fuel.coal > 0 ? "Ready" : "Needs coal") : "Furnace locked"}</strong>
-          </div>
+          ${renderSmithingSmeltingSection(state, smeltingIds, activeMaterial, actionLoopTarget)}
         </div>
-        ${renderSmithingActiveSmelt(state, now)}
-        ${renderSmithingRecipeSection(state, "Smelting", smeltingIds, actionLoopTarget)}
-        ${renderSmithingRecipeSection(state, "Smithing", smithingIds, actionLoopTarget)}
+        ${renderSmithingCraftColumns(state, smithingIds, activeMaterial, actionLoopTarget)}
       </div>
     </section>
+  `;
+}
+
+function resolveSelectedSmithingMaterial(
+  selectedSmithingMaterial: SmithingMaterialId,
+  smeltingIds: ActionId[]
+): SmithingMaterialId {
+  const availableMaterials = smeltingIds
+    .map((actionId) => getSmithingRecipe(actionId)?.material)
+    .filter((material): material is SmithingMaterialId => Boolean(material));
+
+  return availableMaterials.includes(selectedSmithingMaterial)
+    ? selectedSmithingMaterial
+    : (availableMaterials[0] ?? selectedSmithingMaterial);
+}
+
+function renderSmithingFurnaceStatus(fuel: ReturnType<typeof getFurnaceFuelStatus>): string {
+  return `
+    <div class="smithing-status-grid">
+      <div class="smithing-status-item">
+        <span>Furnace</span>
+        <strong>${fuel.furnaceBuilt ? "Crude Stone Furnace" : "Not built"}</strong>
+      </div>
+      <div class="smithing-status-item">
+        <span>Coal</span>
+        <strong>${fuel.coal}</strong>
+      </div>
+      <div class="smithing-status-item">
+        <span>Fuel</span>
+        <strong>${fuel.furnaceBuilt ? (fuel.coal > 0 ? "Ready" : "Needs coal") : "Furnace locked"}</strong>
+      </div>
+    </div>
   `;
 }
 
@@ -1813,29 +1876,131 @@ function renderSmithingActiveSmelt(state: GameState, now: number): string {
   `;
 }
 
-function renderSmithingRecipeSection(
+function renderSmithingSmeltingSection(
   state: GameState,
-  label: string,
   actionIds: ActionId[],
+  selectedSmithingMaterial: SmithingMaterialId,
   actionLoopTarget: ActionLoopTarget
 ): string {
   return `
-    <div class="smithing-recipe-section">
+    <div class="smithing-smelt-column">
       <div class="section-heading">
-        <span>${label}</span>
+        <span>Smelting</span>
       </div>
-      <div class="smithing-recipe-grid">
-        ${actionIds.map((actionId) => renderSmithingRecipeCard(state, actionId, actionLoopTarget)).join("")}
+      <div class="smithing-smelt-grid">
+        ${actionIds
+          .map((actionId) => renderSmithingSmeltCard(state, actionId, selectedSmithingMaterial, actionLoopTarget))
+          .join("")}
       </div>
     </div>
   `;
 }
 
-function renderSmithingRecipeCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
+function renderSmithingSmeltCard(
+  state: GameState,
+  actionId: ActionId,
+  selectedSmithingMaterial: SmithingMaterialId,
+  actionLoopTarget: ActionLoopTarget
+): string {
+  const view = getSmithingActionButtonView(state, actionId, actionLoopTarget);
+  if (!view) {
+    return "";
+  }
+
+  const { definition, recipe, cost, active, disabled, statusText, buttonLabel, tooltipRows } = view;
+  const selected = recipe.material === selectedSmithingMaterial;
+  const smeltLabel = buttonLabel === "Set" ? "Set Smelt" : active ? "Smelting" : buttonLabel === "Start" ? "Smelt" : buttonLabel;
+
+  return `
+    <article class="smithing-smelt-card ${selected ? "selected" : ""} ${active ? "active" : ""}">
+      <button
+        class="smithing-smelt-select"
+        type="button"
+        data-command="select-smithing-material"
+        data-id="${recipe.material}"
+        aria-pressed="${selected}"
+      >
+        <span class="smithing-recipe-icon" aria-hidden="true">${renderActionIcon(actionId)}</span>
+        <span class="smithing-recipe-copy">
+          <strong>${smithingMaterialLabels[recipe.material]}</strong>
+          <small>${selected ? "Selected material" : "Show recipes"}</small>
+        </span>
+        <span class="smithing-recipe-meta">
+          <b>${getSmithingRecipeOutputText(recipe.actionId)}</b>
+          <small>${describeCost(cost)}</small>
+        </span>
+      </button>
+      <button
+        class="smithing-smelt-button"
+        type="button"
+        data-command="start-action"
+        data-id="${actionId}"
+        data-disabled="${disabled}"
+        data-tooltip-source
+        aria-disabled="${disabled}"
+        aria-label="${smeltLabel} ${definition.label}"
+      >
+        ${smeltLabel}
+        ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+      </button>
+    </article>
+  `;
+}
+
+function renderSmithingCraftColumns(
+  state: GameState,
+  actionIds: ActionId[],
+  selectedSmithingMaterial: SmithingMaterialId,
+  actionLoopTarget: ActionLoopTarget
+): string {
+  const materialActionIds = actionIds.filter((actionId) => getSmithingRecipe(actionId)?.material === selectedSmithingMaterial);
+
+  return `
+    <div class="smithing-recipe-section smithing-craft-section">
+      <div class="section-heading">
+        <span>${smithingMaterialLabels[selectedSmithingMaterial]} Smithing</span>
+        <small>Filtered by selected bar</small>
+      </div>
+      <div class="smithing-craft-columns">
+        ${smithingProductCategories
+          .map((category) => renderSmithingCraftColumn(state, materialActionIds, selectedSmithingMaterial, category, actionLoopTarget))
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderSmithingCraftColumn(
+  state: GameState,
+  actionIds: ActionId[],
+  selectedSmithingMaterial: SmithingMaterialId,
+  category: { id: SmithingProductCategory; label: string },
+  actionLoopTarget: ActionLoopTarget
+): string {
+  const categoryActionIds = actionIds.filter((actionId) => (getSmithingRecipe(actionId)?.productCategory ?? "tool") === category.id);
+
+  return `
+    <section class="smithing-craft-column" aria-label="${category.label} recipes">
+      <div class="smithing-craft-column-heading">
+        <span>${category.label}</span>
+        <small>${categoryActionIds.length}</small>
+      </div>
+      ${
+        categoryActionIds.length
+          ? `<div class="smithing-recipe-grid">${categoryActionIds
+              .map((actionId) => renderSmithingRecipeCard(state, actionId, actionLoopTarget))
+              .join("")}</div>`
+          : `<div class="smithing-empty-column">No ${smithingMaterialLabels[selectedSmithingMaterial].toLowerCase()} ${category.label.toLowerCase()} recipes yet.</div>`
+      }
+    </section>
+  `;
+}
+
+function getSmithingActionButtonView(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget) {
   const definition = getActionDefinition(actionId);
   const recipe = getSmithingRecipe(actionId);
   if (!definition || !recipe) {
-    return "";
+    return null;
   }
 
   const unlocked = isActionUnlocked(state, actionId);
@@ -1862,6 +2027,28 @@ function renderSmithingRecipeCard(state: GameState, actionId: ActionId, actionLo
         : "Ready";
   const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
   const tooltipRows = getActionTooltipRows(actionId, definition.durationMs);
+
+  return {
+    definition,
+    recipe,
+    cost,
+    unlocked,
+    canAssignFollowUp,
+    active,
+    disabled,
+    statusText,
+    buttonLabel,
+    tooltipRows
+  };
+}
+
+function renderSmithingRecipeCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
+  const view = getSmithingActionButtonView(state, actionId, actionLoopTarget);
+  if (!view) {
+    return "";
+  }
+
+  const { definition, recipe, cost, unlocked, canAssignFollowUp, active, disabled, statusText, buttonLabel, tooltipRows } = view;
 
   return `
     <button
@@ -2485,6 +2672,10 @@ function getCategoryFilters(categoryId: ActionCategoryId): ActionFilter[] {
 
 function isActionCategoryId(id: string | undefined): id is ActionCategoryId {
   return actionCategories.some((category) => category.id === id);
+}
+
+function isSmithingMaterialId(id: string | undefined): id is SmithingMaterialId {
+  return id === "copper" || id === "bronze";
 }
 
 function isActionFilterId(id: string | undefined): id is ActionFilterId {

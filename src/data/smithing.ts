@@ -15,12 +15,16 @@ export const smithingActionIds = [
 
 export type SmithingActionId = (typeof smithingActionIds)[number];
 export type SmithingRecipeKind = "smelting" | "smithing";
+export type SmithingMaterialId = "copper" | "bronze";
+export type SmithingProductCategory = "tool" | "weapon" | "armor";
 
 export interface SmithingRecipeDefinition {
   actionId: SmithingActionId;
   label: string;
   verb: string;
   kind: SmithingRecipeKind;
+  material: SmithingMaterialId;
+  productCategory?: SmithingProductCategory;
   durationMs: number;
   cost: Cost;
   output?: Cost;
@@ -35,6 +39,7 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Smelt Copper Bar",
     verb: "smelting copper",
     kind: "smelting",
+    material: "copper",
     durationMs: 22000,
     cost: { copper: 2, coal: 1 },
     output: { copperBar: 1 },
@@ -46,6 +51,7 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Smelt Bronze Bar",
     verb: "smelting bronze",
     kind: "smelting",
+    material: "bronze",
     durationMs: 32000,
     cost: { copper: 2, tin: 1, coal: 2 },
     output: { bronzeBar: 1 },
@@ -57,6 +63,8 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Craft Pot",
     verb: "shaping a pot",
     kind: "smithing",
+    material: "copper",
+    productCategory: "tool",
     durationMs: 18000,
     cost: { copperBar: 2 },
     output: { pot: 1 },
@@ -68,6 +76,8 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Craft Ladle",
     verb: "shaping a ladle",
     kind: "smithing",
+    material: "copper",
+    productCategory: "tool",
     durationMs: 14000,
     cost: { copperBar: 1, stick: 1 },
     output: { ladle: 1 },
@@ -79,6 +89,8 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Craft Copper Pickaxe",
     verb: "smithing a copper pickaxe",
     kind: "smithing",
+    material: "copper",
+    productCategory: "tool",
     durationMs: 24000,
     cost: { copperBar: 3, stick: 1, flaxFiber: 1 },
     toolId: "copperPickaxe",
@@ -90,6 +102,8 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Craft Copper Hatchet",
     verb: "smithing a copper hatchet",
     kind: "smithing",
+    material: "copper",
+    productCategory: "tool",
     durationMs: 22000,
     cost: { copperBar: 2, stick: 1, flaxFiber: 1 },
     toolId: "copperHatchet",
@@ -101,6 +115,8 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Craft Copper Knife",
     verb: "smithing a copper knife",
     kind: "smithing",
+    material: "copper",
+    productCategory: "tool",
     durationMs: 18000,
     cost: { copperBar: 1, stick: 1, flaxFiber: 1 },
     toolId: "copperKnife",
@@ -112,6 +128,8 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Craft Bronze Pickaxe",
     verb: "smithing a bronze pickaxe",
     kind: "smithing",
+    material: "bronze",
+    productCategory: "tool",
     durationMs: 30000,
     cost: { bronzeBar: 3, stick: 1, flaxFiber: 1 },
     toolId: "bronzePickaxe",
@@ -123,6 +141,8 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Craft Bronze Hatchet",
     verb: "smithing a bronze hatchet",
     kind: "smithing",
+    material: "bronze",
+    productCategory: "tool",
     durationMs: 28000,
     cost: { bronzeBar: 2, stick: 1, flaxFiber: 1 },
     toolId: "bronzeHatchet",
@@ -134,6 +154,8 @@ export const smithingRecipeDefinitions: SmithingRecipeDefinition[] = [
     label: "Craft Bronze Knife",
     verb: "smithing a bronze knife",
     kind: "smithing",
+    material: "bronze",
+    productCategory: "tool",
     durationMs: 22000,
     cost: { bronzeBar: 1, stick: 1, flaxFiber: 1 },
     toolId: "bronzeKnife",
