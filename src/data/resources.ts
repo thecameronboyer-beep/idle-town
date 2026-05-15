@@ -337,6 +337,12 @@ export const resourceDefinitions: ResourceDefinition[] = [
 export const resourceOrder = resourceDefinitions.map((resource) => resource.id);
 
 export const baseVisibleResources: ResourceId[] = ["stick", "stone"];
+export const cookingIngredientResourceIds: ResourceId[] = resourceDefinitions
+  .filter((resource) => Boolean(resource.cooking?.ingredientCategory))
+  .map((resource) => resource.id);
+export const edibleResourceIds: ResourceId[] = resourceDefinitions
+  .filter((resource) => (resource.nutrition?.hunger ?? 0) > 0)
+  .map((resource) => resource.id);
 
 export const fishResourceIds: ResourceId[] = [
   "minnow",
@@ -372,6 +378,14 @@ export function isWeightedResource(id: ResourceId): boolean {
 
 export function isWholeCountResource(id: ResourceId): boolean {
   return wholeCountResourceIds.includes(id);
+}
+
+export function isCookingIngredientResource(id: ResourceId): boolean {
+  return cookingIngredientResourceIds.includes(id);
+}
+
+export function isEdibleResource(id: ResourceId): boolean {
+  return edibleResourceIds.includes(id);
 }
 
 export function normalizeResourceAmount(id: ResourceId, amount: number): number {

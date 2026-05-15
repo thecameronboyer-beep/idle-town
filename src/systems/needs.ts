@@ -1,4 +1,4 @@
-import { getResourceDefinition, getResourceLabel } from "../data/resources";
+import { getResourceDefinition, getResourceLabel, isEdibleResource } from "../data/resources";
 import type { GameState, ResourceId } from "../types";
 import { hasCost, payCost } from "./inventory";
 import { addLog } from "./log";
@@ -69,7 +69,7 @@ export function eatFood(state: GameState, resourceId: ResourceId, now = Date.now
 }
 
 export function isEdibleFood(resourceId: ResourceId): boolean {
-  return getFoodEffectPreview(resourceId).hunger > 0;
+  return isEdibleResource(resourceId);
 }
 
 function isStewFood(resourceId: ResourceId): boolean {
