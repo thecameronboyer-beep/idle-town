@@ -207,11 +207,6 @@ type EquipmentPlaceholderGroup = {
   slots: string[];
 };
 
-type MapPoint = {
-  x: number;
-  y: number;
-};
-
 type EquipmentStat = {
   label: string;
   value: string;
@@ -378,31 +373,6 @@ const locationDefinitions: LocationDefinition[] = [
 const campLocationDefinition: LocationImageDefinition = {
   label: "Camp",
   iconUrl: campLocationIconUrl
-};
-
-const locationMapImageUrl = `${import.meta.env.BASE_URL}Map.png`;
-const mapCampPoint: MapPoint = { x: 746, y: 603 };
-const mapLocationPoints: Record<LocationId, MapPoint> = {
-  meadow: { x: 260, y: 793 },
-  river: { x: 1327, y: 810 },
-  forest: { x: 410, y: 270 },
-  mine: { x: 1080, y: 270 }
-};
-const mapPoints: Record<CharacterLocationId, MapPoint> = {
-  camp: mapCampPoint,
-  ...mapLocationPoints
-};
-const mapRoutePaths: Record<LocationId, string> = {
-  meadow: "M746 603 C656 666 566 716 456 751 C381 777 318 790 260 793",
-  river: "M746 603 C860 646 994 715 1128 807 C1190 850 1262 841 1327 810",
-  forest: "M746 603 C676 558 612 506 565 424 C529 360 483 306 410 270",
-  mine: "M746 603 C824 540 870 482 900 407 C927 338 992 290 1080 270"
-};
-const mapReturnRoutePaths: Record<LocationId, string> = {
-  meadow: "M260 793 C318 790 381 777 456 751 C566 716 656 666 746 603",
-  river: "M1327 810 C1262 841 1190 850 1128 807 C994 715 860 646 746 603",
-  forest: "M410 270 C483 306 529 360 565 424 C612 506 676 558 746 603",
-  mine: "M1080 270 C992 290 927 338 900 407 C870 482 824 540 746 603"
 };
 
 const EQUIPMENT_SLOT_COUNT = 24;
@@ -661,7 +631,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
   let activeLocation: LocationId = "meadow";
   let activeCharacterDetailTab: CharacterDetailTab = "inventory";
   let campLogVisible = false;
-  let mapVisible = false;
+  let partyPanelVisible = false;
   let characterPanelVisible = false;
   let characterDetailsVisible = false;
   let combatPanelVisible = false;
@@ -694,7 +664,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
 
     if (command === "set-action-category" && isActionCategoryId(id)) {
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       combatPanelVisible = false;
@@ -710,7 +680,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
 
     if (command === "set-action-filter" && isActionFilterId(id)) {
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       combatPanelVisible = false;
@@ -722,7 +692,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
 
     if (command === "set-location" && isLocationId(id)) {
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       combatPanelVisible = false;
@@ -736,7 +706,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     if (command === "set-character-detail-tab" && isCharacterDetailTab(id)) {
       activeCharacterDetailTab = id;
       campLogVisible = false;
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = true;
       combatPanelVisible = false;
@@ -748,7 +718,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "toggle-camp-log") {
       campLogVisible = !campLogVisible;
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       combatPanelVisible = false;
@@ -758,9 +728,9 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       return;
     }
 
-    if (command === "open-map") {
+    if (command === "open-party") {
       campLogVisible = false;
-      mapVisible = true;
+      partyPanelVisible = true;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       combatPanelVisible = false;
@@ -772,7 +742,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "open-character-panel") {
       campLogVisible = false;
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = true;
       characterDetailsVisible = false;
       combatPanelVisible = false;
@@ -784,7 +754,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "open-character-details") {
       campLogVisible = false;
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = true;
       combatPanelVisible = false;
@@ -796,7 +766,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "open-settings") {
       campLogVisible = false;
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       combatPanelVisible = false;
@@ -808,7 +778,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "open-action-loops") {
       campLogVisible = false;
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       combatPanelVisible = false;
@@ -820,7 +790,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "open-combat") {
       campLogVisible = false;
-      mapVisible = false;
+      partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       combatPanelVisible = true;
@@ -833,9 +803,9 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     if (command === "dispatch-combat") {
       const characterId = button.dataset.characterId ?? state.selectedCharacterId;
       dispatchCharacterToCombat(state, characterId, "ruins", handlers.getNow());
-      combatPanelVisible = true;
+      partyPanelVisible = true;
+      combatPanelVisible = false;
       campLogVisible = false;
-      mapVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       settingsPanelVisible = false;
@@ -848,7 +818,13 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     if (command === "recall-combat") {
       const characterId = button.dataset.characterId ?? state.selectedCharacterId;
       recallCharacterFromCombat(state, characterId, handlers.getNow());
-      combatPanelVisible = true;
+      partyPanelVisible = true;
+      combatPanelVisible = false;
+      campLogVisible = false;
+      characterPanelVisible = false;
+      characterDetailsVisible = false;
+      settingsPanelVisible = false;
+      actionLoopsPanelVisible = false;
       handlers.persist();
       handlers.requestRender();
       return;
@@ -857,6 +833,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     if (command === "select-character" && id && state.characters.some((character) => character.id === id)) {
       state.selectedCharacterId = id;
       selectedLoopId = getAssignedActionLoopId(state) ?? selectedLoopId;
+      partyPanelVisible = false;
       characterPanelVisible = true;
       characterDetailsVisible = false;
       handlers.persist();
@@ -1073,7 +1050,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       activeCharacterDetailTab,
       activeLocation,
       campLogVisible,
-      mapVisible,
+      partyPanelVisible,
       characterPanelVisible,
       characterDetailsVisible,
       combatPanelVisible,
@@ -1097,7 +1074,7 @@ function renderApp(
   activeCharacterDetailTab: CharacterDetailTab,
   activeLocation: LocationId,
   campLogVisible: boolean,
-  mapVisible: boolean,
+  partyPanelVisible: boolean,
   characterPanelVisible: boolean,
   characterDetailsVisible: boolean,
   combatPanelVisible: boolean,
@@ -1115,7 +1092,7 @@ function renderApp(
         state,
         activeActionCategory,
         campLogVisible,
-        mapVisible,
+        partyPanelVisible,
         characterPanelVisible,
         characterDetailsVisible,
         combatPanelVisible,
@@ -1136,8 +1113,8 @@ function renderApp(
             ? renderCharacterPanel(state)
             : combatPanelVisible
             ? renderCombatPanel(state, now)
-            : mapVisible
-            ? renderLocationMapPanel(state, now)
+            : partyPanelVisible
+            ? renderPartyPanel(state)
             : campLogVisible
               ? renderMainLogPanel(state)
               : renderWorkArea(state, activeActionCategory, activeActionFilter, activeLocation, actionLoopTarget, now)
@@ -1152,7 +1129,7 @@ function renderCharacterSidebar(
   state: GameState,
   activeActionCategory: ActionCategoryId,
   campLogVisible: boolean,
-  mapVisible: boolean,
+  partyPanelVisible: boolean,
   characterPanelVisible: boolean,
   characterDetailsVisible: boolean,
   combatPanelVisible: boolean,
@@ -1164,7 +1141,7 @@ function renderCharacterSidebar(
   const condition = getCharacterStatusText(state, selectedCharacter);
   const workAreaVisible =
     !campLogVisible &&
-    !mapVisible &&
+    !partyPanelVisible &&
     !characterPanelVisible &&
     !characterDetailsVisible &&
     !combatPanelVisible &&
@@ -1198,11 +1175,10 @@ function renderCharacterSidebar(
                 .map((category) => renderCategoryButton(category, activeActionCategory, workAreaVisible))
                 .join("")}
               ${renderCharactersButton(characterPanelVisible)}
+              ${renderPartyButton(partyPanelVisible)}
               ${renderCombatButton(combatPanelVisible)}
-              ${renderMapButton(mapVisible)}
             </div>
           </nav>
-          ${renderPartyRail(state)}
           <div class="sidebar-footer">
             ${renderActionLoopsToggle(actionLoopsPanelVisible)}
             ${renderCampLogToggle(campLogVisible)}
@@ -1236,6 +1212,33 @@ function renderCharacterPanel(state: GameState): string {
         </div>
         <div class="character-roster-grid">
           ${state.characters.map((character) => renderCharacterSelectCard(state, character)).join("")}
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderPartyPanel(state: GameState): string {
+  const dispatchedCount = state.characters.filter((character) => isCharacterDispatched(state, character.id)).length;
+  const workingCount = state.characters.filter((character) => getCurrentAction(state, character.id)).length;
+  const readyCount = state.characters.filter(
+    (character) => !isCharacterDispatched(state, character.id) && !getCurrentAction(state, character.id)
+  ).length;
+
+  return `
+    <div class="work-area single-panel">
+      <section class="panel party-panel" aria-label="Party" data-editor-id="party-panel" data-editor-label="Party panel" data-editor-files="src/ui/render.ts, src/style.css">
+        <div class="section-heading">
+          <span>Party</span>
+          <small>${state.characters.length} members</small>
+        </div>
+        <div class="party-panel-summary" aria-label="Party status">
+          <span><strong>${dispatchedCount}</strong> in ruins</span>
+          <span><strong>${workingCount}</strong> working</span>
+          <span><strong>${readyCount}</strong> ready</span>
+        </div>
+        <div class="party-panel-grid">
+          ${state.characters.map((character) => renderPartyMember(state, character)).join("")}
         </div>
       </section>
     </div>
@@ -1336,17 +1339,16 @@ function renderCombatButton(active: boolean): string {
   `;
 }
 
-function renderPartyRail(state: GameState): string {
+function renderPartyButton(active: boolean): string {
   return `
-    <section class="party-rail" aria-label="Party">
-      <div class="party-rail-heading">
-        <span>Party</span>
-        <small>${state.characters.length} available</small>
-      </div>
-      <div class="party-member-list">
-        ${state.characters.map((character) => renderPartyMember(state, character)).join("")}
-      </div>
-    </section>
+    <button
+      class="category-button party-button ${active ? "active" : ""}"
+      type="button"
+      data-command="open-party"
+      aria-pressed="${active}"
+    >
+      <span>Party</span>
+    </button>
   `;
 }
 
@@ -1423,19 +1425,6 @@ function renderCategoryButton(
   `;
 }
 
-function renderMapButton(active: boolean): string {
-  return `
-    <button
-      class="category-button map-button ${active ? "active" : ""}"
-      type="button"
-      data-command="open-map"
-      aria-pressed="${active}"
-    >
-      <span>Map</span>
-    </button>
-  `;
-}
-
 function renderCombatPanel(state: GameState, now: number): string {
   const location = getCombatLocationDefinition("ruins");
   const encounter = state.combat.encounter;
@@ -1496,7 +1485,7 @@ function renderCombatGrid(state: GameState, now: number): string {
     <div class="combat-field" style="--combat-cols: ${location.gridWidth}; --combat-rows: ${location.gridHeight};" aria-label="Combat grid">
       ${cells.join("")}
     </div>
-    <div class="combat-field-message">${encounter?.message ?? "Dispatch a party member from the left rail."}</div>
+    <div class="combat-field-message">${encounter?.message ?? "Open Party to dispatch someone."}</div>
   `;
 }
 
@@ -1616,117 +1605,7 @@ function renderCampStatsPanel(state: GameState): string {
   `;
 }
 
-function renderLocationMapPanel(state: GameState, now: number): string {
-  return `
-    <div class="work-area single-panel">
-      <section class="panel location-map-panel" aria-label="World map" data-editor-id="location-map-panel" data-editor-label="World map panel" data-editor-files="src/ui/render.ts, src/style.css">
-        <div class="location-map-frame">
-          <img class="location-map-image" src="${locationMapImageUrl}" alt="Idle Town parchment world map" />
-          <svg class="location-map-traveler-layer" viewBox="0 0 1536 1000" aria-hidden="true">
-            <defs>
-              ${Object.entries(mapRoutePaths)
-                .map(([locationId, path]) => `<path id="map-route-${locationId}" class="location-map-route" d="${path}" />`)
-                .join("")}
-              ${Object.entries(mapReturnRoutePaths)
-                .map(([locationId, path]) => `<path id="map-return-route-${locationId}" class="location-map-route" d="${path}" />`)
-                .join("")}
-            </defs>
-            ${state.characters.map((character, index) => renderMapCharacter(state, character, index, now)).join("")}
-          </svg>
-        </div>
-      </section>
-    </div>
-  `;
-}
-
-function renderMapCharacter(
-  state: GameState,
-  character: GameState["characters"][number],
-  index: number,
-  now: number
-): string {
-  const running = getCurrentAction(state, character.id);
-  const currentLocationId = character.locationId ?? "camp";
-  const offset = getMapCharacterOffset(index);
-
-  if (running && (running.phase === "travelingTo" || running.phase === "travelingBack")) {
-    const originLocationId = getRunningMapOriginLocation(running, currentLocationId);
-    const targetLocationId = getRunningMapTargetLocation(running);
-    if (originLocationId !== targetLocationId) {
-      return renderMovingMapCharacter(character, running, originLocationId, targetLocationId, offset, now);
-    }
-  }
-
-  const point = running && (running.phase === "working" || running.phase === "followUp")
-    ? mapPoints[getRunningMapTargetLocation(running)]
-    : mapPoints[currentLocationId];
-
-  return renderStationaryMapCharacter(character, point, offset, Boolean(running));
-}
-
-function renderMovingMapCharacter(
-  character: GameState["characters"][number],
-  running: NonNullable<GameState["currentAction"]>,
-  originLocationId: CharacterLocationId,
-  targetLocationId: CharacterLocationId,
-  offset: MapPoint,
-  now: number
-): string {
-  const phaseProgress = getPhaseProgress(running, now);
-  const routeId = `map-character-route-${getSafeDomId(character.id)}`;
-  const routePath = getMapTravelPath(originLocationId, targetLocationId);
-  const startKey = phaseProgress;
-  const remainingMs = Math.max(250, running.endsAt - now);
-
-  return `
-    <path id="${routeId}" class="location-map-route" d="${routePath}" />
-    <g class="location-map-character moving">
-      <animateMotion
-        dur="${remainingMs.toFixed(0)}ms"
-        fill="freeze"
-        repeatCount="1"
-        keyPoints="${startKey.toFixed(4)};1"
-        keyTimes="0;1"
-        calcMode="linear"
-      >
-        <mpath href="#${routeId}" />
-      </animateMotion>
-      <g transform="translate(${offset.x} ${offset.y})">
-        ${renderMapCharacterGlyph(character, true)}
-      </g>
-    </g>
-  `;
-}
-
-function renderStationaryMapCharacter(
-  character: GameState["characters"][number],
-  point: MapPoint,
-  offset: MapPoint,
-  active: boolean
-): string {
-  return `
-    <g class="location-map-character ${active ? "working" : "idle"}" transform="translate(${point.x + offset.x} ${point.y + offset.y})">
-      ${renderMapCharacterGlyph(character, active)}
-    </g>
-  `;
-}
-
-function renderMapCharacterGlyph(character: GameState["characters"][number], active: boolean): string {
-  return `
-    <circle class="location-map-character-shadow" cx="0" cy="4" r="15" />
-    <circle class="location-map-character-ring" cx="0" cy="0" r="13" />
-    <circle class="location-map-character-face ${active ? "active" : ""}" cx="0" cy="0" r="10" />
-    <text class="location-map-character-initial" x="0" y="4">${getCharacterInitials(character.name)}</text>
-    <text class="location-map-character-name" x="0" y="29">${character.name}</text>
-  `;
-}
-
-function getPhaseProgress(running: NonNullable<GameState["currentAction"]>, now: number): number {
-  const duration = running.endsAt - running.startedAt;
-  return duration <= 0 ? 1 : clamp((now - running.startedAt) / duration, 0, 1);
-}
-
-function getRunningMapTargetLocation(running: NonNullable<GameState["currentAction"]>): CharacterLocationId {
+function getRunningTargetLocation(running: NonNullable<GameState["currentAction"]>): CharacterLocationId {
   if (running.targetLocationId) {
     return running.targetLocationId;
   }
@@ -1734,7 +1613,7 @@ function getRunningMapTargetLocation(running: NonNullable<GameState["currentActi
   return running.phase === "travelingBack" ? "camp" : (running.locationId ?? "camp");
 }
 
-function getRunningMapOriginLocation(
+function getRunningOriginLocation(
   running: NonNullable<GameState["currentAction"]>,
   currentLocationId: CharacterLocationId
 ): CharacterLocationId {
@@ -1745,38 +1624,8 @@ function getRunningMapOriginLocation(
   return running.phase === "travelingBack" ? (running.locationId ?? currentLocationId) : currentLocationId;
 }
 
-function getMapTravelPath(originLocationId: CharacterLocationId, targetLocationId: CharacterLocationId): string {
-  if (originLocationId === targetLocationId) {
-    const point = mapPoints[originLocationId];
-    return `M${point.x} ${point.y}`;
-  }
-
-  if (originLocationId === "camp" && targetLocationId !== "camp") {
-    return mapRoutePaths[targetLocationId];
-  }
-
-  if (originLocationId !== "camp" && targetLocationId === "camp") {
-    return mapReturnRoutePaths[originLocationId];
-  }
-
-  const originLocation = originLocationId as LocationId;
-  const targetLocation = targetLocationId as LocationId;
-  return `${mapReturnRoutePaths[originLocation]} ${mapRoutePaths[targetLocation].replace(/^M746 603\s+/, "")}`;
-}
-
 function getSafeDomId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");
-}
-
-function getMapCharacterOffset(index: number): MapPoint {
-  const offsets: MapPoint[] = [
-    { x: 0, y: 0 },
-    { x: 26, y: -10 },
-    { x: -26, y: 12 },
-    { x: 14, y: 24 }
-  ];
-
-  return offsets[index % offsets.length] ?? offsets[0];
 }
 
 function getCharacterInitials(name: string): string {
@@ -2523,8 +2372,8 @@ function getCurrentActionVisualLocationId(
   running: NonNullable<GameState["currentAction"]>
 ): CharacterLocationId {
   const selectedCharacter = getSelectedCharacter(state);
-  const originLocation = getRunningMapOriginLocation(running, selectedCharacter.locationId);
-  const targetLocation = getRunningMapTargetLocation(running);
+  const originLocation = getRunningOriginLocation(running, selectedCharacter.locationId);
+  const targetLocation = getRunningTargetLocation(running);
 
   if (targetLocation !== "camp") {
     return targetLocation;
@@ -2543,8 +2392,8 @@ function getRunningActionTitle(state: GameState): string {
     return "Working";
   }
 
-  const targetLocation = getCharacterLocationLabel(getRunningMapTargetLocation(running));
-  const originLocation = getCharacterLocationLabel(getRunningMapOriginLocation(running, "camp"));
+  const targetLocation = getCharacterLocationLabel(getRunningTargetLocation(running));
+  const originLocation = getCharacterLocationLabel(getRunningOriginLocation(running, "camp"));
   if (running.phase === "travelingTo") {
     return `Traveling to ${targetLocation}`;
   }
@@ -2604,8 +2453,8 @@ function getRunningActionStatus(state: GameState, characterId = state.selectedCh
     return "keeping still";
   }
 
-  const targetLocation = getCharacterLocationLabel(getRunningMapTargetLocation(running));
-  const originLocation = getCharacterLocationLabel(getRunningMapOriginLocation(running, "camp"));
+  const targetLocation = getCharacterLocationLabel(getRunningTargetLocation(running));
+  const originLocation = getCharacterLocationLabel(getRunningOriginLocation(running, "camp"));
   if (running.phase === "travelingTo") {
     return `traveling to ${targetLocation}`;
   }

@@ -11,8 +11,7 @@ export default defineConfig({
       input: {
         app: resolve(projectRoot, "index.html"),
         characterCreator: resolve(projectRoot, "character-creator.html"),
-        designMode: resolve(projectRoot, "design-mode.html"),
-        map: resolve(projectRoot, "location-map.html")
+        designMode: resolve(projectRoot, "design-mode.html")
       }
     }
   }
