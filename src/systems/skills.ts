@@ -45,14 +45,16 @@ const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
   gatherStones: { skillId: "foraging", xp: 85 },
   gatherFlaxPlants: { skillId: "foraging", xp: 110 },
   gatherFlaxFibers: { skillId: "foraging", xp: 100 },
-  gatherMushrooms: { skillId: "foraging", xp: 100 },
-  gatherBerries: { skillId: "foraging", xp: 100 },
+  gatherMeadowIngredients: { skillId: "foraging", xp: 120 },
+  gatherWater: { skillId: "foraging", xp: 90 },
   mineCoal: { skillId: "mining", xp: 360 },
   mineCopper: { skillId: "mining", xp: 360 },
   mineTin: { skillId: "mining", xp: 360 },
   fishRiver: { skillId: "fishing", xp: 180 },
   craftLowestTool: { skillId: "crafting", xp: 150 },
   craftBasket: { skillId: "crafting", xp: 150 },
+  craftCrudeBowl: { skillId: "crafting", xp: 120 },
+  craftCrudeWoodenSpoon: { skillId: "crafting", xp: 100 },
   craftFishingPole: { skillId: "crafting", xp: 150 },
   craftStoneKnife: { skillId: "crafting", xp: 150 },
   craftStoneDagger: { skillId: "crafting", xp: 160 },
@@ -200,6 +202,10 @@ export function addTravelSkillXp(state: GameState, durationMs: number, now = Dat
   }
 
   addSkillXp(state, "agility", Math.max(1, Math.round((durationMs / 1000) * TRAVEL_XP_PER_SECOND)), now);
+}
+
+export function addCookingSkillXp(state: GameState, amount: number, now = Date.now()): void {
+  addSkillXp(state, "cooking", amount, now);
 }
 
 export function addSkillXp(state: GameState, skillId: SkillId, amount: number, now = Date.now()): void {
