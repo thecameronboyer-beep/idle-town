@@ -1,3 +1,5 @@
+import { cookingFoodResourceDefinitions } from "./cooking";
+import { gatherableResourceDefinitions } from "./gatherables";
 import type { ResourceDefinition, ResourceId } from "../types";
 
 export const resourceDefinitions: ResourceDefinition[] = [
@@ -42,18 +44,6 @@ export const resourceDefinitions: ResourceDefinition[] = [
     label: "Linen Cloth",
     group: "crafted",
     blurb: "Woven linen panels ready for sewing into useful camp goods."
-  },
-  {
-    id: "mushroom",
-    label: "Mushroom",
-    group: "resources",
-    blurb: "Soft meadow caps gathered for later meals."
-  },
-  {
-    id: "berry",
-    label: "Berry",
-    group: "resources",
-    blurb: "Bright handfuls from low meadow brambles."
   },
   {
     id: "wood",
@@ -146,6 +136,59 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "A small handled tool for moving hot metal safely."
   },
   {
+    id: "water",
+    label: "Water",
+    group: "liquids",
+    blurb: "Clean enough river water stored for camp cooking.",
+    stackSize: 50,
+    weight: 1,
+    value: 1,
+    rarity: "common",
+    nutrition: { hydration: 8 },
+    spoilage: { perishable: false },
+    quality: { enabled: false, baseQuality: 1 },
+    cooking: { tags: ["water", "liquid", "stew-base"], compatibility: ["stew", "brew"] }
+  },
+  {
+    id: "crudeBowl",
+    label: "Crude Bowl",
+    group: "utensils",
+    blurb: "A rough camp bowl. Clay will be better later, but this holds stew for now.",
+    stackSize: 20,
+    weight: 0.5,
+    value: 3,
+    rarity: "common",
+    spoilage: { perishable: false },
+    quality: { enabled: false, baseQuality: 1 },
+    cooking: { tags: ["bowl", "vessel", "primitive"], compatibility: ["stew"] }
+  },
+  {
+    id: "dirtyBowl",
+    label: "Dirty Bowl",
+    group: "utensils",
+    blurb: "A used bowl with stew clinging to the inside. Washing can come later.",
+    stackSize: 20,
+    weight: 0.5,
+    value: 1,
+    rarity: "common",
+    spoilage: { perishable: false },
+    quality: { enabled: false, baseQuality: 1 },
+    cooking: { tags: ["bowl", "dirty", "reuse-hook"], compatibility: ["washing"] }
+  },
+  {
+    id: "crudeWoodenSpoon",
+    label: "Crude Wooden Spoon",
+    group: "utensils",
+    blurb: "A small carved spoon for eating hot stew without burning fingers.",
+    stackSize: 20,
+    weight: 0.2,
+    value: 2,
+    rarity: "common",
+    spoilage: { perishable: false },
+    quality: { enabled: false, baseQuality: 1 },
+    cooking: { tags: ["spoon", "utensil", "primitive"], compatibility: ["eat-stew"] }
+  },
+  {
     id: "minnow",
     label: "Minnow",
     group: "fish",
@@ -221,25 +264,53 @@ export const resourceDefinitions: ResourceDefinition[] = [
     id: "rabbitMeat",
     label: "Rabbit Meat",
     group: "hunted",
-    blurb: "Fresh rabbit meat that wants fire soon."
+    blurb: "Fresh rabbit meat that wants fire soon.",
+    weight: 0.5,
+    value: 4,
+    rarity: "common",
+    nutrition: { hunger: 8 },
+    spoilage: { perishable: true },
+    quality: { enabled: false, baseQuality: 1 },
+    cooking: { ingredientCategory: "meat", tags: ["meat", "small-game", "rabbit"], compatibility: ["stew", "roast"] }
   },
   {
     id: "squirrelMeat",
     label: "Squirrel Meat",
     group: "hunted",
-    blurb: "Fresh squirrel meat that wants fire soon."
+    blurb: "Fresh squirrel meat that wants fire soon.",
+    weight: 0.4,
+    value: 3,
+    rarity: "common",
+    nutrition: { hunger: 6 },
+    spoilage: { perishable: true },
+    quality: { enabled: false, baseQuality: 1 },
+    cooking: { ingredientCategory: "meat", tags: ["meat", "small-game", "squirrel"], compatibility: ["stew", "roast"] }
   },
   {
     id: "cookedRabbitMeat",
     label: "Cooked Rabbit Meat",
     group: "crafted",
-    blurb: "A small cooked rabbit ration."
+    blurb: "A small cooked rabbit ration.",
+    weight: 0.5,
+    value: 5,
+    rarity: "common",
+    nutrition: { hunger: 12 },
+    spoilage: { perishable: true },
+    quality: { enabled: false, baseQuality: 1 },
+    cooking: { tags: ["cooked", "meat", "rabbit"], compatibility: ["eat", "stew-addition"] }
   },
   {
     id: "cookedSquirrelMeat",
     label: "Cooked Squirrel Meat",
     group: "crafted",
-    blurb: "A small cooked squirrel ration."
+    blurb: "A small cooked squirrel ration.",
+    weight: 0.4,
+    value: 4,
+    rarity: "common",
+    nutrition: { hunger: 9 },
+    spoilage: { perishable: true },
+    quality: { enabled: false, baseQuality: 1 },
+    cooking: { tags: ["cooked", "meat", "squirrel"], compatibility: ["eat", "stew-addition"] }
   },
   {
     id: "hide",
@@ -258,7 +329,9 @@ export const resourceDefinitions: ResourceDefinition[] = [
     label: "Leather",
     group: "crafted",
     blurb: "Worked hide for future bags and armor."
-  }
+  },
+  ...gatherableResourceDefinitions,
+  ...cookingFoodResourceDefinitions
 ];
 
 export const resourceOrder = resourceDefinitions.map((resource) => resource.id);
@@ -316,7 +389,11 @@ export function formatResourceAmount(id: ResourceId, amount: number): string {
 }
 
 export function getResourceLabel(id: ResourceId): string {
-  return resourceDefinitions.find((resource) => resource.id === id)?.label ?? id;
+  return getResourceDefinition(id)?.label ?? id;
+}
+
+export function getResourceDefinition(id: ResourceId): ResourceDefinition | undefined {
+  return resourceDefinitions.find((resource) => resource.id === id);
 }
 
 function formatTenths(amount: number): string {
