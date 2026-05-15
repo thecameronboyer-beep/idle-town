@@ -1,5 +1,5 @@
 import { primitiveToolCraftDefinitions } from "../data/craftables";
-import { fishResourceIds } from "../data/resources";
+import { fishResourceIds, resourceDefinitions } from "../data/resources";
 import { getTextileRecipe } from "../data/textiles";
 import type { ActionId, BuildingId, GameState } from "../types";
 import { isCampfireLit } from "./buildings";
@@ -29,33 +29,15 @@ function hasSeenFish(state: GameState): boolean {
 }
 
 function hasSeenCookingPrep(state: GameState): boolean {
-  return (
-    state.seenResources.includes("water") ||
-    state.seenResources.includes("crudeBowl") ||
-    state.seenResources.includes("crudeWoodenSpoon") ||
-    state.seenResources.some((resourceId) =>
-      [
-        "wildGarlic",
-        "dandelionGreens",
-        "clover",
-        "chamomile",
-        "yarrow",
-        "wildOnion",
-        "sorrel",
-        "plantainLeaf",
-        "mint",
-        "fennel",
-        "lavender",
-        "hearthcap",
-        "sunrootTubers",
-        "wildCarrot",
-        "blueberries",
-        "strawberries",
-        "elderflowers",
-        "roseHips"
-      ].includes(resourceId)
-    )
-  );
+  return state.seenResources.some((resourceId) => {
+    const definition = resourceDefinitions.find((resource) => resource.id === resourceId);
+    return Boolean(
+      definition?.cooking?.ingredientCategory ||
+        definition?.cooking?.tags.includes("stew-base") ||
+        definition?.cooking?.tags.includes("vessel") ||
+        definition?.cooking?.tags.includes("utensil")
+    );
+  });
 }
 
 export function isActionUnlocked(state: GameState, actionId: ActionId, now = Date.now()): boolean {
