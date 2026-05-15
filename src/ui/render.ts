@@ -136,6 +136,7 @@ import {
   getCookingRecipeLockReason,
   getCookingRecipeOutputText,
   getCookingRecipeRequirementText,
+  getCookingStationStatus,
   queueCookingRecipe
 } from "../systems/cooking";
 import { getGatheringTableSummary } from "../systems/gathering";
@@ -2171,7 +2172,7 @@ function renderCookingActionPanel(state: GameState, now: number): string {
         <div class="smithing-status-grid cooking-status-grid">
           <div class="smithing-status-item">
             <span>Station</span>
-            <strong>${isCampfireLit(state, now) ? "Campfire lit" : "Needs fire"}</strong>
+            <strong>${getCookingStationStatus(state, "campfire", now)}</strong>
           </div>
           <div class="smithing-status-item">
             <span>Cooking</span>

@@ -1,11 +1,12 @@
 import {
   cookingRecipeDefinitions,
+  getCookingStationDefinition,
   getCookingRecipe,
   getCookingRecipeCost,
   getCookingRecipeOutputs
 } from "../data/cooking";
 import { getResourceLabel } from "../data/resources";
-import type { CookingQueueEntry, CookingRecipeDefinition, CookingRecipeId, Cost, GameState, ResourceId } from "../types";
+import type { CookingQueueEntry, CookingRecipeDefinition, CookingRecipeId, CookingStationId, Cost, GameState, ResourceId } from "../types";
 import { getActiveCampfireExpiresAt, isCampfireLit } from "./buildings";
 import { addResources, describeCost, hasCost, payCost } from "./inventory";
 import { addLog, addStackedLog } from "./log";
@@ -140,6 +141,19 @@ export function getCookingRecipeRequirementText(recipe: CookingRecipeDefinition)
       return ingredient.consumed === false ? `${ingredient.amount} ${label} available` : `${ingredient.amount} ${label}`;
     })
     .join(", ");
+}
+
+export function getCookingStationStatus(state: GameState, stationId: CookingStationId, now = Date.now()): string {
+  const station = getCookingStationDefinition(stationId);
+  if (!station) {
+    return "Unknown station";
+  }
+
+  if (station.id === "campfire") {
+    return isCampfireLit(state, now) ? "Campfire lit" : "Needs lit campfire";
+  }
+
+  return "Station unavailable";
 }
 
 function startNextCookingEntry(state: GameState, now: number): void {
