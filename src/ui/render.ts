@@ -2278,6 +2278,7 @@ function renderCookingRecipeCard(state: GameState, recipe: CookingRecipeDefiniti
   const lockReason = getCookingRecipeLockReason(state, recipe, now);
   const disabled = !canQueue;
   const cost = getCookingRecipeCost(recipe);
+  const completedCount = state.cooking.completedRecipeCounts[recipe.id] ?? 0;
   const tooltipRows: ActionTooltipRow[] = [
     { label: "Station", value: "Campfire" },
     { label: "Speed", value: formatDuration(recipe.cookTimeMs) },
@@ -2286,6 +2287,7 @@ function renderCookingRecipeCard(state: GameState, recipe: CookingRecipeDefiniti
     { label: "Uses", value: getCookingRecipeRequirementText(recipe) },
     { label: "Makes", value: getCookingRecipeOutputText(recipe) },
     { label: "Nutrition", value: `${recipe.nutrition.hunger ?? 0} hunger` },
+    { label: "Cooked", value: `${completedCount}` },
     { label: "Eating", value: "Stews need a Crude Wooden Spoon" },
     { label: "Failure", value: `${Math.round(recipe.failureChance * 100)}% base chance later` }
   ];
@@ -2312,7 +2314,7 @@ function renderCookingRecipeCard(state: GameState, recipe: CookingRecipeDefiniti
       </span>
       <span class="smithing-recipe-meta">
         <b>${getCookingRecipeOutputText(recipe)}</b>
-        <small>${describeCost(cost)}</small>
+        <small>${describeCost(cost)}${completedCount ? `; cooked ${completedCount}` : ""}</small>
       </span>
       ${renderActionTooltip(recipe.name, tooltipRows, statusText)}
     </button>
