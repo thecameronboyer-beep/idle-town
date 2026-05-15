@@ -32,18 +32,11 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Thin stalks stripped by hand for future craft."
   },
   {
-    id: "gatherMushrooms",
-    label: "Gather Mushrooms",
-    verb: "gathering mushrooms",
-    durationMs: 10000,
-    blurb: "Search the meadow shade for small edible caps."
-  },
-  {
-    id: "gatherBerries",
-    label: "Gather Berries",
-    verb: "gathering berries",
-    durationMs: 10000,
-    blurb: "Pick careful handfuls from the meadow brambles."
+    id: "gatherMeadowIngredients",
+    label: "Gather Meadow Ingredients",
+    verb: "gathering meadow ingredients",
+    durationMs: 12000,
+    blurb: "Search the meadow for herbs, flowers, roots, and small fruit."
   },
   {
     id: "mineCoal",
@@ -74,6 +67,13 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Cast into the shallows for small river fish."
   },
   {
+    id: "gatherWater",
+    label: "Gather Water",
+    verb: "gathering water",
+    durationMs: 9000,
+    blurb: "Carry usable river water back for camp cooking."
+  },
+  {
     id: "craftLowestTool",
     label: "Primitive Tools",
     verb: "balancing tool stock",
@@ -86,6 +86,20 @@ export const actionDefinitions: ActionDefinition[] = [
     verb: "crafting a basket",
     durationMs: 15000,
     blurb: "Weave flax fibers around a simple stick frame."
+  },
+  {
+    id: "craftCrudeBowl",
+    label: "Craft Crude Bowl",
+    verb: "crafting a crude bowl",
+    durationMs: 12000,
+    blurb: "Shape a rough temporary bowl from wood, fiber, and packed mud."
+  },
+  {
+    id: "craftCrudeWoodenSpoon",
+    label: "Craft Crude Wooden Spoon",
+    verb: "carving a crude wooden spoon",
+    durationMs: 10000,
+    blurb: "Carve a small spoon for eating hot camp stew."
   },
   {
     id: "craftFishingPole",
