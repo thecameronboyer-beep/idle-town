@@ -34,7 +34,7 @@ export function isCarryAction(actionId: ActionId): boolean {
 }
 
 export function getLoopLocation(actionId: ActionId, locationId: LocationId | undefined): LocationId | null {
-  return isCarryAction(actionId) ? (locationId ?? "meadow") : null;
+  return isCarryAction(actionId) ? (locationId ?? getDefaultActionLocation(actionId)) : null;
 }
 
 export function getRunningActionLoopLocations(
@@ -67,7 +67,7 @@ export function getLoopTargetLocationId(running: RunningAction, index: number): 
 }
 
 export function getActionTargetLocation(actionId: ActionId, locationId: LocationId | undefined): CharacterLocationId {
-  return isCarryAction(actionId) ? (locationId ?? "meadow") : "camp";
+  return isCarryAction(actionId) ? (locationId ?? getDefaultActionLocation(actionId)) : "camp";
 }
 
 export function getRunningTargetLocation(running: RunningAction): CharacterLocationId {
@@ -155,13 +155,17 @@ function isGatherAction(actionId: ActionId): boolean {
     actionId === "gatherStones" ||
     actionId === "gatherFlaxPlants" ||
     actionId === "gatherFlaxFibers" ||
-    actionId === "gatherMushrooms" ||
-    actionId === "gatherBerries" ||
+    actionId === "gatherMeadowIngredients" ||
+    actionId === "gatherWater" ||
     actionId === "mineCoal" ||
     actionId === "mineCopper" ||
     actionId === "mineTin" ||
     actionId === "fishRiver"
   );
+}
+
+function getDefaultActionLocation(actionId: ActionId): LocationId {
+  return actionId === "gatherWater" || actionId === "fishRiver" ? "river" : "meadow";
 }
 
 function getLocationTravelMs(locationId: LocationId): number {
