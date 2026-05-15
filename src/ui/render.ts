@@ -1569,6 +1569,7 @@ function renderWorkArea(
 }
 
 function renderCampStatsPanel(state: GameState): string {
+  const selectedCharacter = getSelectedCharacter(state);
   return `
     <section class="panel camp-stats-panel" aria-label="Camp stats" data-editor-id="camp-stats-panel" data-editor-label="Camp stats panel" data-editor-files="src/ui/render.ts, src/style.css">
       <div class="section-heading">
@@ -1578,6 +1579,10 @@ function renderCampStatsPanel(state: GameState): string {
         <div class="camp-stat-row">
           <span>Population</span>
           <strong>${getPopulationCount(state)}/${getPopulationCapacity(state)}</strong>
+        </div>
+        <div class="camp-stat-row">
+          <span>${selectedCharacter.name} Hunger</span>
+          <strong>${Math.round(selectedCharacter.needs.hunger)}/${Math.round(selectedCharacter.needs.maxHunger)}</strong>
         </div>
       </div>
     </section>
