@@ -204,6 +204,8 @@ type ActionCategory = {
 type CharacterDetailTab = "inventory" | "equipment" | "skills" | "log";
 type InventorySource = "camp" | "character";
 type ActionLoopTarget = { loopId: string; afterIndex: number } | null;
+type CraftingMaterialId = "primitive";
+type CraftingProductCategory = "tool" | "weapon";
 type SkillGroup = {
   label: string;
   skillIds: SkillId[];
@@ -360,6 +362,40 @@ const smithingProductCategories: Array<{ id: SmithingProductCategory; label: str
   { id: "weapon", label: "Weapon" },
   { id: "armor", label: "Armor" }
 ];
+
+const craftingMaterialLabels: Record<CraftingMaterialId, string> = {
+  primitive: "Primitive"
+};
+
+const craftingMaterialDescriptions: Record<CraftingMaterialId, string> = {
+  primitive: "Wood, stone, fiber"
+};
+
+const craftingProductCategories: Array<{ id: CraftingProductCategory; label: string }> = [
+  { id: "tool", label: "Tool" },
+  { id: "weapon", label: "Weapon" }
+];
+
+const craftingRecipeMetadata: Partial<
+  Record<ActionId, { material: CraftingMaterialId; productCategory: CraftingProductCategory }>
+> = {
+  craftLowestTool: { material: "primitive", productCategory: "tool" },
+  craftBasket: { material: "primitive", productCategory: "tool" },
+  craftWoodenSpoon: { material: "primitive", productCategory: "tool" },
+  craftFishingPole: { material: "primitive", productCategory: "tool" },
+  craftWoodenBowl: { material: "primitive", productCategory: "tool" },
+  craftStoneKnife: { material: "primitive", productCategory: "tool" },
+  craftStoneAxe: { material: "primitive", productCategory: "tool" },
+  craftStonePickAxe: { material: "primitive", productCategory: "tool" },
+  craftStoneDagger: { material: "primitive", productCategory: "weapon" },
+  craftStoneSpear: { material: "primitive", productCategory: "weapon" },
+  craftWoodenClub: { material: "primitive", productCategory: "weapon" },
+  craftWoodenTwoHandedClub: { material: "primitive", productCategory: "weapon" },
+  craftWoodenSword: { material: "primitive", productCategory: "weapon" },
+  craftWoodenTwoHandedSword: { material: "primitive", productCategory: "weapon" },
+  craftShortBow: { material: "primitive", productCategory: "weapon" },
+  craftWoodenTotem: { material: "primitive", productCategory: "weapon" }
+};
 
 const locationDefinitions: LocationDefinition[] = [
   {
@@ -648,6 +684,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
   let activeActionFilter: ActionFilterId = "foraging";
   let activeLocation: LocationId = "meadow";
   let activeCharacterDetailTab: CharacterDetailTab = "inventory";
+  let selectedCraftingMaterial: CraftingMaterialId = "primitive";
   let selectedSmithingMaterial: SmithingMaterialId = "copper";
   let campLogVisible = false;
   let partyPanelVisible = false;
@@ -712,6 +749,12 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "select-smithing-material" && isSmithingMaterialId(id)) {
       selectedSmithingMaterial = id;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "select-crafting-material" && isCraftingMaterialId(id)) {
+      selectedCraftingMaterial = id;
       handlers.requestRender();
       return;
     }
@@ -1074,6 +1117,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       activeActionCategory,
       activeCharacterDetailTab,
       activeLocation,
+      selectedCraftingMaterial,
       selectedSmithingMaterial,
       campLogVisible,
       partyPanelVisible,
@@ -1099,6 +1143,7 @@ function renderApp(
   activeActionCategory: ActionCategoryId,
   activeCharacterDetailTab: CharacterDetailTab,
   activeLocation: LocationId,
+  selectedCraftingMaterial: CraftingMaterialId,
   selectedSmithingMaterial: SmithingMaterialId,
   campLogVisible: boolean,
   partyPanelVisible: boolean,
@@ -1149,6 +1194,7 @@ function renderApp(
                   activeActionCategory,
                   activeActionFilter,
                   activeLocation,
+                  selectedCraftingMaterial,
                   selectedSmithingMaterial,
                   actionLoopTarget,
                   now
@@ -1599,6 +1645,7 @@ function renderWorkArea(
   activeActionCategory: ActionCategoryId,
   activeActionFilter: ActionFilterId,
   activeLocation: LocationId,
+  selectedCraftingMaterial: CraftingMaterialId,
   selectedSmithingMaterial: SmithingMaterialId,
   actionLoopTarget: ActionLoopTarget,
   now: number
@@ -1615,7 +1662,15 @@ function renderWorkArea(
   return `
       <div class="work-area">
       ${renderActionCategoryPanel(state, activeActionCategory, activeActionFilter)}
-      ${renderActionStack(state, activeActionFilter, activeLocation, selectedSmithingMaterial, actionLoopTarget, now)}
+      ${renderActionStack(
+        state,
+        activeActionFilter,
+        activeLocation,
+        selectedCraftingMaterial,
+        selectedSmithingMaterial,
+        actionLoopTarget,
+        now
+      )}
     </div>
   `;
 }
@@ -1678,6 +1733,7 @@ function renderActionStack(
   state: GameState,
   activeActionFilter: ActionFilterId,
   activeLocation: LocationId,
+  selectedCraftingMaterial: CraftingMaterialId,
   selectedSmithingMaterial: SmithingMaterialId,
   actionLoopTarget: ActionLoopTarget,
   now: number
@@ -1687,7 +1743,15 @@ function renderActionStack(
   return `
     <div class="action-stack">
       ${renderWorkLocationPanel(filter, activeLocation)}
-      ${renderActionPanel(state, activeActionFilter, activeLocation, selectedSmithingMaterial, actionLoopTarget, now)}
+      ${renderActionPanel(
+        state,
+        activeActionFilter,
+        activeLocation,
+        selectedCraftingMaterial,
+        selectedSmithingMaterial,
+        actionLoopTarget,
+        now
+      )}
     </div>
   `;
 }
@@ -1737,6 +1801,7 @@ function renderActionPanel(
   state: GameState,
   activeActionFilter: ActionFilterId,
   activeLocation: LocationId,
+  selectedCraftingMaterial: CraftingMaterialId,
   selectedSmithingMaterial: SmithingMaterialId,
   actionLoopTarget: ActionLoopTarget,
   now: number
@@ -1748,7 +1813,7 @@ function renderActionPanel(
       : (filter.actionIds ?? []);
 
   if (filter.id === "crafting") {
-    return renderCraftingActionPanel(state, actionIds, actionLoopTarget);
+    return renderCraftingActionPanel(state, actionIds, selectedCraftingMaterial, actionLoopTarget, now);
   }
   if (filter.id === "smithing") {
     return renderSmithingActionPanel(state, actionIds, selectedSmithingMaterial, actionLoopTarget, now);
@@ -1772,21 +1837,298 @@ function renderActionPanel(
 function renderCraftingActionPanel(
   state: GameState,
   actionIds: ActionId[],
-  actionLoopTarget: ActionLoopTarget
+  selectedCraftingMaterial: CraftingMaterialId,
+  actionLoopTarget: ActionLoopTarget,
+  now: number
 ): string {
   const quickCraftActionId: ActionId = "craftLowestTool";
-  const craftActionIds = actionIds.filter((actionId) => actionId !== quickCraftActionId);
+  const craftActionIds = actionIds.filter(isCraftingRecipeActionId);
+  const activeMaterial = resolveSelectedCraftingMaterial(selectedCraftingMaterial, craftActionIds);
 
   return `
     <section class="action-panel crafting-action-panel" data-editor-id="action-panel-crafting" data-editor-label="Crafting action panel" data-editor-files="src/ui/render.ts, src/style.css">
-      <div class="crafting-card">
-        ${renderCraftLowestCard(state, quickCraftActionId, actionLoopTarget)}
-        <div class="crafting-action-grid">
-          ${craftActionIds.map((actionId) => renderActionCard(state, actionId, actionLoopTarget)).join("")}
+      <div class="smithing-panel-card crafting-panel-card">
+        <div class="smithing-workbench crafting-workbench">
+          <div class="smithing-furnace-column crafting-workbench-column">
+            ${renderCraftingWorkbenchStatus(craftActionIds, activeMaterial)}
+            ${renderCraftingActiveCraft(state, now)}
+            ${actionIds.includes(quickCraftActionId) ? renderCraftLowestCard(state, quickCraftActionId, actionLoopTarget) : ""}
+          </div>
+          ${renderCraftingMaterialSection(craftActionIds, activeMaterial)}
         </div>
+        ${renderCraftingCraftColumns(state, craftActionIds, activeMaterial, actionLoopTarget)}
       </div>
     </section>
   `;
+}
+
+function resolveSelectedCraftingMaterial(
+  selectedCraftingMaterial: CraftingMaterialId,
+  actionIds: ActionId[]
+): CraftingMaterialId {
+  const availableMaterials = getAvailableCraftingMaterials(actionIds);
+  return availableMaterials.includes(selectedCraftingMaterial)
+    ? selectedCraftingMaterial
+    : (availableMaterials[0] ?? selectedCraftingMaterial);
+}
+
+function getAvailableCraftingMaterials(actionIds: ActionId[]): CraftingMaterialId[] {
+  const materials = actionIds
+    .map((actionId) => craftingRecipeMetadata[actionId]?.material)
+    .filter((material): material is CraftingMaterialId => Boolean(material));
+
+  return Array.from(new Set(materials));
+}
+
+function isCraftingRecipeActionId(actionId: ActionId): boolean {
+  return Boolean(craftingRecipeMetadata[actionId]);
+}
+
+function renderCraftingWorkbenchStatus(actionIds: ActionId[], selectedCraftingMaterial: CraftingMaterialId): string {
+  const recipeCount = actionIds.filter((actionId) => actionId !== "craftLowestTool").length;
+
+  return `
+    <div class="smithing-status-grid crafting-status-grid">
+      <div class="smithing-status-item">
+        <span>Work Bench</span>
+        <strong>Hand Craft</strong>
+      </div>
+      <div class="smithing-status-item">
+        <span>Materials</span>
+        <strong>${craftingMaterialLabels[selectedCraftingMaterial]}</strong>
+      </div>
+      <div class="smithing-status-item">
+        <span>Recipes</span>
+        <strong>${recipeCount}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function renderCraftingActiveCraft(state: GameState, now: number): string {
+  const running = getCurrentAction(state);
+  const activeActionId = running ? getActiveActionId(running) : null;
+  if (!running || !activeActionId || !isCraftingRecipeActionId(activeActionId)) {
+    return `
+      <div class="smithing-active-row idle crafting-active-row">
+        <span>No active craft</span>
+        <strong>Bench idle</strong>
+      </div>
+    `;
+  }
+
+  const definition = getActionDefinition(activeActionId);
+  const progress = clamp(getActionProgress(state, now), 0, 1);
+
+  return `
+    <div class="smithing-active-row crafting-active-row">
+      <span>Active craft</span>
+      <strong>${definition?.label ?? "Crafting"}</strong>
+      <div class="progress-track smithing-progress-track">
+        <span data-smithing-action-progress style="transform: scaleX(${progress.toFixed(4)})"></span>
+        <em data-smithing-action-remaining>${formatDuration(running.endsAt - now)}</em>
+      </div>
+    </div>
+  `;
+}
+
+function renderCraftingMaterialSection(actionIds: ActionId[], selectedCraftingMaterial: CraftingMaterialId): string {
+  return `
+    <div class="smithing-smelt-column crafting-material-column">
+      <div class="section-heading">
+        <span>Materials Type</span>
+      </div>
+      <div class="smithing-smelt-grid crafting-material-grid">
+        ${getAvailableCraftingMaterials(actionIds)
+          .map((material) => renderCraftingMaterialCard(actionIds, material, selectedCraftingMaterial))
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderCraftingMaterialCard(
+  actionIds: ActionId[],
+  material: CraftingMaterialId,
+  selectedCraftingMaterial: CraftingMaterialId
+): string {
+  const selected = material === selectedCraftingMaterial;
+  const recipeCount = getCraftingMaterialRecipeCount(actionIds, material);
+
+  return `
+    <article class="smithing-smelt-card crafting-material-card ${selected ? "selected" : ""}">
+      <button
+        class="smithing-smelt-select crafting-material-select"
+        type="button"
+        data-command="select-crafting-material"
+        data-id="${material}"
+        aria-pressed="${selected}"
+      >
+        <span class="smithing-recipe-icon" aria-hidden="true">${renderActionIcon("craftLowestTool")}</span>
+        <span class="smithing-recipe-copy">
+          <strong>${craftingMaterialLabels[material]}</strong>
+          <small>${selected ? "Selected type" : "Show recipes"}</small>
+        </span>
+        <span class="smithing-recipe-meta">
+          <b>${recipeCount} recipes</b>
+          <small>${craftingMaterialDescriptions[material]}</small>
+        </span>
+      </button>
+    </article>
+  `;
+}
+
+function getCraftingMaterialRecipeCount(actionIds: ActionId[], material: CraftingMaterialId): number {
+  return actionIds.filter((actionId) => actionId !== "craftLowestTool" && craftingRecipeMetadata[actionId]?.material === material).length;
+}
+
+function renderCraftingCraftColumns(
+  state: GameState,
+  actionIds: ActionId[],
+  selectedCraftingMaterial: CraftingMaterialId,
+  actionLoopTarget: ActionLoopTarget
+): string {
+  const materialActionIds = actionIds.filter(
+    (actionId) => actionId !== "craftLowestTool" && craftingRecipeMetadata[actionId]?.material === selectedCraftingMaterial
+  );
+
+  return `
+    <div class="smithing-recipe-section smithing-craft-section crafting-recipe-section">
+      <div class="section-heading">
+        <span>${craftingMaterialLabels[selectedCraftingMaterial]} Crafting</span>
+        <small>Filtered by materials type</small>
+      </div>
+      <div class="smithing-craft-columns crafting-craft-columns">
+        ${craftingProductCategories
+          .map((category) => renderCraftingCraftColumn(state, materialActionIds, selectedCraftingMaterial, category, actionLoopTarget))
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderCraftingCraftColumn(
+  state: GameState,
+  actionIds: ActionId[],
+  selectedCraftingMaterial: CraftingMaterialId,
+  category: { id: CraftingProductCategory; label: string },
+  actionLoopTarget: ActionLoopTarget
+): string {
+  const categoryActionIds = actionIds.filter((actionId) => craftingRecipeMetadata[actionId]?.productCategory === category.id);
+
+  return `
+    <section class="smithing-craft-column crafting-craft-column" aria-label="${category.label} recipes">
+      <div class="smithing-craft-column-heading">
+        <span>${category.label}</span>
+        <small>${categoryActionIds.length}</small>
+      </div>
+      ${
+        categoryActionIds.length
+          ? `<div class="smithing-recipe-grid crafting-recipe-grid">${categoryActionIds
+              .map((actionId) => renderCraftingRecipeCard(state, actionId, actionLoopTarget))
+              .join("")}</div>`
+          : `<div class="smithing-empty-column">No ${craftingMaterialLabels[selectedCraftingMaterial].toLowerCase()} ${category.label.toLowerCase()} recipes yet.</div>`
+      }
+    </section>
+  `;
+}
+
+function getCraftingActionButtonView(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget) {
+  const definition = getActionDefinition(actionId);
+  if (!definition || !isCraftingRecipeActionId(actionId)) {
+    return null;
+  }
+
+  const unlocked = isActionUnlocked(state, actionId);
+  const cost = getActionCost(actionId);
+  const canStart = canStartAction(state, actionId);
+  const targetLoop = actionLoopTarget ? getActionLoop(state, actionLoopTarget.loopId) : null;
+  const running = getCurrentAction(state);
+  const assigningLoopAction = Boolean(actionLoopTarget && targetLoop);
+  const canAssignFollowUp = Boolean(
+    assigningLoopAction && targetLoop && actionLoopTarget && canInsertActionInSavedLoop(targetLoop, actionLoopTarget.afterIndex, actionId)
+  );
+  const active = running ? getActiveActionId(running) === actionId : false;
+  const disabled = assigningLoopAction ? !canAssignFollowUp : !canStart || active;
+  const missingCostText = getMissingCostText(state, cost);
+  const lockReason = canStart ? "" : unlocked ? missingCostText : getActionLockReason(state, actionId);
+  const statusText = assigningLoopAction
+    ? canAssignFollowUp
+      ? "Set as action loop step"
+      : "Not valid for this loop"
+    : active
+      ? "Running"
+      : !canStart && lockReason
+        ? lockReason
+        : "Ready";
+  const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
+  const tooltipRows = getActionTooltipRows(actionId, definition.durationMs);
+
+  return {
+    definition,
+    cost,
+    unlocked,
+    canAssignFollowUp,
+    active,
+    disabled,
+    statusText,
+    buttonLabel,
+    tooltipRows
+  };
+}
+
+function renderCraftingRecipeCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
+  const view = getCraftingActionButtonView(state, actionId, actionLoopTarget);
+  if (!view) {
+    return "";
+  }
+
+  const { definition, cost, unlocked, canAssignFollowUp, active, disabled, statusText, buttonLabel, tooltipRows } = view;
+
+  return `
+    <button
+      class="smithing-recipe-card crafting-recipe-card ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}"
+      type="button"
+      data-command="start-action"
+      data-id="${actionId}"
+      data-editor-id="crafting-recipe-${actionId}"
+      data-editor-label="Crafting recipe: ${definition.label}"
+      data-editor-files="src/ui/render.ts, src/style.css"
+      data-disabled="${disabled}"
+      data-tooltip-source
+      aria-disabled="${disabled}"
+      aria-label="${buttonLabel} ${definition.label}"
+    >
+      <span class="smithing-recipe-icon" aria-hidden="true">${renderActionIcon(actionId)}</span>
+      <span class="smithing-recipe-copy">
+        <strong>${definition.label}</strong>
+        <small>${statusText}</small>
+      </span>
+      <span class="smithing-recipe-meta">
+        <b>${getCraftingRecipeOutputText(actionId)}</b>
+        <small>${describeCost(cost)}</small>
+      </span>
+      ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+    </button>
+  `;
+}
+
+function getCraftingRecipeOutputText(actionId: ActionId): string {
+  const craftedTool = getCraftedToolDefinitionForAction(actionId);
+  if (craftedTool) {
+    return `1 ${craftedTool.label}`;
+  }
+
+  switch (actionId) {
+    case "craftLowestTool":
+      return "Lowest Stock";
+    case "craftWoodenSpoon":
+      return "1 Wooden Spoon";
+    case "craftWoodenBowl":
+      return "1 Wooden Bowl";
+    default:
+      return getActionDefinition(actionId)?.label.replace(/^Craft /, "1 ") ?? "1 item";
+  }
 }
 
 function renderSmithingActionPanel(
@@ -2678,6 +3020,10 @@ function isSmithingMaterialId(id: string | undefined): id is SmithingMaterialId 
   return id === "copper" || id === "bronze";
 }
 
+function isCraftingMaterialId(id: string | undefined): id is CraftingMaterialId {
+  return id === "primitive";
+}
+
 function isActionFilterId(id: string | undefined): id is ActionFilterId {
   return actionFilters.some((filter) => filter.id === id);
 }
@@ -2897,16 +3243,20 @@ function renderCraftLowestCard(state: GameState, actionId: ActionId, actionLoopT
     ? canAssignFollowUp
       ? "Set as action loop step"
       : "Not valid for this loop"
-    : !canStart && lockReason
-      ? lockReason
-      : targetDefinition
-        ? `Next: ${targetDefinition.label}`
-        : "";
+    : active
+      ? "Running"
+      : !canStart && lockReason
+        ? lockReason
+        : targetDefinition
+          ? `Next: ${targetDefinition.label}`
+          : "";
   const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
+  const outputText = targetDefinition ? targetDefinition.label.replace(/^Craft /, "") : getCraftingRecipeOutputText(actionId);
+  const costText = targetActionId ? describeCost(getActionCost(targetActionId)) : "Varies by target";
 
   return `
     <button
-      class="craft-priority-button ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}"
+      class="smithing-recipe-card craft-priority-button ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}"
       type="button"
       data-command="start-action"
       data-id="${actionId}"
@@ -2918,8 +3268,16 @@ function renderCraftLowestCard(state: GameState, actionId: ActionId, actionLoopT
       aria-disabled="${disabled}"
       aria-label="${buttonLabel} ${definition.label}${targetDefinition ? `, next ${targetDefinition.label}` : ""}"
     >
-      <span class="craft-priority-main" aria-hidden="true">
-        <img src="${craftMaterialsBundleButtonUrl}" alt="" aria-hidden="true" />
+      <span class="smithing-recipe-icon" aria-hidden="true">
+        ${renderActionIcon(actionId)}
+      </span>
+      <span class="smithing-recipe-copy">
+        <strong>${definition.label}</strong>
+        <small>${statusText || "Balance stock"}</small>
+      </span>
+      <span class="smithing-recipe-meta">
+        <b>${outputText}</b>
+        <small>${costText}</small>
       </span>
       ${renderActionTooltip(definition.label, tooltipRows, statusText)}
     </button>
