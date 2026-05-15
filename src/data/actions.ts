@@ -1,4 +1,5 @@
 import type { ActionDefinition } from "../types";
+import { alchemyRecipeDefinitions } from "./alchemy";
 import { smithingRecipeDefinitions } from "./smithing";
 import { textileRecipeDefinitions } from "./textiles";
 
@@ -37,6 +38,41 @@ export const actionDefinitions: ActionDefinition[] = [
     verb: "gathering meadow ingredients",
     durationMs: 12000,
     blurb: "Search the meadow for herbs, flowers, roots, and small fruit."
+  },
+  {
+    id: "gatherForestIngredients",
+    label: "Gather Forest Forage",
+    verb: "gathering forest forage",
+    durationMs: 14000,
+    blurb: "Search the forest floor for berries, herbs, nuts, fungus, and resin."
+  },
+  {
+    id: "gatherRiverIngredients",
+    label: "Gather River Forage",
+    verb: "gathering river forage",
+    durationMs: 13500,
+    blurb: "Search the riverbank for wetland herbs, roots, seeds, and fungus."
+  },
+  {
+    id: "gatherMineIngredients",
+    label: "Gather Mine Forage",
+    verb: "gathering mine forage",
+    durationMs: 17000,
+    blurb: "Search the mine for cave herbs, fungus, roots, crystals, and lichens."
+  },
+  {
+    id: "gatherDesertIngredients",
+    label: "Gather Desert Forage",
+    verb: "gathering desert forage",
+    durationMs: 18000,
+    blurb: "Search the desert scrub for hardy herbs, fruits, roots, flowers, and fungus."
+  },
+  {
+    id: "gatherSand",
+    label: "Gather Sand",
+    verb: "gathering sand",
+    durationMs: 10000,
+    blurb: "Collect clean desert sand for furnace glasswork."
   },
   {
     id: "mineCoal",
@@ -249,6 +285,13 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Knot a crude leather sling pouch with a drawstring."
   },
   ...smithingRecipeDefinitions.map((recipe): ActionDefinition => ({
+    id: recipe.actionId,
+    label: recipe.label,
+    verb: recipe.verb,
+    durationMs: recipe.durationMs,
+    blurb: recipe.blurb
+  })),
+  ...alchemyRecipeDefinitions.map((recipe): ActionDefinition => ({
     id: recipe.actionId,
     label: recipe.label,
     verb: recipe.verb,

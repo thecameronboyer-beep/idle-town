@@ -2,6 +2,7 @@ import { primitiveToolCraftDefinitions } from "../data/craftables";
 import { fishResourceIds, resourceDefinitions } from "../data/resources";
 import { getTextileRecipe } from "../data/textiles";
 import type { ActionId, BuildingId, GameState } from "../types";
+import { getAlchemyRecipeLockReason, isAlchemyRecipeUnlocked } from "./alchemy";
 import { isCampfireLit } from "./buildings";
 import { getSmithingRecipeLockReason, isSmithingRecipeUnlocked } from "./smithing";
 import { getTextileRecipeLockReason, isTextileRecipeUnlocked } from "./textiles";
@@ -44,12 +45,19 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
   if (isSmithingRecipeUnlocked(state, actionId)) {
     return true;
   }
+  if (isAlchemyRecipeUnlocked(state, actionId)) {
+    return true;
+  }
   const textileRecipe = getTextileRecipe(actionId);
   if (textileRecipe) {
     return isTextileRecipeUnlocked(state, actionId);
   }
   const smithingLockReason = getSmithingRecipeLockReason(state, actionId);
   if (smithingLockReason) {
+    return false;
+  }
+  const alchemyLockReason = getAlchemyRecipeLockReason(state, actionId);
+  if (alchemyLockReason) {
     return false;
   }
 
@@ -66,6 +74,11 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
     case "gatherFlaxPlants":
     case "gatherFlaxFibers":
     case "gatherMeadowIngredients":
+    case "gatherForestIngredients":
+    case "gatherRiverIngredients":
+    case "gatherMineIngredients":
+    case "gatherDesertIngredients":
+    case "gatherSand":
     case "gatherWater":
     case "craftWoodenSpoon":
       return true;
@@ -102,6 +115,10 @@ export function getActionLockReason(state: GameState, actionId: ActionId): strin
   const smithingLockReason = getSmithingRecipeLockReason(state, actionId);
   if (smithingLockReason) {
     return smithingLockReason;
+  }
+  const alchemyLockReason = getAlchemyRecipeLockReason(state, actionId);
+  if (alchemyLockReason) {
+    return alchemyLockReason;
   }
   const textileLockReason = getTextileRecipeLockReason(state, actionId);
   if (textileLockReason) {

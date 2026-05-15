@@ -1,4 +1,5 @@
 import { actionDefinitions, getActionDefinition } from "../data/actions";
+import { getAlchemyRecipe } from "../data/alchemy";
 import { getSmithingRecipe } from "../data/smithing";
 import { getTextileRecipe } from "../data/textiles";
 import type { ActionId, Cost, GameState, RunningAction } from "../types";
@@ -143,6 +144,10 @@ export function getActionCost(actionId: ActionId): Cost {
   const smithingRecipe = getSmithingRecipe(actionId);
   if (smithingRecipe) {
     return smithingRecipe.cost;
+  }
+  const alchemyRecipe = getAlchemyRecipe(actionId);
+  if (alchemyRecipe) {
+    return alchemyRecipe.cost;
   }
   const textileRecipe = getTextileRecipe(actionId);
   if (textileRecipe) {

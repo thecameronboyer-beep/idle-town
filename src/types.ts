@@ -71,6 +71,11 @@ export type ActionId =
   | "gatherFlaxPlants"
   | "gatherFlaxFibers"
   | "gatherMeadowIngredients"
+  | "gatherForestIngredients"
+  | "gatherRiverIngredients"
+  | "gatherMineIngredients"
+  | "gatherDesertIngredients"
+  | "gatherSand"
   | "gatherWater"
   | "mineCoal"
   | "mineCopper"
@@ -122,7 +127,10 @@ export type ActionId =
   | "craftCopperKnife"
   | "craftBronzePickaxe"
   | "craftBronzeHatchet"
-  | "craftBronzeKnife";
+  | "craftBronzeKnife"
+  | "craftGlassVial"
+  | "brewHealthPotion"
+  | "brewManaPotion";
 
 export type SkillId =
   | "foraging"
@@ -132,6 +140,7 @@ export type SkillId =
   | "hunting"
   | "crafting"
   | "smithing"
+  | "alchemy"
   | "textiles"
   | "butchering"
   | "cooking"
@@ -233,7 +242,7 @@ export interface CombatState {
   log: CombatLogEntry[];
 }
 
-export type LocationId = "meadow" | "river" | "forest" | "mine";
+export type LocationId = "meadow" | "river" | "forest" | "mine" | "desert";
 export type CharacterLocationId = "camp" | LocationId;
 
 export type RunningActionPhase = "travelingTo" | "working" | "followUp" | "travelingBack";

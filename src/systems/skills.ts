@@ -31,6 +31,7 @@ export const skillDefinitions: SkillDefinition[] = [
   { id: "hunting", label: "Hunting", description: "Tracking and taking small animals." },
   { id: "crafting", label: "Crafting", description: "Making tools and useful camp goods." },
   { id: "smithing", label: "Smithing", description: "Smelting ore and shaping early metalwork." },
+  { id: "alchemy", label: "Alchemy", description: "Firing vials and brewing experimental potions." },
   { id: "textiles", label: "Tailoring", description: "Retting flax, spinning thread, weaving cloth, and sewing goods." },
   { id: "butchering", label: "Butchering", description: "Breaking animals and fish into usable parts." },
   { id: "cooking", label: "Cooking", description: "Preparing food over fire." },
@@ -47,6 +48,11 @@ const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
   gatherFlaxPlants: { skillId: "foraging", xp: 110 },
   gatherFlaxFibers: { skillId: "foraging", xp: 100 },
   gatherMeadowIngredients: { skillId: "foraging", xp: 120 },
+  gatherForestIngredients: { skillId: "foraging", xp: 140 },
+  gatherRiverIngredients: { skillId: "foraging", xp: 135 },
+  gatherMineIngredients: { skillId: "foraging", xp: 170 },
+  gatherDesertIngredients: { skillId: "foraging", xp: 180 },
+  gatherSand: { skillId: "foraging", xp: 100 },
   gatherWater: { skillId: "foraging", xp: 90 },
   mineCoal: { skillId: "mining", xp: 360 },
   mineCopper: { skillId: "mining", xp: 360 },
@@ -98,7 +104,10 @@ const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
   craftCopperKnife: { skillId: "smithing", xp: 220 },
   craftBronzePickaxe: { skillId: "smithing", xp: 500 },
   craftBronzeHatchet: { skillId: "smithing", xp: 440 },
-  craftBronzeKnife: { skillId: "smithing", xp: 340 }
+  craftBronzeKnife: { skillId: "smithing", xp: 340 },
+  craftGlassVial: { skillId: "alchemy", xp: 180 },
+  brewHealthPotion: { skillId: "alchemy", xp: 320 },
+  brewManaPotion: { skillId: "alchemy", xp: 320 }
 };
 
 const BUILDING_SKILL_XP: Record<BuildingId, number> = {

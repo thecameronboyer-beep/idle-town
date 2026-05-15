@@ -83,6 +83,18 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "Pale ore that will matter once bronze is possible."
   },
   {
+    id: "sand",
+    label: "Sand",
+    group: "resources",
+    blurb: "Clean desert sand ready for furnace glasswork.",
+    stackSize: 99,
+    weight: 0.2,
+    value: 1,
+    rarity: "common",
+    spoilage: { perishable: false },
+    quality: { enabled: false, baseQuality: 1 }
+  },
+  {
     id: "copperBar",
     label: "Copper Bar",
     group: "crafted",
@@ -147,6 +159,42 @@ export const resourceDefinitions: ResourceDefinition[] = [
     label: "Ladle",
     group: "crafted",
     blurb: "A small handled tool for moving hot metal safely."
+  },
+  {
+    id: "glassVial",
+    label: "Glass Vial",
+    group: "crafted",
+    blurb: "A small fired vessel for careful alchemy work.",
+    stackSize: 50,
+    weight: 0.1,
+    value: 4,
+    rarity: "common",
+    spoilage: { perishable: false },
+    quality: { enabled: false, baseQuality: 1 }
+  },
+  {
+    id: "healthPotion",
+    label: "Health Potion",
+    group: "liquids",
+    blurb: "A red meadow brew prepared for future healing systems.",
+    stackSize: 20,
+    weight: 0.2,
+    value: 12,
+    rarity: "uncommon",
+    spoilage: { perishable: false },
+    quality: { enabled: false, baseQuality: 1 }
+  },
+  {
+    id: "manaPotion",
+    label: "Mana Potion",
+    group: "liquids",
+    blurb: "A blue river brew prepared for future mana recovery systems.",
+    stackSize: 20,
+    weight: 0.2,
+    value: 12,
+    rarity: "uncommon",
+    spoilage: { perishable: false },
+    quality: { enabled: false, baseQuality: 1 }
   },
   {
     id: "water",

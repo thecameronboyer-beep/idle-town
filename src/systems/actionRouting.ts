@@ -8,7 +8,8 @@ const LOCATION_TRAVEL_MS: Record<LocationId, number> = {
   meadow: 10000,
   river: 15000,
   forest: 30000,
-  mine: 60000
+  mine: 60000,
+  desert: 75000
 };
 
 export function getRunningActionLoop(running: RunningAction): ActionId[] {
@@ -156,6 +157,11 @@ function isGatherAction(actionId: ActionId): boolean {
     actionId === "gatherFlaxPlants" ||
     actionId === "gatherFlaxFibers" ||
     actionId === "gatherMeadowIngredients" ||
+    actionId === "gatherForestIngredients" ||
+    actionId === "gatherRiverIngredients" ||
+    actionId === "gatherMineIngredients" ||
+    actionId === "gatherDesertIngredients" ||
+    actionId === "gatherSand" ||
     actionId === "gatherWater" ||
     actionId === "mineCoal" ||
     actionId === "mineCopper" ||
@@ -165,7 +171,19 @@ function isGatherAction(actionId: ActionId): boolean {
 }
 
 function getDefaultActionLocation(actionId: ActionId): LocationId {
-  return actionId === "gatherWater" || actionId === "fishRiver" ? "river" : "meadow";
+  if (actionId === "gatherWater" || actionId === "fishRiver" || actionId === "gatherRiverIngredients") {
+    return "river";
+  }
+  if (actionId === "gatherForestIngredients" || actionId === "chopTrees") {
+    return "forest";
+  }
+  if (actionId === "gatherMineIngredients" || actionId === "mineCoal" || actionId === "mineCopper" || actionId === "mineTin") {
+    return "mine";
+  }
+  if (actionId === "gatherDesertIngredients" || actionId === "gatherSand") {
+    return "desert";
+  }
+  return "meadow";
 }
 
 function getLocationTravelMs(locationId: LocationId): number {

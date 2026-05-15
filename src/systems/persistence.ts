@@ -514,11 +514,11 @@ function isRunningActionPhase(value: unknown): value is RunningAction["phase"] {
 }
 
 function isCharacterLocationId(value: unknown): value is CharacterLocationId {
-  return value === "camp" || value === "meadow" || value === "river" || value === "forest" || value === "mine";
+  return value === "camp" || value === "meadow" || value === "river" || value === "forest" || value === "mine" || value === "desert";
 }
 
 function isLocationId(value: unknown): value is LocationId {
-  return value === "meadow" || value === "river" || value === "forest" || value === "mine";
+  return value === "meadow" || value === "river" || value === "forest" || value === "mine" || value === "desert";
 }
 
 function isCombatLocationId(value: unknown): value is CombatLocationId {

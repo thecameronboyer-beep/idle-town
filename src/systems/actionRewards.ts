@@ -1,4 +1,5 @@
 import { primitiveToolCraftDefinitions, toolDefinitions } from "../data/craftables";
+import { getAlchemyRecipe } from "../data/alchemy";
 import { getSmithingRecipe } from "../data/smithing";
 import { getTextileRecipe } from "../data/textiles";
 import {
@@ -84,6 +85,14 @@ function rollBaseRewards(
       tone: "craft"
     };
   }
+  const alchemyRecipe = getAlchemyRecipe(actionId);
+  if (alchemyRecipe) {
+    return {
+      resources: alchemyRecipe.output,
+      message: `Cameron finishes ${alchemyRecipe.label.toLowerCase()}.`,
+      tone: "craft"
+    };
+  }
   const textileRecipe = getTextileRecipe(actionId);
   if (textileRecipe) {
     return {
@@ -127,10 +136,25 @@ function rollBaseRewards(
       };
     }
     case "gatherMeadowIngredients": {
-      const gathered = rollGatheringTable("meadow");
+      return gatherIngredients("meadow");
+    }
+    case "gatherForestIngredients": {
+      return gatherIngredients("forest");
+    }
+    case "gatherRiverIngredients": {
+      return gatherIngredients("river");
+    }
+    case "gatherMineIngredients": {
+      return gatherIngredients("mine");
+    }
+    case "gatherDesertIngredients": {
+      return gatherIngredients("desert");
+    }
+    case "gatherSand": {
+      const amount = randomInt(2, 5);
       return {
-        resources: gathered.resources,
-        message: gathered.message,
+        resources: { sand: amount },
+        message: `Cameron gathers ${amount} ${plural("Sand", amount)} from the desert.`,
         tone: "gain"
       };
     }
@@ -314,6 +338,10 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
   if (smithingRecipe) {
     return `${characterName} completed ${smithingRecipe.label.toLowerCase()}`;
   }
+  const alchemyRecipe = getAlchemyRecipe(actionId);
+  if (alchemyRecipe) {
+    return `${characterName} completed ${alchemyRecipe.label.toLowerCase()}`;
+  }
   const textileRecipe = getTextileRecipe(actionId);
   if (textileRecipe) {
     return `${characterName} completed ${textileRecipe.label.toLowerCase()}`;
@@ -330,6 +358,16 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
       return `${characterName} gathered flax fibers`;
     case "gatherMeadowIngredients":
       return `${characterName} gathered meadow ingredients`;
+    case "gatherForestIngredients":
+      return `${characterName} gathered forest forage`;
+    case "gatherRiverIngredients":
+      return `${characterName} gathered river forage`;
+    case "gatherMineIngredients":
+      return `${characterName} gathered mine forage`;
+    case "gatherDesertIngredients":
+      return `${characterName} gathered desert forage`;
+    case "gatherSand":
+      return `${characterName} gathered sand`;
     case "gatherWater":
       return `${characterName} gathered water`;
     case "mineCoal":
@@ -411,6 +449,15 @@ function applyRewardMultiplier(rewards: ActionRewards): ActionRewards {
     resourceCounts: rewards.resourceCounts
       ? applyTestRewardMultiplierToResourceCounts(rewards.resourceCounts)
       : undefined
+  };
+}
+
+function gatherIngredients(locationId: "meadow" | "forest" | "river" | "mine" | "desert"): ActionRewards {
+  const gathered = rollGatheringTable(locationId);
+  return {
+    resources: gathered.resources,
+    message: gathered.message,
+    tone: "gain"
   };
 }
 
