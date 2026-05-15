@@ -2,7 +2,7 @@ import "./style.css";
 import { loadGame, resetSave, saveGame } from "./systems/persistence";
 import { getActionProgress, getCurrentAction, getCurrentActions, simulateUntil } from "./systems/actions";
 import { simulateCombatUntil } from "./systems/combat";
-import { getActiveCookingEntry, getCookingProgress, simulateCookingUntil } from "./systems/cooking";
+import { discoverCookingRecipes, getActiveCookingEntry, getCookingProgress, simulateCookingUntil } from "./systems/cooking";
 import { formatDuration } from "./systems/math";
 import { createRenderer } from "./ui/render";
 
@@ -42,6 +42,7 @@ function tick(): void {
   const now = syncGameClock();
   const beforeSignature = getRenderSignature();
   simulateUntil(state, now);
+  discoverCookingRecipes(state);
   simulateCookingUntil(state, now);
   simulateCombatUntil(state, now);
   const afterSignature = getRenderSignature();
