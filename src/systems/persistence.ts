@@ -1,5 +1,6 @@
 import { actionDefinitions } from "../data/actions";
 import { combatClassIds, combatEnemyIds, combatLocationIds } from "../data/combat";
+import { cookingRecipeIds } from "../data/cooking";
 import { toolDefinitions } from "../data/craftables";
 import { wholeCountResourceIds } from "../data/resources";
 import {
@@ -8,7 +9,9 @@ import {
   createEmptyInventory,
   createEmptyResourceCounts,
   createEmptyTools,
+  createInitialCharacterNeeds,
   createInitialCharacterCombatStats,
+  createInitialCookingState,
   createInitialCombatState,
   createInitialState
 } from "../state/createInitialState";
@@ -17,6 +20,7 @@ import type {
   ActionLoop,
   CharacterLocationId,
   CharacterCombatStats,
+  CharacterNeeds,
   CombatClassId,
   CombatClassProgress,
   CombatClassProgressMap,
@@ -26,6 +30,10 @@ import type {
   CombatState,
   CombatUnit,
   CombatUnitKind,
+  CookingQueueEntry,
+  CookingRecipeId,
+  CookingState,
+  CookingStationId,
   EnemyId,
   GameState,
   Inventory,
@@ -44,7 +52,7 @@ import { normalizeInventory } from "./inventory";
 import { normalizeSkills } from "./skills";
 
 const SAVE_KEY = "idle-town:first-survival-slice:v1";
-const CURRENT_SAVE_VERSION = 9;
+const CURRENT_SAVE_VERSION = 10;
 const LEGACY_CAMPFIRE_DURATION_MS = 15 * 60 * 1000;
 const WHOLE_RESOURCE_AVERAGE_WEIGHTS: Partial<Record<ResourceId, number>> = {
   minnow: 1,
@@ -107,6 +115,7 @@ export function loadGame(): GameState {
       characters,
       seenResources: parsed.seenResources?.length ? parsed.seenResources : fallback.seenResources,
       skills: normalizeSkills(parsed.skills),
+      cooking: normalizeCookingState(parsed.cooking, fallback.cooking),
       combat: normalizeCombatState(parsed.combat, fallback.combat, characters),
       actionLoops,
       currentActions,
@@ -115,6 +124,7 @@ export function loadGame(): GameState {
       version: CURRENT_SAVE_VERSION
     };
     const savedVersion = typeof parsed.version === "number" ? parsed.version : 1;
+    migrateLegacyForageResources(state, savedVersion);
     migrateLegacyAnimalCounts(state, savedVersion);
     migrateWholeResourceCounts(state, savedVersion);
     migrateCampfireTimer(state, savedVersion);
@@ -182,12 +192,29 @@ function normalizeCharacters(
       ...candidate,
       locationId: isCharacterLocationId(candidate.locationId) ? candidate.locationId : fallbackCharacter.locationId,
       combat: normalizeCharacterCombat(candidate.combat, fallbackCharacter.combat),
+      needs: normalizeCharacterNeeds(candidate.needs, fallbackCharacter.needs),
       classProgress: normalizeCombatClassProgressMap(candidate.classProgress),
       inventory,
       resourceCounts,
       actionLoopId: typeof candidate.actionLoopId === "string" ? candidate.actionLoopId : fallbackCharacter.actionLoopId
     };
   });
+}
+
+function normalizeCharacterNeeds(
+  rawNeeds: unknown,
+  fallbackNeeds: CharacterNeeds = createInitialCharacterNeeds()
+): CharacterNeeds {
+  if (!rawNeeds || typeof rawNeeds !== "object") {
+    return fallbackNeeds;
+  }
+
+  const candidate = rawNeeds as Partial<CharacterNeeds>;
+  const maxHunger = clampNumber(candidate.maxHunger, 1, 999);
+  return {
+    maxHunger,
+    hunger: clampNumber(candidate.hunger, 0, maxHunger)
+  };
 }
 
 function normalizeCharacterCombat(
@@ -372,7 +399,9 @@ function normalizeActionLoop(savedLoop: unknown, index: number): ActionLoop | nu
 
   const candidate = savedLoop as Partial<ActionLoop>;
   const actionIds = Array.isArray(candidate.actionIds)
-    ? candidate.actionIds.filter((actionId): actionId is ActionId => isActionId(actionId))
+    ? candidate.actionIds
+        .map((actionId) => normalizeSavedActionId(actionId))
+        .filter((actionId): actionId is ActionId => Boolean(actionId))
     : [];
   if (!actionIds.length) {
     return null;
@@ -395,9 +424,11 @@ function normalizeLegacyActionLoop(legacyCurrentAction: unknown): ActionLoop | n
 
   const running = legacyCurrentAction as Partial<RunningAction>;
   const actionIds = Array.isArray(running.loopActionIds)
-    ? running.loopActionIds.filter((actionId): actionId is ActionId => isActionId(actionId))
-    : isActionId(running.actionId)
-      ? [running.actionId]
+    ? running.loopActionIds
+        .map((actionId) => normalizeSavedActionId(actionId))
+        .filter((actionId): actionId is ActionId => Boolean(actionId))
+    : normalizeSavedActionId(running.actionId)
+      ? [normalizeSavedActionId(running.actionId) as ActionId]
       : [];
   if (!actionIds.length) {
     return null;
@@ -424,26 +455,58 @@ function normalizeLoopLocations(actionIds: ActionId[], savedLocations: unknown):
 
 function normalizeCurrentActions(savedActions: unknown, legacyCurrentAction: unknown): RunningAction[] {
   const source = Array.isArray(savedActions) ? savedActions : legacyCurrentAction ? [legacyCurrentAction] : [];
-  return source.filter((action): action is RunningAction => isRunningAction(action));
+  return source
+    .map((action) => normalizeRunningAction(action))
+    .filter((action): action is RunningAction => Boolean(action));
 }
 
-function isRunningAction(action: unknown): action is RunningAction {
+function normalizeRunningAction(action: unknown): RunningAction | null {
   if (!action || typeof action !== "object") {
-    return false;
+    return null;
   }
 
   const candidate = action as Partial<RunningAction>;
-  return (
-    isActionId(candidate.actionId) &&
-    typeof candidate.characterId === "string" &&
-    isRunningActionPhase(candidate.phase) &&
-    typeof candidate.startedAt === "number" &&
-    typeof candidate.endsAt === "number"
-  );
+  const actionId = normalizeSavedActionId(candidate.actionId);
+  if (
+    !actionId ||
+    typeof candidate.characterId !== "string" ||
+    !isRunningActionPhase(candidate.phase) ||
+    typeof candidate.startedAt !== "number" ||
+    typeof candidate.endsAt !== "number"
+  ) {
+    return null;
+  }
+
+  const loopActionIds = Array.isArray(candidate.loopActionIds)
+    ? candidate.loopActionIds
+        .map((entry) => normalizeSavedActionId(entry))
+        .filter((entry): entry is ActionId => Boolean(entry))
+    : undefined;
+  const followUpActionId = normalizeSavedActionId(candidate.followUpActionId);
+
+  return {
+    ...candidate,
+    actionId,
+    characterId: candidate.characterId,
+    phase: candidate.phase,
+    loopActionIds,
+    followUpActionId: followUpActionId ?? undefined,
+    startedAt: candidate.startedAt,
+    endsAt: candidate.endsAt,
+    repeat: Boolean(candidate.repeat)
+  };
 }
 
 function isActionId(value: unknown): value is ActionId {
   return typeof value === "string" && actionDefinitions.some((action) => action.id === value);
+}
+
+function normalizeSavedActionId(value: unknown): ActionId | null {
+  if (value === "gatherMushrooms" || value === "gatherBerries") {
+    return "gatherMeadowIngredients";
+  }
+
+  return isActionId(value) ? value : null;
 }
 
 function isRunningActionPhase(value: unknown): value is RunningAction["phase"] {
@@ -525,6 +588,125 @@ function migrateWholeResourceCounts(state: GameState, savedVersion: number): voi
       character.resourceCounts[resourceId] = inferWholeResourceCount(resourceId, character.inventory[resourceId]);
     }
   }
+}
+
+function migrateLegacyForageResources(state: GameState, savedVersion: number): void {
+  if (savedVersion >= 10) {
+    return;
+  }
+
+  moveLegacyResource(state.inventory, "mushroom", "hearthcap");
+  moveLegacyResource(state.characterInventory, "mushroom", "hearthcap");
+  moveLegacyResource(state.inventory, "berry", "blueberries");
+  moveLegacyResource(state.characterInventory, "berry", "blueberries");
+  for (const character of state.characters) {
+    moveLegacyResource(character.inventory, "mushroom", "hearthcap");
+    moveLegacyResource(character.inventory, "berry", "blueberries");
+  }
+
+  state.seenResources = state.seenResources
+    .map((resourceId) => {
+      if (resourceId === "mushroom") {
+        return "hearthcap";
+      }
+      if (resourceId === "berry") {
+        return "blueberries";
+      }
+      return resourceId;
+    })
+    .filter((resourceId, index, resources) => resources.indexOf(resourceId) === index);
+}
+
+function moveLegacyResource(inventory: Inventory, from: ResourceId, to: ResourceId): void {
+  const amount = Number(inventory[from] ?? 0);
+  if (amount > 0) {
+    inventory[to] = Number(inventory[to] ?? 0) + amount;
+  }
+  delete inventory[from];
+}
+
+function normalizeCookingState(rawCooking: unknown, fallbackCooking: CookingState = createInitialCookingState()): CookingState {
+  if (!rawCooking || typeof rawCooking !== "object") {
+    return fallbackCooking;
+  }
+
+  const candidate = rawCooking as Partial<CookingState>;
+  const queue = Array.isArray(candidate.queue)
+    ? candidate.queue
+        .map((entry) => normalizeCookingQueueEntry(entry))
+        .filter((entry): entry is CookingQueueEntry => Boolean(entry))
+    : [];
+  let activeSeen = false;
+
+  return {
+    queue: queue.map((entry) => {
+      const isActive = entry.startedAt !== null && entry.endsAt !== null;
+      if (!isActive || !activeSeen) {
+        activeSeen = activeSeen || isActive;
+        return entry;
+      }
+      return {
+        ...entry,
+        startedAt: null,
+        endsAt: null
+      };
+    }),
+    knownRecipeIds: normalizeCookingRecipeIds(candidate.knownRecipeIds),
+    completedRecipeCounts: normalizeCompletedRecipeCounts(candidate.completedRecipeCounts)
+  };
+}
+
+function normalizeCookingQueueEntry(rawEntry: unknown): CookingQueueEntry | null {
+  if (!rawEntry || typeof rawEntry !== "object") {
+    return null;
+  }
+
+  const candidate = rawEntry as Partial<CookingQueueEntry>;
+  if (typeof candidate.id !== "string" || !isCookingRecipeId(candidate.recipeId)) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    recipeId: candidate.recipeId,
+    stationId: normalizeCookingStationId(candidate.stationId),
+    queuedAt: clampNumber(candidate.queuedAt, 0, Number.MAX_SAFE_INTEGER),
+    startedAt: typeof candidate.startedAt === "number" ? clampNumber(candidate.startedAt, 0, Number.MAX_SAFE_INTEGER) : null,
+    endsAt: typeof candidate.endsAt === "number" ? clampNumber(candidate.endsAt, 0, Number.MAX_SAFE_INTEGER) : null
+  };
+}
+
+function normalizeCookingRecipeIds(rawRecipeIds: unknown): CookingRecipeId[] {
+  if (!Array.isArray(rawRecipeIds)) {
+    return [];
+  }
+
+  return rawRecipeIds
+    .filter((recipeId): recipeId is CookingRecipeId => isCookingRecipeId(recipeId))
+    .filter((recipeId, index, recipeIds) => recipeIds.indexOf(recipeId) === index);
+}
+
+function normalizeCompletedRecipeCounts(rawCounts: unknown): Partial<Record<CookingRecipeId, number>> {
+  if (!rawCounts || typeof rawCounts !== "object") {
+    return {};
+  }
+
+  const normalized: Partial<Record<CookingRecipeId, number>> = {};
+  const counts = rawCounts as Partial<Record<CookingRecipeId, number>>;
+  for (const [recipeId, count] of Object.entries(counts)) {
+    if (isCookingRecipeId(recipeId)) {
+      normalized[recipeId] = clampNumber(count, 0, Number.MAX_SAFE_INTEGER);
+    }
+  }
+  return normalized;
+}
+
+function isCookingRecipeId(value: unknown): value is CookingRecipeId {
+  return typeof value === "string" && cookingRecipeIds.includes(value);
+}
+
+function normalizeCookingStationId(value: unknown): CookingStationId {
+  return value === "campfire" ? "campfire" : "campfire";
 }
 
 function inferWholeResourceCount(resourceId: ResourceId, totalWeight: number): number {
