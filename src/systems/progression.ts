@@ -28,6 +28,36 @@ function hasSeenFish(state: GameState): boolean {
   });
 }
 
+function hasSeenCookingPrep(state: GameState): boolean {
+  return (
+    state.seenResources.includes("water") ||
+    state.seenResources.includes("crudeBowl") ||
+    state.seenResources.includes("crudeWoodenSpoon") ||
+    state.seenResources.some((resourceId) =>
+      [
+        "wildGarlic",
+        "dandelionGreens",
+        "clover",
+        "chamomile",
+        "yarrow",
+        "wildOnion",
+        "sorrel",
+        "plantainLeaf",
+        "mint",
+        "fennel",
+        "lavender",
+        "hearthcap",
+        "sunrootTubers",
+        "wildCarrot",
+        "blueberries",
+        "strawberries",
+        "elderflowers",
+        "roseHips"
+      ].includes(resourceId)
+    )
+  );
+}
+
 export function isActionUnlocked(state: GameState, actionId: ActionId, now = Date.now()): boolean {
   if (isSmithingRecipeUnlocked(state, actionId)) {
     return true;
@@ -50,8 +80,10 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
     case "gatherStones":
     case "gatherFlaxPlants":
     case "gatherFlaxFibers":
-    case "gatherMushrooms":
-    case "gatherBerries":
+    case "gatherMeadowIngredients":
+    case "gatherWater":
+    case "craftCrudeBowl":
+    case "craftCrudeWoodenSpoon":
       return true;
     case "fishRiver":
       return hasUsableToolForRole(state, "fishing");
@@ -131,7 +163,7 @@ export function isBuildingVisible(_state: GameState, _buildingId: BuildingId, _n
 export function isBuildingUnlocked(state: GameState, buildingId: BuildingId, now = Date.now()): boolean {
   switch (buildingId) {
     case "campfire":
-      return isCampfireLit(state, now) || hasSeenMeat(state);
+      return isCampfireLit(state, now) || hasSeenMeat(state) || hasSeenCookingPrep(state);
     case "tanningRack":
       return state.buildings.tanningRack || state.seenResources.includes("hide");
     case "hideTent":
@@ -148,7 +180,7 @@ export function isBuildingUnlocked(state: GameState, buildingId: BuildingId, now
 export function getBuildingUnlockReason(_state: GameState, buildingId: BuildingId): string {
   switch (buildingId) {
     case "campfire":
-      return "See Rabbit Meat or Squirrel Meat";
+      return "See Meat, Water, or Meadow Ingredients";
     case "tanningRack":
     case "hideTent":
       return "See Hide";
