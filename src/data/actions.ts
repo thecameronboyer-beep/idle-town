@@ -88,11 +88,11 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Weave flax fibers around a simple stick frame."
   },
   {
-    id: "craftCrudeWoodenSpoon",
-    label: "Craft Crude Wooden Spoon",
-    verb: "carving a crude wooden spoon",
+    id: "craftWoodenSpoon",
+    label: "Craft Wooden Spoon",
+    verb: "carving a wooden spoon",
     durationMs: 10000,
-    blurb: "Carve a small spoon for eating hot camp stew."
+    blurb: "Carve a small wooden spoon for eating hot camp stew."
   },
   {
     id: "craftFishingPole",

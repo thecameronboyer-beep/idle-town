@@ -176,10 +176,10 @@ export const resourceDefinitions: ResourceDefinition[] = [
     cooking: { tags: ["bowl", "dirty", "reuse-hook"], compatibility: ["washing"] }
   },
   {
-    id: "crudeWoodenSpoon",
-    label: "Crude Wooden Spoon",
+    id: "woodenSpoon",
+    label: "Wooden Spoon",
     group: "utensils",
-    blurb: "A small carved spoon for eating hot stew without burning fingers.",
+    blurb: "A small carved wooden spoon for eating hot stew without burning fingers.",
     stackSize: 20,
     weight: 0.2,
     value: 2,

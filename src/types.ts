@@ -78,7 +78,7 @@ export type ActionId =
   | "fishRiver"
   | "craftLowestTool"
   | "craftBasket"
-  | "craftCrudeWoodenSpoon"
+  | "craftWoodenSpoon"
   | "craftFishingPole"
   | "craftWoodenBowl"
   | "craftStoneKnife"

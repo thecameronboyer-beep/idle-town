@@ -66,6 +66,7 @@ import hideTentUrl from "../assets/buildings/hide-tent-2x2.png";
 import tanningRackUrl from "../assets/buildings/tanning-rack-2x2.png";
 import woodenBowlIconUrl from "../assets/items/wooden-bowl-icon.png";
 import woodenClubEquippedSlotUrl from "../assets/items/wooden-club-equipped-slot.png";
+import woodenSpoonIconUrl from "../assets/items/wooden-spoon-icon.png";
 import woodenSwordEquippedSlotUrl from "../assets/items/wooden-sword-equipped-slot.png";
 import woodenTotemEquippedSlotUrl from "../assets/items/wooden-totem-equipped-slot.png";
 import woodenTwoHandedClubEquippedSlotUrl from "../assets/items/wooden-two-handed-club-equipped-slot.png";
@@ -265,7 +266,7 @@ const actionFilters: ActionFilter[] = [
     actionIds: [
       "craftLowestTool",
       "craftBasket",
-      "craftCrudeWoodenSpoon",
+      "craftWoodenSpoon",
       "craftFishingPole",
       "craftWoodenBowl",
       "craftStoneKnife",
@@ -507,7 +508,6 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   flaxFiber: flaxFiberIconUrl,
   chamomile: flaxFiberIconUrl,
   clover: flaxFiberIconUrl,
-  crudeWoodenSpoon: woodIconUrl,
   dandelionGreens: flaxFiberIconUrl,
   dirtyBowl: woodIconUrl,
   elderflowers: flaxFiberIconUrl,
@@ -539,6 +539,7 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   wildOnion: flaxFiberIconUrl,
   yarrow: flaxFiberIconUrl,
   woodenBowl: woodenBowlIconUrl,
+  woodenSpoon: woodenSpoonIconUrl,
   wood: woodIconUrl
 };
 
@@ -2314,7 +2315,7 @@ function renderCookingRecipeCard(state: GameState, recipe: CookingRecipeDefiniti
     { label: "Makes", value: getCookingRecipeOutputText(recipe) },
     { label: "Nutrition", value: `${recipe.nutrition.hunger ?? 0} hunger` },
     { label: "Cooked", value: `${completedCount}` },
-    { label: "Eating", value: "Stews need a Crude Wooden Spoon" },
+    { label: "Eating", value: "Stews need a Wooden Spoon" },
     { label: "Failure", value: `${Math.round(recipe.failureChance * 100)}% base chance later` }
   ];
   const statusText = canQueue ? "Ready" : lockReason;
@@ -2969,8 +2970,8 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [minnowIconUrl];
     case "craftLowestTool":
       return [craftMaterialsBundleButtonUrl];
-    case "craftCrudeWoodenSpoon":
-      return [woodIconUrl];
+    case "craftWoodenSpoon":
+      return [woodenSpoonIconUrl];
     case "craftWoodenBowl":
       return [woodenBowlIconUrl];
     case "craftLeatherBackpack":
@@ -3169,8 +3170,8 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
       ];
     case "craftBasket":
       return [...rows, { label: "Makes", value: "1 Basket" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
-    case "craftCrudeWoodenSpoon":
-      return [...rows, { label: "Makes", value: "1 Crude Wooden Spoon" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
+    case "craftWoodenSpoon":
+      return [...rows, { label: "Makes", value: "1 Wooden Spoon" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftFishingPole":
       return [...rows, { label: "Makes", value: "1 Fishing Pole" }, { label: "Uses", value: describeCost(getActionCost(actionId)) }];
     case "craftLeatherBackpack":
@@ -4323,8 +4324,8 @@ function formatLogResource(resourceId: ResourceId, amount: number): string {
       return "Water";
     case "dirtyBowl":
       return "Dirty Bowls";
-    case "crudeWoodenSpoon":
-      return "Crude Wooden Spoons";
+    case "woodenSpoon":
+      return "Wooden Spoons";
     case "clothWrap":
       return "Cloth Wraps";
     case "linenBandage":

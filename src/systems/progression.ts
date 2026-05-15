@@ -67,7 +67,7 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
     case "gatherFlaxFibers":
     case "gatherMeadowIngredients":
     case "gatherWater":
-    case "craftCrudeWoodenSpoon":
+    case "craftWoodenSpoon":
       return true;
     case "fishRiver":
       return hasUsableToolForRole(state, "fishing");

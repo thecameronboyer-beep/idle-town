@@ -28,8 +28,8 @@ export function getEatFoodLockReason(state: GameState, resourceId: ResourceId): 
     return `Needs ${getResourceLabel(resourceId)}`;
   }
 
-  if (isStewFood(resourceId) && !hasCost(state, { crudeWoodenSpoon: 1 })) {
-    return "Needs Crude Wooden Spoon";
+  if (isStewFood(resourceId) && !hasCost(state, { woodenSpoon: 1 })) {
+    return "Needs Wooden Spoon";
   }
 
   const character = state.characters.find((entry) => entry.id === state.selectedCharacterId);

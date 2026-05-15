@@ -153,10 +153,10 @@ function rollBaseRewards(
     case "craftLowestTool":
     case "craftLeatherBackpack":
       break;
-    case "craftCrudeWoodenSpoon":
+    case "craftWoodenSpoon":
       return {
-        resources: { crudeWoodenSpoon: 1 },
-        message: "Cameron carves a crude wooden spoon.",
+        resources: { woodenSpoon: 1 },
+        message: "Cameron carves a wooden spoon.",
         tone: "craft"
       };
     case "chopTrees": {
@@ -342,8 +342,8 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
       return `${characterName} caught river fish`;
     case "craftLowestTool":
       return `${characterName} balanced tool stock`;
-    case "craftCrudeWoodenSpoon":
-      return `${characterName} crafted crude wooden spoons`;
+    case "craftWoodenSpoon":
+      return `${characterName} crafted wooden spoons`;
     case "craftWoodenBowl":
       return `${characterName} carved wooden bowls`;
     case "craftLeatherBackpack":
