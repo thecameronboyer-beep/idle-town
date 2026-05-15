@@ -1691,6 +1691,69 @@ h3 {
   line-height: 1.2;
 }
 
+.alchemy-panel-card {
+  width: min(100%, 64rem);
+}
+
+.alchemy-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.alchemy-mode-button {
+  min-height: 42px;
+  padding: 0.5rem 0.65rem;
+  color: var(--muted);
+  background: rgba(17, 18, 14, 0.58);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.alchemy-mode-button.active {
+  color: #ffe3a6;
+  border-color: rgba(214, 164, 81, 0.62);
+  background:
+    linear-gradient(90deg, rgba(115, 168, 160, 0.18), rgba(214, 164, 81, 0.14)),
+    rgba(17, 18, 14, 0.82);
+}
+
+.alchemy-brewing-panel {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.alchemy-status-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.alchemy-active-row:not(.idle) {
+  border-color: rgba(115, 168, 160, 0.42);
+  background:
+    linear-gradient(90deg, rgba(115, 168, 160, 0.14), rgba(214, 164, 81, 0.1)),
+    rgba(17, 18, 14, 0.68);
+}
+
+.alchemy-recipe-grid {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.alchemy-recipe-card .smithing-recipe-meta small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+}
+
+.alchemy-empty-panel {
+  display: grid;
+  min-height: 14rem;
+  align-items: stretch;
+}
+
 .cooking-panel-card {
   width: min(100%, 62rem);
 }

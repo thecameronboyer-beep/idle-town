@@ -1,4 +1,11 @@
 import { getActionDefinition } from "../data/actions";
+import {
+  alchemyActionIds,
+  brewingActionIds,
+  getAlchemyRecipe,
+  type AlchemyPanelId,
+  type AlchemyRecipeKind
+} from "../data/alchemy";
 import { combatClassDefinitions, getCombatEnemyDefinition, getCombatLocationDefinition } from "../data/combat";
 import { getCookingRecipeCost } from "../data/cooking";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
@@ -43,6 +50,7 @@ import fishingPoleEmptySlotUrl from "../assets/items/fishing-pole-empty-slot.png
 import fishingPoleEquippedSlotUrl from "../assets/items/fishing-pole-equipped-slot.png";
 import flaxFiberIconUrl from "../assets/items/flax-fiber-icon.png";
 import forestLocationIconUrl from "../assets/locations/forest-location-icon.png";
+import desertLocationIconUrl from "../assets/locations/desert-location-icon.svg";
 import berryIconUrl from "../assets/items/berry-icon.png";
 import hideIconUrl from "../assets/items/hide-icon.png";
 import leatherBackpackEquippedSlotUrl from "../assets/items/leather-backpack-equipped-slot.png";
@@ -143,6 +151,7 @@ import {
   skillDefinitions
 } from "../systems/skills";
 import { getFurnaceFuelStatus, getSmithingRecipeOutputText, isSmeltingAction } from "../systems/smithing";
+import { getAlchemyRecipeOutputText, getAlchemyStationStatus } from "../systems/alchemy";
 import { getTextileRecipeOutputText } from "../systems/textiles";
 import { getBestUsableToolForRole, getMaxToolDurability } from "../systems/tools";
 import {
@@ -178,6 +187,7 @@ import type {
 type ActionFilterId =
   | "crafting"
   | "smithing"
+  | "alchemy"
   | "textiles"
   | "foraging"
   | "mining"
@@ -243,7 +253,19 @@ const actionFilters: ActionFilter[] = [
   {
     id: "foraging",
     label: "Forage",
-    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxPlants", "gatherFlaxFibers", "gatherMeadowIngredients", "gatherWater"]
+    actionIds: [
+      "gatherSticks",
+      "gatherStones",
+      "gatherFlaxPlants",
+      "gatherFlaxFibers",
+      "gatherMeadowIngredients",
+      "gatherForestIngredients",
+      "gatherRiverIngredients",
+      "gatherMineIngredients",
+      "gatherDesertIngredients",
+      "gatherSand",
+      "gatherWater"
+    ]
   },
   {
     id: "fishing",
@@ -293,6 +315,11 @@ const actionFilters: ActionFilter[] = [
     actionIds: [...smithingActionIds]
   },
   {
+    id: "alchemy",
+    label: "Alchemy",
+    actionIds: [...alchemyActionIds]
+  },
+  {
     id: "textiles",
     label: "Tailoring",
     actionIds: [...textileActionIds]
@@ -323,7 +350,7 @@ const actionCategories: ActionCategory[] = [
   {
     id: "processing",
     label: "Processing",
-    filterIds: ["crafting", "smithing", "textiles", "butchering", "cooking", "leatherworking"]
+    filterIds: ["crafting", "smithing", "alchemy", "textiles", "butchering", "cooking", "leatherworking"]
   },
   {
     id: "camp",
@@ -335,6 +362,7 @@ const actionCategories: ActionCategory[] = [
 const filterSkillIds: Record<ActionFilterId, SkillId> = {
   crafting: "crafting",
   smithing: "smithing",
+  alchemy: "alchemy",
   textiles: "textiles",
   foraging: "foraging",
   mining: "mining",
@@ -348,7 +376,7 @@ const filterSkillIds: Record<ActionFilterId, SkillId> = {
 
 const characterSkillGroups: SkillGroup[] = [
   { label: "Gather", skillIds: ["foraging", "mining", "fishing", "woodcutting", "hunting"] },
-  { label: "Process", skillIds: ["crafting", "smithing", "textiles", "butchering", "cooking", "leatherworking"] },
+  { label: "Process", skillIds: ["crafting", "smithing", "alchemy", "textiles", "butchering", "cooking", "leatherworking"] },
   { label: "Combat", skillIds: [] },
   { label: "Other", skillIds: ["construction", "agility"] }
 ];
@@ -363,6 +391,17 @@ const smithingProductCategories: Array<{ id: SmithingProductCategory; label: str
   { id: "weapon", label: "Weapon" },
   { id: "armor", label: "Armor" }
 ];
+
+const alchemyPanelTabs: Array<{ id: AlchemyPanelId; label: string; emptyLabel: string }> = [
+  { id: "brewing", label: "Brewing", emptyLabel: "Brewing" },
+  { id: "transmutation", label: "Transmute", emptyLabel: "Transmutation" },
+  { id: "decomposition", label: "Decomp", emptyLabel: "Decomposition" }
+];
+
+const alchemyRecipeKindLabels: Record<AlchemyRecipeKind, string> = {
+  vessel: "Glassware",
+  potion: "Potions"
+};
 
 const craftingMaterialLabels: Record<CraftingMaterialId, string> = {
   primitive: "Primitive"
@@ -409,19 +448,25 @@ const locationDefinitions: LocationDefinition[] = [
     id: "river",
     label: "River",
     iconUrl: riverLocationIconUrl,
-    actionIds: ["gatherStones", "gatherFlaxFibers", "gatherWater"]
+    actionIds: ["gatherStones", "gatherFlaxFibers", "gatherWater", "gatherRiverIngredients"]
   },
   {
     id: "forest",
     label: "Forest",
     iconUrl: forestLocationIconUrl,
-    actionIds: ["chopTrees"]
+    actionIds: ["gatherForestIngredients"]
   },
   {
     id: "mine",
     label: "Mine",
     iconUrl: mineLocationIconUrl,
-    actionIds: ["mineCoal", "mineCopper", "mineTin"]
+    actionIds: ["gatherMineIngredients"]
+  },
+  {
+    id: "desert",
+    label: "Desert",
+    iconUrl: desertLocationIconUrl,
+    actionIds: ["gatherSand", "gatherDesertIngredients"]
   }
 ];
 
@@ -687,6 +732,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
   let activeCharacterDetailTab: CharacterDetailTab = "inventory";
   let selectedCraftingMaterial: CraftingMaterialId = "primitive";
   let selectedSmithingMaterial: SmithingMaterialId = "copper";
+  let selectedAlchemyPanel: AlchemyPanelId = "brewing";
   let campLogVisible = false;
   let partyPanelVisible = false;
   let characterPanelVisible = false;
@@ -750,6 +796,12 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
 
     if (command === "select-smithing-material" && isSmithingMaterialId(id)) {
       selectedSmithingMaterial = id;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "select-alchemy-panel" && isAlchemyPanelId(id)) {
+      selectedAlchemyPanel = id;
       handlers.requestRender();
       return;
     }
@@ -1120,6 +1172,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       activeLocation,
       selectedCraftingMaterial,
       selectedSmithingMaterial,
+      selectedAlchemyPanel,
       campLogVisible,
       partyPanelVisible,
       characterPanelVisible,
@@ -1146,6 +1199,7 @@ function renderApp(
   activeLocation: LocationId,
   selectedCraftingMaterial: CraftingMaterialId,
   selectedSmithingMaterial: SmithingMaterialId,
+  selectedAlchemyPanel: AlchemyPanelId,
   campLogVisible: boolean,
   partyPanelVisible: boolean,
   characterPanelVisible: boolean,
@@ -1197,6 +1251,7 @@ function renderApp(
                   activeLocation,
                   selectedCraftingMaterial,
                   selectedSmithingMaterial,
+                  selectedAlchemyPanel,
                   actionLoopTarget,
                   now
                 )
@@ -1648,6 +1703,7 @@ function renderWorkArea(
   activeLocation: LocationId,
   selectedCraftingMaterial: CraftingMaterialId,
   selectedSmithingMaterial: SmithingMaterialId,
+  selectedAlchemyPanel: AlchemyPanelId,
   actionLoopTarget: ActionLoopTarget,
   now: number
 ): string {
@@ -1669,6 +1725,7 @@ function renderWorkArea(
         activeLocation,
         selectedCraftingMaterial,
         selectedSmithingMaterial,
+        selectedAlchemyPanel,
         actionLoopTarget,
         now
       )}
@@ -1736,6 +1793,7 @@ function renderActionStack(
   activeLocation: LocationId,
   selectedCraftingMaterial: CraftingMaterialId,
   selectedSmithingMaterial: SmithingMaterialId,
+  selectedAlchemyPanel: AlchemyPanelId,
   actionLoopTarget: ActionLoopTarget,
   now: number
 ): string {
@@ -1750,6 +1808,7 @@ function renderActionStack(
         activeLocation,
         selectedCraftingMaterial,
         selectedSmithingMaterial,
+        selectedAlchemyPanel,
         actionLoopTarget,
         now
       )}
@@ -1804,13 +1863,16 @@ function renderActionPanel(
   activeLocation: LocationId,
   selectedCraftingMaterial: CraftingMaterialId,
   selectedSmithingMaterial: SmithingMaterialId,
+  selectedAlchemyPanel: AlchemyPanelId,
   actionLoopTarget: ActionLoopTarget,
   now: number
 ): string {
   const filter = getActionFilter(activeActionFilter);
   const actionIds =
-    filter.id === "foraging" || filter.id === "woodcutting"
-      ? getLocation(activeLocation, filter.id).actionIds
+    filter.id === "foraging"
+      ? getForagingActionIds(getActiveLocationForFilter(filter.id, activeLocation))
+      : filter.id === "woodcutting"
+      ? filter.actionIds ?? []
       : (filter.actionIds ?? []);
 
   if (filter.id === "crafting") {
@@ -1818,6 +1880,9 @@ function renderActionPanel(
   }
   if (filter.id === "smithing") {
     return renderSmithingActionPanel(state, actionIds, selectedSmithingMaterial, actionLoopTarget, now);
+  }
+  if (filter.id === "alchemy") {
+    return renderAlchemyActionPanel(state, actionIds, selectedAlchemyPanel, actionLoopTarget, now);
   }
   if (filter.id === "textiles") {
     return renderTextileActionPanel(state, actionIds, actionLoopTarget, now);
@@ -2421,6 +2486,238 @@ function renderSmithingRecipeCard(state: GameState, actionId: ActionId, actionLo
   `;
 }
 
+function renderAlchemyActionPanel(
+  state: GameState,
+  actionIds: ActionId[],
+  selectedAlchemyPanel: AlchemyPanelId,
+  actionLoopTarget: ActionLoopTarget,
+  now: number
+): string {
+  const activePanel = alchemyPanelTabs.some((panel) => panel.id === selectedAlchemyPanel)
+    ? selectedAlchemyPanel
+    : "brewing";
+
+  return `
+    <section class="action-panel alchemy-action-panel" data-editor-id="action-panel-alchemy" data-editor-label="Alchemy action panel" data-editor-files="src/ui/render.ts, src/style.css">
+      <div class="smithing-panel-card alchemy-panel-card">
+        ${renderAlchemyPanelTabs(activePanel)}
+        ${
+          activePanel === "brewing"
+            ? renderAlchemyBrewingPanel(state, actionIds, actionLoopTarget, now)
+            : renderAlchemyBlankPanel(activePanel)
+        }
+      </div>
+    </section>
+  `;
+}
+
+function renderAlchemyPanelTabs(activePanel: AlchemyPanelId): string {
+  return `
+    <div class="alchemy-mode-tabs" role="tablist" aria-label="Alchemy panels">
+      ${alchemyPanelTabs
+        .map((panel) => {
+          const active = panel.id === activePanel;
+          return `
+            <button
+              class="alchemy-mode-button ${active ? "active" : ""}"
+              type="button"
+              role="tab"
+              data-command="select-alchemy-panel"
+              data-id="${panel.id}"
+              aria-selected="${active}"
+              aria-pressed="${active}"
+            >
+              ${panel.label}
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderAlchemyBrewingPanel(
+  state: GameState,
+  actionIds: ActionId[],
+  actionLoopTarget: ActionLoopTarget,
+  now: number
+): string {
+  const brewingIds = actionIds.filter((actionId) => brewingActionIds.some((id) => id === actionId));
+  const vesselIds = brewingIds.filter((actionId) => getAlchemyRecipe(actionId)?.kind === "vessel");
+  const potionIds = brewingIds.filter((actionId) => getAlchemyRecipe(actionId)?.kind === "potion");
+
+  return `
+    <div class="alchemy-brewing-panel">
+      ${renderAlchemyStationStatus(state)}
+      ${renderAlchemyActiveWork(state, now)}
+      ${renderAlchemyRecipeSection(state, alchemyRecipeKindLabels.vessel, vesselIds, actionLoopTarget)}
+      ${renderAlchemyRecipeSection(state, alchemyRecipeKindLabels.potion, potionIds, actionLoopTarget)}
+    </div>
+  `;
+}
+
+function renderAlchemyStationStatus(state: GameState): string {
+  const status = getAlchemyStationStatus(state);
+
+  return `
+    <div class="smithing-status-grid alchemy-status-grid">
+      <div class="smithing-status-item">
+        <span>Furnace</span>
+        <strong>${status.furnaceBuilt ? "Stone Furnace" : "Not built"}</strong>
+      </div>
+      <div class="smithing-status-item">
+        <span>Coal</span>
+        <strong>${status.coal}</strong>
+      </div>
+      <div class="smithing-status-item">
+        <span>Vials</span>
+        <strong>${status.vials}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function renderAlchemyActiveWork(state: GameState, now: number): string {
+  const running = getCurrentAction(state);
+  const activeActionId = running ? getActiveActionId(running) : null;
+  const recipe = activeActionId ? getAlchemyRecipe(activeActionId) : undefined;
+  if (!running || !recipe) {
+    return `
+      <div class="smithing-active-row idle alchemy-active-row">
+        <span>No active brew</span>
+        <strong>Bench idle</strong>
+      </div>
+    `;
+  }
+
+  const progress = clamp(getActionProgress(state, now), 0, 1);
+
+  return `
+    <div class="smithing-active-row alchemy-active-row">
+      <span>Active alchemy</span>
+      <strong>${recipe.label}</strong>
+      <div class="progress-track smithing-progress-track">
+        <span data-alchemy-action-progress style="transform: scaleX(${progress.toFixed(4)})"></span>
+        <em data-alchemy-action-remaining>${formatDuration(running.endsAt - now)}</em>
+      </div>
+    </div>
+  `;
+}
+
+function renderAlchemyRecipeSection(
+  state: GameState,
+  label: string,
+  actionIds: ActionId[],
+  actionLoopTarget: ActionLoopTarget
+): string {
+  if (!actionIds.length) {
+    return "";
+  }
+
+  return `
+    <div class="smithing-recipe-section alchemy-recipe-section">
+      <div class="section-heading">
+        <span>${label}</span>
+      </div>
+      <div class="smithing-recipe-grid alchemy-recipe-grid">
+        ${actionIds.map((actionId) => renderAlchemyRecipeCard(state, actionId, actionLoopTarget)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderAlchemyRecipeCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
+  const view = getAlchemyActionButtonView(state, actionId, actionLoopTarget);
+  if (!view) {
+    return "";
+  }
+
+  const { definition, recipe, cost, unlocked, canAssignFollowUp, active, disabled, statusText, buttonLabel, tooltipRows } = view;
+
+  return `
+    <button
+      class="smithing-recipe-card alchemy-recipe-card ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}"
+      type="button"
+      data-command="start-action"
+      data-id="${actionId}"
+      data-editor-id="alchemy-recipe-${actionId}"
+      data-editor-label="Alchemy recipe: ${definition.label}"
+      data-editor-files="src/ui/render.ts, src/style.css"
+      data-disabled="${disabled}"
+      data-tooltip-source
+      aria-disabled="${disabled}"
+      aria-label="${buttonLabel} ${definition.label}"
+    >
+      <span class="smithing-recipe-icon" aria-hidden="true">${renderActionIcon(actionId)}</span>
+      <span class="smithing-recipe-copy">
+        <strong>${definition.label}</strong>
+        <small>${statusText}</small>
+      </span>
+      <span class="smithing-recipe-meta">
+        <b>${getAlchemyRecipeOutputText(recipe.actionId)}</b>
+        <small>${describeCost(cost)}</small>
+      </span>
+      ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+    </button>
+  `;
+}
+
+function getAlchemyActionButtonView(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget) {
+  const definition = getActionDefinition(actionId);
+  const recipe = getAlchemyRecipe(actionId);
+  if (!definition || !recipe) {
+    return null;
+  }
+
+  const unlocked = isActionUnlocked(state, actionId);
+  const cost = getActionCost(actionId);
+  const canStart = canStartAction(state, actionId);
+  const targetLoop = actionLoopTarget ? getActionLoop(state, actionLoopTarget.loopId) : null;
+  const running = getCurrentAction(state);
+  const assigningLoopAction = Boolean(actionLoopTarget && targetLoop);
+  const canAssignFollowUp = Boolean(
+    assigningLoopAction && targetLoop && actionLoopTarget && canInsertActionInSavedLoop(targetLoop, actionLoopTarget.afterIndex, actionId)
+  );
+  const active = running ? getActiveActionId(running) === actionId : false;
+  const disabled = assigningLoopAction ? !canAssignFollowUp : !canStart || active;
+  const missingCostText = getMissingCostText(state, cost);
+  const lockReason = canStart ? "" : unlocked ? missingCostText : getActionLockReason(state, actionId);
+  const statusText = assigningLoopAction
+    ? canAssignFollowUp
+      ? "Set as action loop step"
+      : "Not valid for this loop"
+    : active
+      ? "Running"
+      : !canStart && lockReason
+        ? lockReason
+        : "Ready";
+  const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
+  const tooltipRows = getActionTooltipRows(actionId, definition.durationMs);
+
+  return {
+    definition,
+    recipe,
+    cost,
+    unlocked,
+    canAssignFollowUp,
+    active,
+    disabled,
+    statusText,
+    buttonLabel,
+    tooltipRows
+  };
+}
+
+function renderAlchemyBlankPanel(panelId: AlchemyPanelId): string {
+  const panel = alchemyPanelTabs.find((entry) => entry.id === panelId) ?? alchemyPanelTabs[0];
+
+  return `
+    <div class="alchemy-empty-panel" role="tabpanel" aria-label="${panel.emptyLabel}">
+      <div class="smithing-empty-column">No ${panel.emptyLabel.toLowerCase()} recipes yet.</div>
+    </div>
+  `;
+}
+
 function renderTextileActionPanel(
   state: GameState,
   actionIds: ActionId[],
@@ -3021,6 +3318,10 @@ function isSmithingMaterialId(id: string | undefined): id is SmithingMaterialId 
   return id === "copper" || id === "bronze";
 }
 
+function isAlchemyPanelId(id: string | undefined): id is AlchemyPanelId {
+  return id === "brewing" || id === "transmutation" || id === "decomposition";
+}
+
 function isCraftingMaterialId(id: string | undefined): id is CraftingMaterialId {
   return id === "primitive";
 }
@@ -3100,6 +3401,8 @@ function getLocationsForFilter(filterId: ActionFilterId): typeof locationDefinit
       return locationDefinitions.filter((location) => location.id === "meadow");
     case "woodcutting":
       return locationDefinitions.filter((location) => location.id === "forest");
+    case "foraging":
+      return locationDefinitions;
     default:
       return locationDefinitions.filter((location) => location.id === "meadow" || location.id === "river");
   }
@@ -3122,7 +3425,11 @@ function getActiveLocationForFilter(filterId: ActionFilterId, activeLocation: Lo
     return "forest";
   }
 
-  return activeLocation === "meadow" || activeLocation === "river" ? activeLocation : "meadow";
+  return locationDefinitions.some((location) => location.id === activeLocation) ? activeLocation : "meadow";
+}
+
+function getForagingActionIds(locationId: LocationId): ActionId[] {
+  return getLocation(locationId, "foraging").actionIds;
 }
 
 function getActionStartLocation(actionId: ActionId, activeLocation: LocationId): LocationId {
@@ -3138,11 +3445,27 @@ function getActionStartLocation(actionId: ActionId, activeLocation: LocationId):
     return "river";
   }
 
+  if (actionId === "gatherRiverIngredients") {
+    return "river";
+  }
+
+  if (actionId === "gatherForestIngredients") {
+    return "forest";
+  }
+
+  if (actionId === "gatherMineIngredients") {
+    return "mine";
+  }
+
+  if (actionId === "gatherDesertIngredients" || actionId === "gatherSand") {
+    return "desert";
+  }
+
   if (actionId === "chopTrees") {
     return "forest";
   }
 
-  return activeLocation === "forest" ? "meadow" : activeLocation;
+  return activeLocation;
 }
 
 function isMiningAction(actionId: ActionId): boolean {
@@ -3395,6 +3718,16 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [flaxFiberIconUrl];
     case "gatherMeadowIngredients":
       return [mushroomIconUrl, berryIconUrl];
+    case "gatherForestIngredients":
+      return [forestLocationIconUrl, berryIconUrl];
+    case "gatherRiverIngredients":
+      return [riverLocationIconUrl, mushroomIconUrl];
+    case "gatherMineIngredients":
+      return [mineLocationIconUrl, mushroomIconUrl];
+    case "gatherDesertIngredients":
+      return [desertLocationIconUrl, berryIconUrl];
+    case "gatherSand":
+      return [desertLocationIconUrl, stoneIconUrl];
     case "gatherWater":
       return [riverLocationIconUrl];
     case "mineCoal":
@@ -3457,6 +3790,12 @@ function getActionIconUrls(actionId: ActionId): string[] {
     case "craftBronzeHatchet":
     case "craftBronzeKnife":
       return [copperIconUrl, tinIconUrl];
+    case "craftGlassVial":
+      return [stoneFurnaceUrl, desertLocationIconUrl];
+    case "brewHealthPotion":
+      return [berryIconUrl, mushroomIconUrl];
+    case "brewManaPotion":
+      return [riverLocationIconUrl, berryIconUrl];
   }
 
   return [];
@@ -3512,6 +3851,18 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
       { label: "Unlock", value: smithingRecipe.unlockHint }
     ];
   }
+  const alchemyRecipe = getAlchemyRecipe(actionId);
+  if (alchemyRecipe) {
+    const stationText = alchemyRecipe.actionId === "craftGlassVial" ? "Stone Furnace" : "Alchemy bench";
+    return [
+      ...rows,
+      { label: "Panel", value: "Brewing" },
+      { label: "Station", value: stationText },
+      { label: "Uses", value: describeCost(alchemyRecipe.cost) },
+      { label: "Makes", value: getAlchemyRecipeOutputText(alchemyRecipe.actionId) },
+      { label: "Unlock", value: alchemyRecipe.unlockHint }
+    ];
+  }
   const textileRecipe = getTextileRecipe(actionId);
   if (textileRecipe) {
     const stationText = textileRecipe.requiredBuildings?.length
@@ -3556,6 +3907,36 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
         { label: "Pickup", value: "1-2 weighted ingredient rolls" },
         { label: "Kinds", value: "Herbs, flowers, berries, roots, vegetables, seasonings" }
       ];
+    case "gatherForestIngredients":
+      return [
+        ...rows,
+        { label: "Table", value: getGatheringTableSummary("forest") },
+        { label: "Pickup", value: "1-2 weighted ingredient rolls" },
+        { label: "Kinds", value: "Berries, herbs, nuts, fungus, resin" }
+      ];
+    case "gatherRiverIngredients":
+      return [
+        ...rows,
+        { label: "Table", value: getGatheringTableSummary("river") },
+        { label: "Pickup", value: "1-2 weighted ingredient rolls" },
+        { label: "Kinds", value: "Wetland herbs, roots, seeds, fungus" }
+      ];
+    case "gatherMineIngredients":
+      return [
+        ...rows,
+        { label: "Table", value: getGatheringTableSummary("mine") },
+        { label: "Pickup", value: "1-2 weighted ingredient rolls" },
+        { label: "Kinds", value: "Cave herbs, fungus, roots, lichen" }
+      ];
+    case "gatherDesertIngredients":
+      return [
+        ...rows,
+        { label: "Table", value: getGatheringTableSummary("desert") },
+        { label: "Pickup", value: "1-2 weighted ingredient rolls" },
+        { label: "Kinds", value: "Desert herbs, fruits, roots, flowers, fungus" }
+      ];
+    case "gatherSand":
+      return [...rows, { label: "Pickup", value: "2-5 Sand" }, { label: "Place", value: "Desert" }];
     case "gatherWater":
       return [...rows, { label: "Pickup", value: "1-3 Water" }, { label: "Place", value: "River" }];
     case "mineCoal":

@@ -131,6 +131,8 @@ function updateLiveActionIndicators(): void {
   const remainingElement = document.querySelector<HTMLElement>("[data-action-remaining]");
   const smithingProgressElement = document.querySelector<HTMLElement>("[data-smithing-action-progress]");
   const smithingRemainingElement = document.querySelector<HTMLElement>("[data-smithing-action-remaining]");
+  const alchemyProgressElement = document.querySelector<HTMLElement>("[data-alchemy-action-progress]");
+  const alchemyRemainingElement = document.querySelector<HTMLElement>("[data-alchemy-action-remaining]");
   const textileProgressElement = document.querySelector<HTMLElement>("[data-textile-action-progress]");
   const textileRemainingElement = document.querySelector<HTMLElement>("[data-textile-action-remaining]");
   const cookingProgressElement = document.querySelector<HTMLElement>("[data-cooking-action-progress]");
@@ -154,6 +156,14 @@ function updateLiveActionIndicators(): void {
 
     if (smithingRemainingElement) {
       smithingRemainingElement.textContent = formatDuration(running.endsAt - now);
+    }
+
+    if (alchemyProgressElement) {
+      alchemyProgressElement.style.transform = `scaleX(${progress.toFixed(4)})`;
+    }
+
+    if (alchemyRemainingElement) {
+      alchemyRemainingElement.textContent = formatDuration(running.endsAt - now);
     }
 
     if (textileProgressElement) {
