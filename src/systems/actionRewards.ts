@@ -188,6 +188,12 @@ export function rollRewards(
         message: "Cameron cooks squirrel meat over the coals.",
         tone: "craft"
       };
+    case "craftWoodenBowl":
+      return {
+        resources: { woodenBowl: 1 },
+        message: "Cameron carves a wooden bowl.",
+        tone: "craft"
+      };
     case "tanHide":
       return {
         resources: { leather: 1 },
@@ -334,6 +340,8 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
       return `${characterName} crafted crude bowls`;
     case "craftCrudeWoodenSpoon":
       return `${characterName} crafted crude wooden spoons`;
+    case "craftWoodenBowl":
+      return `${characterName} carved wooden bowls`;
     case "craftLeatherBackpack":
       return `${characterName} crafted leather backpacks`;
     case "chopTrees":

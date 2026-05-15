@@ -52,6 +52,12 @@ export const resourceDefinitions: ResourceDefinition[] = [
     blurb: "Usable lengths from felled trees."
   },
   {
+    id: "woodenBowl",
+    label: "Wooden Bowl",
+    group: "crafted",
+    blurb: "A hand-carved bowl for simple camp meals."
+  },
+  {
     id: "coal",
     label: "Coal",
     group: "resources",

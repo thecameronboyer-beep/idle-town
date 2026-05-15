@@ -81,6 +81,7 @@ export type ActionId =
   | "craftCrudeBowl"
   | "craftCrudeWoodenSpoon"
   | "craftFishingPole"
+  | "craftWoodenBowl"
   | "craftStoneKnife"
   | "craftStoneDagger"
   | "craftStoneAxe"

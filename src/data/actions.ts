@@ -109,6 +109,13 @@ export const actionDefinitions: ActionDefinition[] = [
     blurb: "Bind flax line to a flexible stick."
   },
   {
+    id: "craftWoodenBowl",
+    label: "Craft Wooden Bowl",
+    verb: "carving a wooden bowl",
+    durationMs: 12000,
+    blurb: "Carve a simple camp bowl from usable wood."
+  },
+  {
     id: "craftStoneKnife",
     label: "Craft Stone Skinning Knife",
     verb: "crafting a stone skinning knife",
