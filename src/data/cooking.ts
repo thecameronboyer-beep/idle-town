@@ -226,7 +226,10 @@ function createAccentStews(
 }
 
 function createStewRecipe(config: StewRecipeConfig): CookingRecipeDefinition {
-  const outputs: CookingRecipeOutput[] = [{ resourceId: config.outputId, amount: 1 }];
+  const outputs: CookingRecipeOutput[] = [
+    { resourceId: config.outputId, amount: 1 },
+    { resourceId: "dirtyBowl", amount: 1 }
+  ];
   return {
     id: config.id,
     name: config.name,
@@ -235,6 +238,7 @@ function createStewRecipe(config: StewRecipeConfig): CookingRecipeDefinition {
     ingredients: [
       { resourceId: "water", amount: 1, role: "liquid" },
       { resourceId: "crudeBowl", amount: 1, role: "vessel" },
+      { resourceId: "crudeWoodenSpoon", amount: 1, role: "vessel", consumed: false },
       ...config.ingredients.map((ingredient) => ({
         resourceId: ingredient.id,
         amount: ingredient.amount ?? 1,
