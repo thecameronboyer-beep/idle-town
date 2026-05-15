@@ -5,9 +5,11 @@ import { createEmptySkills } from "../systems/skills";
 import type {
   ActionLoop,
   CharacterCombatStats,
+  CharacterNeeds,
   CombatClassProgress,
   CombatClassProgressMap,
   CombatState,
+  CookingState,
   GameState,
   Inventory,
   OwnedBuildingCounts,
@@ -61,6 +63,13 @@ export function createInitialCharacterCombatStats(): CharacterCombatStats {
   };
 }
 
+export function createInitialCharacterNeeds(): CharacterNeeds {
+  return {
+    hunger: 100,
+    maxHunger: 100
+  };
+}
+
 export function createInitialCombatClassProgress(): CombatClassProgress {
   return {
     level: 1,
@@ -83,9 +92,17 @@ export function createInitialCombatState(): CombatState {
   };
 }
 
+export function createInitialCookingState(): CookingState {
+  return {
+    queue: [],
+    knownRecipeIds: [],
+    completedRecipeCounts: {}
+  };
+}
+
 export function createInitialState(now = Date.now()): GameState {
   return {
-    version: 9,
+    version: 10,
     createdAt: now,
     updatedAt: now,
     lastSimulatedAt: now,
@@ -98,6 +115,7 @@ export function createInitialState(now = Date.now()): GameState {
         condition: "resting",
         locationId: "camp",
         combat: createInitialCharacterCombatStats(),
+        needs: createInitialCharacterNeeds(),
         classProgress: createEmptyCombatClassProgressMap(),
         inventory: createEmptyInventory(),
         resourceCounts: createEmptyResourceCounts(),
@@ -121,6 +139,7 @@ export function createInitialState(now = Date.now()): GameState {
     campfireExpiresAt: null,
     seenResources: [...baseVisibleResources],
     skills: createEmptySkills(),
+    cooking: createInitialCookingState(),
     combat: createInitialCombatState(),
     actionLoops: [createStarterActionLoop(now)],
     currentActions: [],
