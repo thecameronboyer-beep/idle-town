@@ -122,7 +122,7 @@ export const weaponCombatClasses: Partial<Record<ToolId, CombatClassId>> = {
   woodenTwoHandedClub: "crusher",
   shortBow: "archer",
   woodenTotem: "shaman",
-  stoneDagger: "rogue",
+  stoneKnife: "rogue",
   stoneSpear: "warrior"
 };
 

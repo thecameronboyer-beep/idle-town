@@ -64,7 +64,6 @@ const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
   craftFishingPole: { skillId: "crafting", xp: 150 },
   craftWoodenBowl: { skillId: "crafting", xp: 120 },
   craftStoneKnife: { skillId: "crafting", xp: 150 },
-  craftStoneDagger: { skillId: "crafting", xp: 160 },
   craftStoneAxe: { skillId: "crafting", xp: 170 },
   craftStonePickAxe: { skillId: "crafting", xp: 180 },
   craftStoneSpear: { skillId: "crafting", xp: 180 },

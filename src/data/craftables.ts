@@ -13,19 +13,20 @@ export interface ToolDefinition extends CraftableDefinition<ToolId> {
 export const toolDefinitions: ToolDefinition[] = [
   {
     id: "stoneKnife",
-    label: "Stone Skinning Knife",
+    label: "Stone Knife",
     craftActionId: "craftStoneKnife",
     recipe: { stick: 1, stone: 1, flaxFiber: 1 },
-    blurb: "A dedicated scraping edge for hide and bone recovery while butchering.",
+    blurb: "A compact stone edge for butchering and close-quarters combat.",
     maxDurability: 18,
-    roles: ["butchering"],
+    roles: ["butchering", "hunting"],
     roleTiers: { butchering: 1 },
     tier: "primitive",
+    weapon: { damage: 2.2, speed: 1.2, hands: 1, range: "melee" },
     quickCraft: true
   },
   {
     id: "stoneAxe",
-    label: "Stone Axe",
+    label: "Stone Hatchet",
     craftActionId: "craftStoneAxe",
     recipe: { stick: 1, stone: 1, flaxFiber: 1 },
     blurb: "Heavy enough to bite into small trees.",
@@ -57,18 +58,6 @@ export const toolDefinitions: ToolDefinition[] = [
     roles: ["hunting"],
     tier: "primitive",
     weapon: { damage: 2.4, speed: 0.9, hands: 2, range: "melee" },
-    quickCraft: true
-  },
-  {
-    id: "stoneDagger",
-    label: "Stone Dagger",
-    craftActionId: "craftStoneDagger",
-    recipe: { stick: 1, stone: 2, flaxFiber: 1 },
-    blurb: "A compact combat blade separate from the skinning knife.",
-    maxDurability: 12,
-    roles: ["hunting"],
-    tier: "primitive",
-    weapon: { damage: 2.2, speed: 1.2, hands: 1, range: "melee" },
     quickCraft: true
   },
   {

@@ -146,22 +146,15 @@ export const actionDefinitions: ActionDefinition[] = [
   },
   {
     id: "craftStoneKnife",
-    label: "Craft Stone Skinning Knife",
-    verb: "crafting a stone skinning knife",
+    label: "Craft Stone Knife",
+    verb: "crafting a stone knife",
     durationMs: 15000,
-    blurb: "Shape a scraping edge for hide and bone recovery."
-  },
-  {
-    id: "craftStoneDagger",
-    label: "Craft Stone Dagger",
-    verb: "crafting a stone dagger",
-    durationMs: 15000,
-    blurb: "Shape a compact combat blade separate from the skinning knife."
+    blurb: "Shape a compact edge for hide work and close combat."
   },
   {
     id: "craftStoneAxe",
-    label: "Craft Stone Axe",
-    verb: "crafting a stone axe",
+    label: "Craft Stone Hatchet",
+    verb: "crafting a stone hatchet",
     durationMs: 15000,
     blurb: "Bind a chopping head to a short haft."
   },

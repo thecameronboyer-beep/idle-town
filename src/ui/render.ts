@@ -38,7 +38,7 @@ import {
 import boneIconUrl from "../assets/items/bone-icon.png";
 import brookSticklebackIconUrl from "../assets/items/brook-stickleback-icon.png";
 import basketEmptySlotUrl from "../assets/items/basket-empty-slot.png";
-import basketEquippedSlotUrl from "../assets/items/basket-equipped-slot.png";
+import basketEquippedSlotUrl from "../assets/items/basket-background-1-border-1.png";
 import campLocationIconUrl from "../assets/locations/camp-location-icon.png";
 import campfireLitUrl from "../assets/buildings/campfire-2x2.png";
 import campfireUnlitUrl from "../assets/buildings/campfire-unlit-2x2.png";
@@ -47,7 +47,7 @@ import copperIconUrl from "../assets/items/copper-icon.png";
 import craftMaterialsBundleButtonUrl from "../assets/items/craft-materials-bundle-button.png";
 import fishFiletIconUrl from "../assets/items/fish-filet-icon.png";
 import fishingPoleEmptySlotUrl from "../assets/items/fishing-pole-empty-slot.png";
-import fishingPoleEquippedSlotUrl from "../assets/items/fishing-pole-equipped-slot.png";
+import fishingPoleEquippedSlotUrl from "../assets/items/fishing-pole-background-1-border-1.png";
 import flaxFiberIconUrl from "../assets/items/flax-fiber-icon.png";
 import forestLocationIconUrl from "../assets/locations/forest-location-icon.png";
 import desertLocationIconUrl from "../assets/locations/desert-location-icon.svg";
@@ -65,28 +65,27 @@ import riverLocationIconUrl from "../assets/locations/river-location-icon-v2.png
 import squirrelIconUrl from "../assets/items/squirrel-icon.png";
 import stickIconUrl from "../assets/items/stick-icon.png";
 import stoneAxeEmptySlotUrl from "../assets/items/stone-axe-empty-slot.png";
-import stoneAxeEquippedSlotUrl from "../assets/items/stone-axe-equipped-slot.png";
-import stoneDaggerEquippedSlotUrl from "../assets/items/stone-dagger-equipped-slot.png";
-import stoneKnifeEquippedSlotUrl from "../assets/items/stone-knife-equipped-slot.png";
+import stoneAxeEquippedSlotUrl from "../assets/items/stone-hatchet-background-1-border-1.png";
+import stoneKnifeEquippedSlotUrl from "../assets/items/stone-knife-background-1-border-1.png";
 import stoneKnifeEmptySlotUrl from "../assets/items/stone-knife-empty-slot.png";
 import stonePickAxeEmptySlotUrl from "../assets/items/stone-pick-axe-empty-slot.png";
-import stonePickAxeEquippedSlotUrl from "../assets/items/stone-pick-axe-equipped-slot.png";
+import stonePickAxeEquippedSlotUrl from "../assets/items/stone-pick-axe-background-1-border-1.png";
 import stoneSpearEmptySlotUrl from "../assets/items/stone-spear-empty-slot.png";
-import stoneSpearEquippedSlotUrl from "../assets/items/stone-spear-equipped-slot.png";
+import stoneSpearEquippedSlotUrl from "../assets/items/stone-spear-background-1-border-1.png";
 import stoneIconUrl from "../assets/items/stone-icon.png";
 import stoneLoachIconUrl from "../assets/items/stone-loach-icon.png";
 import stoneFurnaceUrl from "../assets/buildings/stone-furnace-2x2.png";
-import shortBowEquippedSlotUrl from "../assets/items/short-bow-equipped-slot.png";
+import shortBowEquippedSlotUrl from "../assets/items/short-bow-background-1-border-1.png";
 import tinIconUrl from "../assets/items/tin-icon.png";
 import hideTentUrl from "../assets/buildings/hide-tent-2x2.png";
 import tanningRackUrl from "../assets/buildings/tanning-rack-2x2.png";
-import woodenBowlIconUrl from "../assets/items/wooden-bowl-icon.png";
-import woodenClubEquippedSlotUrl from "../assets/items/wooden-club-equipped-slot.png";
-import woodenSpoonIconUrl from "../assets/items/wooden-spoon-icon.png";
-import woodenSwordEquippedSlotUrl from "../assets/items/wooden-sword-equipped-slot.png";
-import woodenTotemEquippedSlotUrl from "../assets/items/wooden-totem-equipped-slot.png";
-import woodenTwoHandedClubEquippedSlotUrl from "../assets/items/wooden-two-handed-club-equipped-slot.png";
-import woodenTwoHandedSwordEquippedSlotUrl from "../assets/items/wooden-two-handed-sword-equipped-slot.png";
+import woodenBowlIconUrl from "../assets/items/wooden-bowl-background-1-border-1.png";
+import woodenClubEquippedSlotUrl from "../assets/items/wooden-club-background-1-border-1.png";
+import woodenSpoonIconUrl from "../assets/items/wooden-spoon-background-1-border-1.png";
+import woodenSwordEquippedSlotUrl from "../assets/items/wooden-sword-background-1-border-1.png";
+import woodenTotemEquippedSlotUrl from "../assets/items/wooden-totem-background-1-border-1.png";
+import woodenTwoHandedClubEquippedSlotUrl from "../assets/items/wooden-two-handed-club-background-1-border-1.png";
+import woodenTwoHandedSwordEquippedSlotUrl from "../assets/items/wooden-two-handed-sword-background-1-border-1.png";
 import woodIconUrl from "../assets/items/wood-icon.png";
 import { getCampfireRemainingMs, isCampfireLit } from "../systems/buildings";
 import { getBuildingCount, getPopulationCapacity, getPopulationCount } from "../systems/camp";
@@ -297,7 +296,6 @@ const actionFilters: ActionFilter[] = [
       "craftFishingPole",
       "craftWoodenBowl",
       "craftStoneKnife",
-      "craftStoneDagger",
       "craftStoneAxe",
       "craftStonePickAxe",
       "craftStoneSpear",
@@ -427,7 +425,6 @@ const craftingRecipeMetadata: Partial<
   craftStoneKnife: { material: "primitive", productCategory: "tool" },
   craftStoneAxe: { material: "primitive", productCategory: "tool" },
   craftStonePickAxe: { material: "primitive", productCategory: "tool" },
-  craftStoneDagger: { material: "primitive", productCategory: "weapon" },
   craftStoneSpear: { material: "primitive", productCategory: "weapon" },
   craftWoodenClub: { material: "primitive", productCategory: "weapon" },
   craftWoodenTwoHandedClub: { material: "primitive", productCategory: "weapon" },
@@ -481,7 +478,6 @@ const equipmentToolSlots: Array<ToolId | null> = [
   "stoneKnife",
   "copperKnife",
   "bronzeKnife",
-  "stoneDagger",
   "stoneSpear",
   "woodenClub",
   "woodenTwoHandedClub",
@@ -497,6 +493,7 @@ const equipmentToolSlots: Array<ToolId | null> = [
   "bronzePickaxe",
   "basket",
   "leatherBackpack",
+  null,
   null,
   null,
   null,
@@ -521,7 +518,6 @@ const equippedSlotImages: Partial<Record<ToolId, string>> = {
   fishingPole: fishingPoleEquippedSlotUrl,
   leatherBackpack: leatherBackpackEquippedSlotUrl,
   stoneKnife: stoneKnifeEquippedSlotUrl,
-  stoneDagger: stoneDaggerEquippedSlotUrl,
   stoneAxe: stoneAxeEquippedSlotUrl,
   stonePickAxe: stonePickAxeEquippedSlotUrl,
   stoneSpear: stoneSpearEquippedSlotUrl,
@@ -536,7 +532,6 @@ const emptySlotImages: Partial<Record<ToolId, string>> = {
   basket: basketEmptySlotUrl,
   fishingPole: fishingPoleEmptySlotUrl,
   stoneKnife: stoneKnifeEmptySlotUrl,
-  stoneDagger: stoneDaggerEquippedSlotUrl,
   stoneAxe: stoneAxeEmptySlotUrl,
   stonePickAxe: stonePickAxeEmptySlotUrl,
   stoneSpear: stoneSpearEmptySlotUrl,
@@ -551,9 +546,8 @@ const emptySlotLabels: Partial<Record<ToolId, string>> = {
   basket: "Basket",
   fishingPole: "Pole",
   leatherBackpack: "Backpack",
-  stoneKnife: "Skinning Knife",
-  stoneDagger: "Dagger",
-  stoneAxe: "Axe",
+  stoneKnife: "Knife",
+  stoneAxe: "Hatchet",
   stonePickAxe: "Pick",
   stoneSpear: "Spear",
   woodenClub: "Club",
@@ -630,9 +624,9 @@ const toolEquipmentStats: Partial<Record<ToolId, EquipmentStat[]>> = {
     { label: "Use", value: "River fishing" }
   ],
   stoneKnife: [
-    { label: "Slot", value: "Butchering tool" },
+    { label: "Slot", value: "Butchering weapon" },
     { label: "Unlocks", value: "Hide and bone recovery" },
-    { label: "Use", value: "Butchering small animals" }
+    { label: "Use", value: "Butchering and combat" }
   ],
   stoneAxe: [
     { label: "Slot", value: "Woodcutting tool" },
@@ -4929,7 +4923,7 @@ function getToolInitials(toolId: ToolId): string {
     case "fishingPole":
       return "FP";
     case "stoneAxe":
-      return "AX";
+      return "HT";
     case "stonePickAxe":
       return "PX";
     case "copperPickaxe":
@@ -4948,8 +4942,6 @@ function getToolInitials(toolId: ToolId): string {
       return "SP";
     case "stoneKnife":
       return "SK";
-    case "stoneDagger":
-      return "DG";
     case "woodenSword":
       return "WS";
     case "woodenTwoHandedSword":
