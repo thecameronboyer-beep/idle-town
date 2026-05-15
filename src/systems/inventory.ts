@@ -1,5 +1,6 @@
 import {
   formatResourceAmount,
+  getResourceDefinition,
   getResourceLabel,
   isWholeCountResource,
   isWeightedResource,
@@ -64,6 +65,11 @@ export function addResources(state: GameState, resources: Cost, resourceCounts: 
 }
 
 export function getResourceWeight(resourceId: ResourceId): number {
+  const definitionWeight = getResourceDefinition(resourceId)?.weight;
+  if (typeof definitionWeight === "number") {
+    return definitionWeight;
+  }
+
   switch (resourceId) {
     case "wood":
       return 2;
@@ -77,9 +83,6 @@ export function getResourceWeight(resourceId: ResourceId): number {
     case "linenCloth":
     case "copperNeedle":
     case "bronzeNeedle":
-      return 0.1;
-    case "mushroom":
-    case "berry":
       return 0.1;
     default:
       return 1;
