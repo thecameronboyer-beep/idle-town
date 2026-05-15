@@ -1800,7 +1800,7 @@ function renderActionStack(
 
   return `
     <div class="action-stack">
-      ${hasLocationPanel(filter.id) ? renderLocationPanel(filter, activeLocation) : ""}
+      ${renderWorkLocationPanel(filter, activeLocation)}
       ${renderActionPanel(state, activeActionFilter, activeLocation, actionLoopTarget, now)}
     </div>
   `;
@@ -2682,6 +2682,22 @@ function hasLocationPanel(filterId: ActionFilterId): boolean {
   );
 }
 
+function hasProcessingLocationPanel(filterId: ActionFilterId): boolean {
+  return getCategoryFilters("processing").some((filter) => filter.id === filterId);
+}
+
+function renderWorkLocationPanel(filter: ActionFilter, activeLocation: LocationId): string {
+  if (hasLocationPanel(filter.id)) {
+    return renderLocationPanel(filter, activeLocation);
+  }
+
+  if (hasProcessingLocationPanel(filter.id)) {
+    return renderProcessingLocationPanel(filter);
+  }
+
+  return "";
+}
+
 function getLocation(id: LocationId, filterId?: ActionFilterId): (typeof locationDefinitions)[number] {
   const locations = filterId ? getLocationsForFilter(filterId) : locationDefinitions;
   return locations.find((location) => location.id === id) ?? locations[0];
@@ -2750,6 +2766,28 @@ function renderLocationPanel(filter: ActionFilter, activeLocation: LocationId): 
   return `
     <section class="panel location-panel" data-editor-id="location-panel" data-editor-label="Location tabs panel" data-editor-files="src/ui/render.ts, src/style.css">
       ${renderLocationTabs(getLocationsForFilter(filter.id), getActiveLocationForFilter(filter.id, activeLocation), filter.label)}
+    </section>
+  `;
+}
+
+function renderProcessingLocationPanel(filter: ActionFilter): string {
+  return `
+    <section class="panel location-panel" data-editor-id="location-panel-processing-${filter.id}" data-editor-label="${filter.label} location panel" data-editor-files="src/ui/render.ts, src/style.css">
+      <div class="location-tabs location-count-1" role="tablist" aria-label="${filter.label} locations">
+        <button
+          class="location-tab active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-label="Camp location"
+          data-editor-id="location-tab-camp-${filter.id}"
+          data-editor-label="Camp location tab"
+          data-editor-files="src/ui/render.ts, src/style.css"
+        >
+          <img class="location-tab-image" src="${campLocationDefinition.iconUrl}" alt="" aria-hidden="true" />
+          <span class="location-tab-label">Camp</span>
+        </button>
+      </div>
     </section>
   `;
 }
