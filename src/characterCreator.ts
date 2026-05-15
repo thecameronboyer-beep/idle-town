@@ -49,7 +49,7 @@ const backgrounds: Option<BackgroundId>[] = [
   {
     id: "forager",
     label: "Forager",
-    blurb: "Reads berries, mushrooms, and quiet animal sign before hunger gets loud."
+    blurb: "Reads meadow herbs, roots, and quiet animal sign before hunger gets loud."
   },
   {
     id: "maker",
