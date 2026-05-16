@@ -1,4 +1,15 @@
-import type { ActionId, BuildingId, GameState, SkillId, SkillPrestigeBonus, SkillState, Skills } from "../types";
+import { forageIngredientActionDefinitions, forageResourceActionDefinitions } from "../data/gatherables";
+import type {
+  ActionId,
+  BuildingId,
+  ForageIngredientActionId,
+  ForageResourceActionId,
+  GameState,
+  SkillId,
+  SkillPrestigeBonus,
+  SkillState,
+  Skills
+} from "../types";
 import { applyTestRewardMultiplierToAmount } from "./debugModifiers";
 
 export const MAX_SKILL_LEVEL = 1000;
@@ -42,6 +53,19 @@ export const skillDefinitions: SkillDefinition[] = [
 
 export const skillIds: SkillId[] = skillDefinitions.map((definition) => definition.id);
 
+const FORAGE_ACTION_SKILL_XP = Object.fromEntries(
+  forageIngredientActionDefinitions.map((definition) => [
+    definition.actionId,
+    { skillId: "foraging" as const, xp: definition.xp }
+  ])
+) as Record<ForageIngredientActionId, { skillId: "foraging"; xp: number }>;
+const FORAGE_RESOURCE_ACTION_SKILL_XP = Object.fromEntries(
+  forageResourceActionDefinitions.map((definition) => [
+    definition.actionId,
+    { skillId: "foraging" as const, xp: definition.xp }
+  ])
+) as Record<ForageResourceActionId, { skillId: "foraging"; xp: number }>;
+
 const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
   gatherSticks: { skillId: "foraging", xp: 70 },
   gatherStones: { skillId: "foraging", xp: 85 },
@@ -52,6 +76,8 @@ const ACTION_SKILL_XP: Record<ActionId, { skillId: SkillId; xp: number }> = {
   gatherRiverIngredients: { skillId: "foraging", xp: 135 },
   gatherMineIngredients: { skillId: "foraging", xp: 170 },
   gatherDesertIngredients: { skillId: "foraging", xp: 180 },
+  ...FORAGE_ACTION_SKILL_XP,
+  ...FORAGE_RESOURCE_ACTION_SKILL_XP,
   gatherSand: { skillId: "foraging", xp: 100 },
   gatherWater: { skillId: "foraging", xp: 90 },
   mineCoal: { skillId: "mining", xp: 360 },

@@ -1,3 +1,9 @@
+import {
+  getForageIngredientActionDefinition,
+  getForageResourceActionDefinition,
+  isForageIngredientAction,
+  isForageResourceAction
+} from "../data/gatherables";
 import type { ActionId, CharacterLocationId, GameState, LocationId, RunningAction } from "../types";
 
 export type StartActionOptions = {
@@ -152,6 +158,8 @@ export function getTravelMs(originLocationId: CharacterLocationId, targetLocatio
 
 function isGatherAction(actionId: ActionId): boolean {
   return (
+    isForageIngredientAction(actionId) ||
+    isForageResourceAction(actionId) ||
     actionId === "gatherSticks" ||
     actionId === "gatherStones" ||
     actionId === "gatherFlaxPlants" ||
@@ -171,6 +179,16 @@ function isGatherAction(actionId: ActionId): boolean {
 }
 
 function getDefaultActionLocation(actionId: ActionId): LocationId {
+  const forageResourceAction = getForageResourceActionDefinition(actionId);
+  if (forageResourceAction) {
+    return forageResourceAction.locationId;
+  }
+
+  const forageAction = getForageIngredientActionDefinition(actionId);
+  if (forageAction) {
+    return forageAction.locationId;
+  }
+
   if (actionId === "gatherWater" || actionId === "fishRiver" || actionId === "gatherRiverIngredients") {
     return "river";
   }

@@ -1,5 +1,6 @@
 import type { ActionDefinition } from "../types";
 import { alchemyRecipeDefinitions } from "./alchemy";
+import { forageIngredientActionDefinitions, forageResourceActionDefinitions } from "./gatherables";
 import { smithingRecipeDefinitions } from "./smithing";
 import { textileRecipeDefinitions } from "./textiles";
 
@@ -67,6 +68,20 @@ export const actionDefinitions: ActionDefinition[] = [
     durationMs: 18000,
     blurb: "Search the desert scrub for hardy herbs, fruits, roots, flowers, and fungus."
   },
+  ...forageIngredientActionDefinitions.map((definition): ActionDefinition => ({
+    id: definition.actionId,
+    label: definition.label,
+    verb: definition.verb,
+    durationMs: definition.durationMs,
+    blurb: definition.blurb
+  })),
+  ...forageResourceActionDefinitions.map((definition): ActionDefinition => ({
+    id: definition.actionId,
+    label: definition.label,
+    verb: definition.verb,
+    durationMs: definition.durationMs,
+    blurb: definition.blurb
+  })),
   {
     id: "gatherSand",
     label: "Gather Sand",

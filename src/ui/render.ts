@@ -10,6 +10,17 @@ import { combatClassDefinitions, getCombatEnemyDefinition, getCombatLocationDefi
 import { getCookingRecipeCost } from "../data/cooking";
 import { buildingDefinitions, toolDefinitions } from "../data/craftables";
 import {
+  forageIngredientActionIds,
+  forageResourceActionIds,
+  getForageIngredientActionDefinition,
+  getForageResourceActionDefinition,
+  getForageResourceActionDefinitionsForLocation,
+  getForageResourceActionIdsForLocation,
+  getGatherableCategoryLabel,
+  type ForageResourceActionDefinition,
+  type GatherableIngredientCategory
+} from "../data/gatherables";
+import {
   getSmithingRecipe,
   metalworkingActionIds,
   smeltingActionIds,
@@ -35,25 +46,27 @@ import {
   resourceDefinitions,
   resourceOrder
 } from "../data/resources";
+import aloeLeavesIconUrl from "../assets/items/aloe-leaves-icon.png";
 import boneIconUrl from "../assets/items/bone-icon.png";
 import brookSticklebackIconUrl from "../assets/items/brook-stickleback-icon.png";
-import basketEmptySlotUrl from "../assets/items/basket-empty-slot.png";
 import basketEquippedSlotUrl from "../assets/items/basket-background-1-border-1.png";
 import campLocationIconUrl from "../assets/locations/camp-location-icon.png";
 import campfireLitUrl from "../assets/buildings/campfire-2x2.png";
 import campfireUnlitUrl from "../assets/buildings/campfire-unlit-2x2.png";
+import chamomileIconUrl from "../assets/items/chamomile-icon.png";
 import coalIconUrl from "../assets/items/coal-icon.png";
 import copperIconUrl from "../assets/items/copper-icon.png";
 import craftMaterialsBundleButtonUrl from "../assets/items/craft-materials-bundle-button.png";
 import fishFiletIconUrl from "../assets/items/fish-filet-icon.png";
-import fishingPoleEmptySlotUrl from "../assets/items/fishing-pole-empty-slot.png";
 import fishingPoleEquippedSlotUrl from "../assets/items/fishing-pole-background-1-border-1.png";
 import flaxFiberIconUrl from "../assets/items/flax-fiber-icon.png";
 import forestLocationIconUrl from "../assets/locations/forest-location-icon.png";
 import desertLocationIconUrl from "../assets/locations/desert-location-icon.svg";
 import berryIconUrl from "../assets/items/berry-icon.png";
+import elderFlowersIconUrl from "../assets/items/elder-flowers-icon.png";
 import hideIconUrl from "../assets/items/hide-icon.png";
 import leatherBackpackEquippedSlotUrl from "../assets/items/leather-backpack-equipped-slot.png";
+import lavenderIconUrl from "../assets/items/lavender-icon.png";
 import meadowLocationIconUrl from "../assets/locations/meadow-location-icon-v2.png";
 import mineLocationIconUrl from "../assets/locations/mine-location-icon.png";
 import minnowIconUrl from "../assets/items/minnow-icon.png";
@@ -61,16 +74,14 @@ import mudskipperIconUrl from "../assets/items/mudskipper-icon.png";
 import mushroomIconUrl from "../assets/items/mushroom-icon.png";
 import pebblePerchIconUrl from "../assets/items/pebble-perch-icon.png";
 import rabbitIconUrl from "../assets/items/rabbit-icon.png";
+import rabbitMeatIconUrl from "../assets/items/rabbit-meat-icon.png";
 import riverLocationIconUrl from "../assets/locations/river-location-icon-v2.png";
 import squirrelIconUrl from "../assets/items/squirrel-icon.png";
+import squirrelMeatIconUrl from "../assets/items/squirrel-meat-icon.png";
 import stickIconUrl from "../assets/items/stick-icon.png";
-import stoneAxeEmptySlotUrl from "../assets/items/stone-axe-empty-slot.png";
 import stoneAxeEquippedSlotUrl from "../assets/items/stone-hatchet-background-1-border-1.png";
 import stoneKnifeEquippedSlotUrl from "../assets/items/stone-knife-background-1-border-1.png";
-import stoneKnifeEmptySlotUrl from "../assets/items/stone-knife-empty-slot.png";
-import stonePickAxeEmptySlotUrl from "../assets/items/stone-pick-axe-empty-slot.png";
 import stonePickAxeEquippedSlotUrl from "../assets/items/stone-pick-axe-background-1-border-1.png";
-import stoneSpearEmptySlotUrl from "../assets/items/stone-spear-empty-slot.png";
 import stoneSpearEquippedSlotUrl from "../assets/items/stone-spear-background-1-border-1.png";
 import stoneIconUrl from "../assets/items/stone-icon.png";
 import stoneLoachIconUrl from "../assets/items/stone-loach-icon.png";
@@ -87,6 +98,7 @@ import woodenTotemEquippedSlotUrl from "../assets/items/wooden-totem-background-
 import woodenTwoHandedClubEquippedSlotUrl from "../assets/items/wooden-two-handed-club-background-1-border-1.png";
 import woodenTwoHandedSwordEquippedSlotUrl from "../assets/items/wooden-two-handed-sword-background-1-border-1.png";
 import woodIconUrl from "../assets/items/wood-icon.png";
+import yarrowIconUrl from "../assets/items/yarrow-icon.png";
 import { getCampfireRemainingMs, isCampfireLit } from "../systems/buildings";
 import { getBuildingCount, getPopulationCapacity, getPopulationCount } from "../systems/camp";
 import {
@@ -247,6 +259,17 @@ type LocationImageDefinition = {
   label: string;
   iconUrl: string;
 };
+type ForageDisplayCategory = GatherableIngredientCategory | "fungal";
+
+const forageDisplayCategories: ForageDisplayCategory[] = [
+  "herb",
+  "flower",
+  "berry",
+  "fungal",
+  "root",
+  "vegetable",
+  "seasoning"
+];
 
 const actionFilters: ActionFilter[] = [
   {
@@ -262,6 +285,8 @@ const actionFilters: ActionFilter[] = [
       "gatherRiverIngredients",
       "gatherMineIngredients",
       "gatherDesertIngredients",
+      ...forageIngredientActionIds,
+      ...forageResourceActionIds,
       "gatherSand",
       "gatherWater"
     ]
@@ -410,8 +435,8 @@ const craftingMaterialDescriptions: Record<CraftingMaterialId, string> = {
 };
 
 const craftingProductCategories: Array<{ id: CraftingProductCategory; label: string }> = [
-  { id: "tool", label: "Tool" },
-  { id: "weapon", label: "Weapon" }
+  { id: "tool", label: "Tools" },
+  { id: "weapon", label: "Weapons" }
 ];
 
 const craftingRecipeMetadata: Partial<
@@ -439,31 +464,31 @@ const locationDefinitions: LocationDefinition[] = [
     id: "meadow",
     label: "Meadow",
     iconUrl: meadowLocationIconUrl,
-    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxPlants", "gatherMeadowIngredients"]
+    actionIds: ["gatherSticks", "gatherStones", "gatherFlaxPlants", ...getForageResourceActionIdsForLocation("meadow")]
   },
   {
     id: "river",
     label: "River",
     iconUrl: riverLocationIconUrl,
-    actionIds: ["gatherStones", "gatherFlaxFibers", "gatherWater", "gatherRiverIngredients"]
+    actionIds: ["gatherStones", "gatherFlaxFibers", "gatherWater", ...getForageResourceActionIdsForLocation("river")]
   },
   {
     id: "forest",
     label: "Forest",
     iconUrl: forestLocationIconUrl,
-    actionIds: ["gatherForestIngredients"]
+    actionIds: [...getForageResourceActionIdsForLocation("forest")]
   },
   {
     id: "mine",
     label: "Mine",
     iconUrl: mineLocationIconUrl,
-    actionIds: ["gatherMineIngredients"]
+    actionIds: [...getForageResourceActionIdsForLocation("mine")]
   },
   {
     id: "desert",
     label: "Desert",
     iconUrl: desertLocationIconUrl,
-    actionIds: ["gatherSand", "gatherDesertIngredients"]
+    actionIds: ["gatherSand", ...getForageResourceActionIdsForLocation("desert")]
   }
 ];
 
@@ -528,20 +553,6 @@ const equippedSlotImages: Partial<Record<ToolId, string>> = {
   shortBow: shortBowEquippedSlotUrl,
   woodenTotem: woodenTotemEquippedSlotUrl
 };
-const emptySlotImages: Partial<Record<ToolId, string>> = {
-  basket: basketEmptySlotUrl,
-  fishingPole: fishingPoleEmptySlotUrl,
-  stoneKnife: stoneKnifeEmptySlotUrl,
-  stoneAxe: stoneAxeEmptySlotUrl,
-  stonePickAxe: stonePickAxeEmptySlotUrl,
-  stoneSpear: stoneSpearEmptySlotUrl,
-  woodenClub: woodenClubEquippedSlotUrl,
-  woodenTwoHandedClub: woodenTwoHandedClubEquippedSlotUrl,
-  woodenSword: woodenSwordEquippedSlotUrl,
-  woodenTwoHandedSword: woodenTwoHandedSwordEquippedSlotUrl,
-  shortBow: shortBowEquippedSlotUrl,
-  woodenTotem: woodenTotemEquippedSlotUrl
-};
 const emptySlotLabels: Partial<Record<ToolId, string>> = {
   basket: "Basket",
   fishingPole: "Pole",
@@ -559,6 +570,7 @@ const emptySlotLabels: Partial<Record<ToolId, string>> = {
 };
 
 const resourceSlotImages: Partial<Record<ResourceId, string>> = {
+  aloeLeaves: aloeLeavesIconUrl,
   blueberries: berryIconUrl,
   bone: boneIconUrl,
   brookStickleback: brookSticklebackIconUrl,
@@ -570,27 +582,29 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   pebblePerchFilet: fishFiletIconUrl,
   stoneLoachFilet: fishFiletIconUrl,
   flaxFiber: flaxFiberIconUrl,
-  chamomile: flaxFiberIconUrl,
+  chamomile: chamomileIconUrl,
   clover: flaxFiberIconUrl,
   dandelionGreens: flaxFiberIconUrl,
   dirtyBowl: woodIconUrl,
-  elderflowers: flaxFiberIconUrl,
+  elderflowers: elderFlowersIconUrl,
   fennel: flaxFiberIconUrl,
   hearthcap: mushroomIconUrl,
   hide: hideIconUrl,
-  lavender: flaxFiberIconUrl,
+  lavender: lavenderIconUrl,
   meadowStew: mushroomIconUrl,
   minnow: minnowIconUrl,
   mint: flaxFiberIconUrl,
   mudskipper: mudskipperIconUrl,
   pebblePerch: pebblePerchIconUrl,
   rabbit: rabbitIconUrl,
+  rabbitMeat: rabbitMeatIconUrl,
   rabbitStew: rabbitIconUrl,
   roseHips: berryIconUrl,
   rootStew: mushroomIconUrl,
   sorrel: flaxFiberIconUrl,
   squirrelHerbStew: squirrelIconUrl,
   squirrel: squirrelIconUrl,
+  squirrelMeat: squirrelMeatIconUrl,
   strawberries: berryIconUrl,
   stick: stickIconUrl,
   stone: stoneIconUrl,
@@ -601,7 +615,7 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   wildGarlic: flaxFiberIconUrl,
   wildGarlicRabbitStew: rabbitIconUrl,
   wildOnion: flaxFiberIconUrl,
-  yarrow: flaxFiberIconUrl,
+  yarrow: yarrowIconUrl,
   woodenBowl: woodenBowlIconUrl,
   woodenSpoon: woodenSpoonIconUrl,
   wood: woodIconUrl
@@ -1884,6 +1898,13 @@ function renderActionPanel(
   if (filter.id === "cooking") {
     return renderCookingActionPanel(state, now);
   }
+  if (filter.id === "foraging") {
+    return renderForagingActionPanel(
+      state,
+      getActiveLocationForFilter(filter.id, activeLocation),
+      actionLoopTarget
+    );
+  }
 
   return `
       <section class="action-panel" data-editor-id="action-panel-${activeActionFilter}" data-editor-label="${filter.label} action panel" data-editor-files="src/ui/render.ts, src/style.css">
@@ -1891,6 +1912,206 @@ function renderActionPanel(
           ${actionIds.map((actionId) => renderActionCard(state, actionId, actionLoopTarget)).join("")}
         </div>
     </section>
+  `;
+}
+
+function renderForagingActionPanel(
+  state: GameState,
+  activeLocation: LocationId,
+  actionLoopTarget: ActionLoopTarget
+): string {
+  const utilityActionIds = getForagingActionIds(activeLocation).filter(
+    (actionId) => !getForageResourceActionDefinition(actionId)
+  );
+  const forageActions = getForageResourceActionDefinitionsForLocation(activeLocation);
+
+  return `
+      <section class="action-panel" data-editor-id="action-panel-foraging" data-editor-label="Forage action panel" data-editor-files="src/ui/render.ts, src/style.css">
+        <div class="smithing-craft-columns crafting-craft-columns forage-category-columns">
+          ${utilityActionIds.length ? renderForageUtilityCategoryCard(state, utilityActionIds, actionLoopTarget) : ""}
+          ${forageDisplayCategories
+            .map((category) =>
+              renderForageCategoryCard(
+                state,
+                category,
+                forageActions.filter((definition) => getForageDisplayCategory(definition) === category),
+                actionLoopTarget
+              )
+            )
+            .join("")}
+        </div>
+      </section>
+  `;
+}
+
+function renderForageCategoryCard(
+  state: GameState,
+  category: ForageDisplayCategory,
+  actionDefinitions: ForageResourceActionDefinition[],
+  actionLoopTarget: ActionLoopTarget
+): string {
+  const categoryLabel = getForageDisplayCategoryLabel(category);
+
+  return renderForageActionCategoryCard(
+    `${categoryLabel} forage`,
+    categoryLabel,
+    actionDefinitions.map((definition) => renderForageResourceCard(state, definition.actionId, actionLoopTarget)),
+    `No ${categoryLabel.toLowerCase()} here.`
+  );
+}
+
+function renderForageUtilityCategoryCard(
+  state: GameState,
+  actionIds: ActionId[],
+  actionLoopTarget: ActionLoopTarget
+): string {
+  return renderForageActionCategoryCard(
+    "Forage supplies",
+    "Supplies",
+    actionIds.map((actionId) => renderForageUtilityCard(state, actionId, actionLoopTarget)),
+    "No supplies here."
+  );
+}
+
+function renderForageActionCategoryCard(
+  ariaLabel: string,
+  categoryLabel: string,
+  actionCards: string[],
+  emptyText: string
+): string {
+  const cards = actionCards.filter(Boolean);
+
+  return `
+    <section class="smithing-craft-column crafting-category-card forage-category-card" aria-label="${ariaLabel}">
+      <div class="smithing-craft-column-heading crafting-category-heading">
+        <span>${categoryLabel}</span>
+        <small>${cards.length}</small>
+      </div>
+      ${
+        cards.length
+          ? `<div class="smithing-recipe-grid crafting-recipe-grid crafting-category-recipes forage-item-grid">${cards.join("")}</div>`
+          : `<div class="smithing-empty-column">${emptyText}</div>`
+      }
+    </section>
+  `;
+}
+
+function getForageDisplayCategory(definition: ForageResourceActionDefinition): ForageDisplayCategory {
+  return definition.tags.includes("fungus") ? "fungal" : definition.category;
+}
+
+function getForageDisplayCategoryLabel(category: ForageDisplayCategory): string {
+  return category === "fungal" ? "Fungal" : getGatherableCategoryLabel(category);
+}
+
+function renderForageResourceCard(
+  state: GameState,
+  actionId: ActionId,
+  actionLoopTarget: ActionLoopTarget
+): string {
+  const definition = getActionDefinition(actionId);
+  const forageAction = getForageResourceActionDefinition(actionId);
+  if (!definition || !forageAction) {
+    return "";
+  }
+
+  const unlocked = isActionUnlocked(state, actionId);
+  const cost = getActionCost(actionId);
+  const canStart = canStartAction(state, actionId);
+  const targetLoop = actionLoopTarget ? getActionLoop(state, actionLoopTarget.loopId) : null;
+  const running = getCurrentAction(state);
+  const assigningLoopAction = Boolean(actionLoopTarget && targetLoop);
+  const canAssignFollowUp = Boolean(
+    assigningLoopAction && targetLoop && actionLoopTarget && canInsertActionInSavedLoop(targetLoop, actionLoopTarget.afterIndex, actionId)
+  );
+  const active = running ? getActiveActionId(running) === actionId : false;
+  const disabled = assigningLoopAction ? !canAssignFollowUp : !canStart || active;
+  const missingCostText = getMissingCostText(state, cost);
+  const lockReason = canStart ? "" : unlocked ? missingCostText : getActionLockReason(state, actionId);
+  const statusText = assigningLoopAction
+    ? canAssignFollowUp
+      ? "Set as action loop step"
+      : "Not valid for this loop"
+    : active
+      ? "Running"
+      : !canStart && lockReason
+        ? lockReason
+        : "Ready";
+  const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
+  const tooltipRows = getActionTooltipRows(actionId, definition.durationMs);
+  const amountText =
+    forageAction.minAmount === forageAction.maxAmount
+      ? `${forageAction.minAmount}`
+      : `${forageAction.minAmount}-${forageAction.maxAmount}`;
+
+  return `
+    <button
+      class="smithing-recipe-card crafting-recipe-card forage-item-card ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}"
+      type="button"
+      data-command="start-action"
+      data-id="${actionId}"
+      data-editor-id="forage-item-${forageAction.resourceId}"
+      data-editor-label="Forage item: ${forageAction.resourceLabel}"
+      data-editor-files="src/ui/render.ts, src/style.css"
+      data-disabled="${disabled}"
+      data-tooltip-source
+      aria-disabled="${disabled}"
+      aria-label="${buttonLabel} ${forageAction.resourceLabel}. Finds ${amountText}"
+    >
+      <span class="smithing-recipe-icon" aria-hidden="true">${renderActionIcon(actionId)}</span>
+      ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+    </button>
+  `;
+}
+
+function renderForageUtilityCard(state: GameState, actionId: ActionId, actionLoopTarget: ActionLoopTarget): string {
+  const definition = getActionDefinition(actionId);
+  if (!definition) {
+    return "";
+  }
+
+  const unlocked = isActionUnlocked(state, actionId);
+  const cost = getActionCost(actionId);
+  const canStart = canStartAction(state, actionId);
+  const targetLoop = actionLoopTarget ? getActionLoop(state, actionLoopTarget.loopId) : null;
+  const running = getCurrentAction(state);
+  const assigningLoopAction = Boolean(actionLoopTarget && targetLoop);
+  const canAssignFollowUp = Boolean(
+    assigningLoopAction && targetLoop && actionLoopTarget && canInsertActionInSavedLoop(targetLoop, actionLoopTarget.afterIndex, actionId)
+  );
+  const active = running ? getActiveActionId(running) === actionId : false;
+  const disabled = assigningLoopAction ? !canAssignFollowUp : !canStart || active;
+  const missingCostText = getMissingCostText(state, cost);
+  const lockReason = canStart ? "" : unlocked ? missingCostText : getActionLockReason(state, actionId);
+  const statusText = assigningLoopAction
+    ? canAssignFollowUp
+      ? "Set as action loop step"
+      : "Not valid for this loop"
+    : active
+      ? "Running"
+      : !canStart && lockReason
+        ? lockReason
+        : "Ready";
+  const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
+  const tooltipRows = getActionTooltipRows(actionId, definition.durationMs);
+
+  return `
+    <button
+      class="smithing-recipe-card crafting-recipe-card forage-item-card ${active ? "active" : ""} ${canAssignFollowUp ? "assignable" : ""} ${!unlocked && !canAssignFollowUp ? "locked" : ""}"
+      type="button"
+      data-command="start-action"
+      data-id="${actionId}"
+      data-editor-id="forage-action-${actionId}"
+      data-editor-label="Forage action: ${definition.label}"
+      data-editor-files="src/ui/render.ts, src/style.css"
+      data-disabled="${disabled}"
+      data-tooltip-source
+      aria-disabled="${disabled}"
+      aria-label="${buttonLabel} ${definition.label}"
+    >
+      <span class="smithing-recipe-icon" aria-hidden="true">${renderActionIcon(actionId)}</span>
+      ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+    </button>
   `;
 }
 
@@ -1979,11 +2200,12 @@ function renderCraftingActiveCraft(state: GameState, now: number): string {
 
   const definition = getActionDefinition(activeActionId);
   const progress = clamp(getActionProgress(state, now), 0, 1);
+  const displayLabel = definition ? getCraftingRecipeDisplayLabel(definition.label) : "Recipe";
 
   return `
     <div class="smithing-active-row crafting-active-row">
       <span>Active craft</span>
-      <strong>${definition?.label ?? "Crafting"}</strong>
+      <strong>${displayLabel}</strong>
       <div class="progress-track smithing-progress-track">
         <span data-smithing-action-progress style="transform: scaleX(${progress.toFixed(4)})"></span>
         <em data-smithing-action-remaining>${formatDuration(running.endsAt - now)}</em>
@@ -2054,10 +2276,6 @@ function renderCraftingCraftColumns(
 
   return `
     <div class="smithing-recipe-section smithing-craft-section crafting-recipe-section">
-      <div class="section-heading">
-        <span>${craftingMaterialLabels[selectedCraftingMaterial]} Crafting</span>
-        <small>Filtered by materials type</small>
-      </div>
       <div class="smithing-craft-columns crafting-craft-columns">
         ${craftingProductCategories
           .map((category) => renderCraftingCraftColumn(state, materialActionIds, selectedCraftingMaterial, category, actionLoopTarget))
@@ -2077,17 +2295,17 @@ function renderCraftingCraftColumn(
   const categoryActionIds = actionIds.filter((actionId) => craftingRecipeMetadata[actionId]?.productCategory === category.id);
 
   return `
-    <section class="smithing-craft-column crafting-craft-column" aria-label="${category.label} recipes">
-      <div class="smithing-craft-column-heading">
+    <section class="smithing-craft-column crafting-craft-column crafting-category-card" aria-label="${category.label} recipes">
+      <div class="smithing-craft-column-heading crafting-category-heading">
         <span>${category.label}</span>
         <small>${categoryActionIds.length}</small>
       </div>
       ${
         categoryActionIds.length
-          ? `<div class="smithing-recipe-grid crafting-recipe-grid">${categoryActionIds
+          ? `<div class="smithing-recipe-grid crafting-recipe-grid crafting-category-recipes">${categoryActionIds
               .map((actionId) => renderCraftingRecipeCard(state, actionId, actionLoopTarget))
               .join("")}</div>`
-          : `<div class="smithing-empty-column">No ${craftingMaterialLabels[selectedCraftingMaterial].toLowerCase()} ${category.label.toLowerCase()} recipes yet.</div>`
+          : `<div class="smithing-empty-column">No ${craftingMaterialLabels[selectedCraftingMaterial].toLowerCase()} ${category.label.toLowerCase()} yet.</div>`
       }
     </section>
   `;
@@ -2144,6 +2362,8 @@ function renderCraftingRecipeCard(state: GameState, actionId: ActionId, actionLo
   }
 
   const { definition, cost, unlocked, canAssignFollowUp, active, disabled, statusText, buttonLabel, tooltipRows } = view;
+  const displayLabel = getCraftingRecipeDisplayLabel(definition.label);
+  const costText = describeCost(cost);
 
   return `
     <button
@@ -2152,25 +2372,25 @@ function renderCraftingRecipeCard(state: GameState, actionId: ActionId, actionLo
       data-command="start-action"
       data-id="${actionId}"
       data-editor-id="crafting-recipe-${actionId}"
-      data-editor-label="Crafting recipe: ${definition.label}"
+      data-editor-label="Crafting recipe: ${displayLabel}"
       data-editor-files="src/ui/render.ts, src/style.css"
       data-disabled="${disabled}"
       data-tooltip-source
       aria-disabled="${disabled}"
-      aria-label="${buttonLabel} ${definition.label}"
+      aria-label="${buttonLabel} ${displayLabel}. Uses ${costText}"
     >
       <span class="smithing-recipe-icon" aria-hidden="true">${renderActionIcon(actionId)}</span>
-      <span class="smithing-recipe-copy">
-        <strong>${definition.label}</strong>
-        <small>${statusText}</small>
-      </span>
-      <span class="smithing-recipe-meta">
-        <b>${getCraftingRecipeOutputText(actionId)}</b>
-        <small>${describeCost(cost)}</small>
-      </span>
-      ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+      ${renderActionTooltip(displayLabel, tooltipRows, statusText)}
     </button>
   `;
+}
+
+function getCraftingRecipeDisplayLabel(label: string): string {
+  if (label === "Craft Lowest Tool") {
+    return "Lowest Stock Tool";
+  }
+
+  return label.replace(/^Craft\s+/, "");
 }
 
 function getCraftingRecipeOutputText(actionId: ActionId): string {
@@ -3427,6 +3647,16 @@ function getForagingActionIds(locationId: LocationId): ActionId[] {
 }
 
 function getActionStartLocation(actionId: ActionId, activeLocation: LocationId): LocationId {
+  const forageResourceAction = getForageResourceActionDefinition(actionId);
+  if (forageResourceAction) {
+    return forageResourceAction.locationId;
+  }
+
+  const forageAction = getForageIngredientActionDefinition(actionId);
+  if (forageAction) {
+    return forageAction.locationId;
+  }
+
   if (isMiningAction(actionId)) {
     return "mine";
   }
@@ -3566,10 +3796,12 @@ function renderCraftLowestCard(state: GameState, actionId: ActionId, actionLoopT
       : !canStart && lockReason
         ? lockReason
         : targetDefinition
-          ? `Next: ${targetDefinition.label}`
+          ? `Next: ${getCraftingRecipeDisplayLabel(targetDefinition.label)}`
           : "";
   const buttonLabel = assigningLoopAction ? "Set" : active ? "Running" : canStart ? "Start" : "Locked";
-  const outputText = targetDefinition ? targetDefinition.label.replace(/^Craft /, "") : getCraftingRecipeOutputText(actionId);
+  const displayLabel = getCraftingRecipeDisplayLabel(definition.label);
+  const targetDisplayLabel = targetDefinition ? getCraftingRecipeDisplayLabel(targetDefinition.label) : "";
+  const outputText = targetDisplayLabel || getCraftingRecipeOutputText(actionId);
   const costText = targetActionId ? describeCost(getActionCost(targetActionId)) : "Varies by target";
 
   return `
@@ -3579,25 +3811,25 @@ function renderCraftLowestCard(state: GameState, actionId: ActionId, actionLoopT
       data-command="start-action"
       data-id="${actionId}"
       data-editor-id="action-card-${actionId}"
-      data-editor-label="Action card: ${definition.label}"
+      data-editor-label="Action card: ${displayLabel}"
       data-editor-files="src/ui/render.ts, src/style.css"
       data-disabled="${disabled}"
       data-tooltip-source
       aria-disabled="${disabled}"
-      aria-label="${buttonLabel} ${definition.label}${targetDefinition ? `, next ${targetDefinition.label}` : ""}"
+      aria-label="${buttonLabel} ${displayLabel}${targetDisplayLabel ? `, next ${targetDisplayLabel}` : ""}"
     >
       <span class="smithing-recipe-icon" aria-hidden="true">
         ${renderActionIcon(actionId)}
       </span>
       <span class="smithing-recipe-copy">
-        <strong>${definition.label}</strong>
+        <strong>${displayLabel}</strong>
         <small>${statusText || "Balance stock"}</small>
       </span>
       <span class="smithing-recipe-meta">
         <b>${outputText}</b>
         <small>${costText}</small>
       </span>
-      ${renderActionTooltip(definition.label, tooltipRows, statusText)}
+      ${renderActionTooltip(displayLabel, tooltipRows, statusText)}
     </button>
   `;
 }
@@ -3700,6 +3932,10 @@ function getActionIconUrls(actionId: ActionId): string[] {
   if (craftedTool) {
     return getToolIconUrls(craftedTool.id);
   }
+  const forageIcons = getForageActionIconUrls(actionId);
+  if (forageIcons.length) {
+    return forageIcons;
+  }
 
   switch (actionId) {
     case "gatherSticks":
@@ -3748,10 +3984,10 @@ function getActionIconUrls(actionId: ActionId): string[] {
       return [fishFiletIconUrl];
     case "butcherRabbit":
     case "cookRabbitMeat":
-      return [rabbitIconUrl];
+      return [rabbitMeatIconUrl];
     case "butcherSquirrel":
     case "cookSquirrelMeat":
-      return [squirrelIconUrl];
+      return [squirrelMeatIconUrl];
     case "tanHide":
       return [hideIconUrl];
     case "retFlax":
@@ -3793,6 +4029,42 @@ function getActionIconUrls(actionId: ActionId): string[] {
   }
 
   return [];
+}
+
+function getForageActionIconUrls(actionId: ActionId): string[] {
+  const forageResourceAction = getForageResourceActionDefinition(actionId);
+  if (forageResourceAction) {
+    return [
+      resourceSlotImages[forageResourceAction.resourceId] ?? getForageCategoryIconUrl(getForageDisplayCategory(forageResourceAction))
+    ];
+  }
+
+  const forageAction = getForageIngredientActionDefinition(actionId);
+  if (!forageAction) {
+    return [];
+  }
+
+  return [getForageCategoryIconUrl(forageAction.category)];
+}
+
+function getForageCategoryIconUrl(category: ForageDisplayCategory): string {
+  switch (category) {
+    case "fungal":
+      return mushroomIconUrl;
+    case "berry":
+      return berryIconUrl;
+    case "root":
+      return mushroomIconUrl;
+    case "vegetable":
+      return flaxFiberIconUrl;
+    case "seasoning":
+      return mushroomIconUrl;
+    case "flower":
+      return flaxFiberIconUrl;
+    case "herb":
+    default:
+      return flaxFiberIconUrl;
+  }
 }
 
 function getCraftedToolDefinitionForAction(actionId: ActionId) {
@@ -3882,6 +4154,29 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
             { label: "Style", value: `${craftedTool.weapon.hands}H ${labelWeaponRange(craftedTool.weapon.range)}` }
           ]
         : [])
+    ];
+  }
+  const forageAction = getForageIngredientActionDefinition(actionId);
+  if (forageAction) {
+    return [
+      ...rows,
+      { label: "Table", value: getGatheringTableSummary(forageAction.locationId, forageAction.category) },
+      { label: "Pickup", value: `1-2 weighted ${forageAction.category} rolls` },
+      { label: "Place", value: getLocation(forageAction.locationId).label }
+    ];
+  }
+  const forageResourceAction = getForageResourceActionDefinition(actionId);
+  if (forageResourceAction) {
+    const amountText =
+      forageResourceAction.minAmount === forageResourceAction.maxAmount
+        ? `${forageResourceAction.minAmount}`
+        : `${forageResourceAction.minAmount}-${forageResourceAction.maxAmount}`;
+    return [
+      ...rows,
+      { label: "Finds", value: forageResourceAction.resourceLabel },
+      { label: "Pickup", value: `${amountText} per gather` },
+      { label: "Type", value: getForageDisplayCategoryLabel(getForageDisplayCategory(forageResourceAction)) },
+      { label: "Place", value: getLocation(forageResourceAction.locationId).label }
     ];
   }
 
@@ -4899,16 +5194,11 @@ function renderSlotIcon(toolId: ToolId): string {
 }
 
 function renderEmptyEquipmentSlot(index: number, toolId: ToolId | null): string {
-  const imageUrl = toolId ? emptySlotImages[toolId] : undefined;
   const label = toolId ? (emptySlotLabels[toolId] ?? "Empty") : "Empty";
 
   return `
-    <div class="equipment-slot empty ${imageUrl ? "image-empty" : ""}" aria-label="Empty equipment slot ${index + 1}">
-      ${
-        imageUrl
-          ? `<img class="slot-shadow-icon" src="${imageUrl}" alt="" aria-hidden="true" />`
-          : `<span class="slot-glyph">${toolId ? getToolInitials(toolId) : "+"}</span>`
-      }
+    <div class="equipment-slot empty" aria-label="Empty equipment slot ${index + 1}">
+      <span class="slot-glyph">${toolId ? getToolInitials(toolId) : "+"}</span>
       <strong>${label}</strong>
     </div>
   `;

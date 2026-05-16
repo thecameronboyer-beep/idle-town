@@ -1,5 +1,10 @@
 import { getResourceLabel } from "../data/resources";
-import { getLocationGatheringTable, type GatherableLootEntry } from "../data/gatherables";
+import {
+  getGatherableCategoryLabel,
+  getLocationGatheringTable,
+  type GatherableIngredientCategory,
+  type GatherableLootEntry
+} from "../data/gatherables";
 import type { Cost, LocationId } from "../types";
 import { randomInt } from "./math";
 
@@ -8,9 +13,10 @@ export interface GatheredLoot {
   message: string;
 }
 
-export function rollGatheringTable(locationId: LocationId): GatheredLoot {
+export function rollGatheringTable(locationId: LocationId, category?: GatherableIngredientCategory): GatheredLoot {
   const table = getLocationGatheringTable(locationId);
-  if (!table?.entries.length) {
+  const entries = category ? table?.entries.filter((entry) => entry.category === category) : table?.entries;
+  if (!table || !entries?.length) {
     return {
       resources: {},
       message: "Cameron searches carefully, but finds nothing useful."
@@ -22,7 +28,7 @@ export function rollGatheringTable(locationId: LocationId): GatheredLoot {
   const pickedEntries: GatherableLootEntry[] = [];
 
   for (let index = 0; index < rollCount; index += 1) {
-    const entry = pickWeightedEntry(table.entries);
+    const entry = pickWeightedEntry(entries);
     if (!entry) {
       continue;
     }
@@ -39,18 +45,40 @@ export function rollGatheringTable(locationId: LocationId): GatheredLoot {
   return {
     resources,
     message: found.length
-      ? `Cameron gathers ${joinFoundItems(found)} from the ${table.locationId}.`
+      ? `Cameron gathers ${joinFoundItems(found)} from the ${table.locationId}${category ? ` ${getGatherableCategoryLabel(category).toLowerCase()}` : ""}.`
       : "Cameron searches carefully, but finds nothing useful."
   };
 }
 
-export function getGatheringTableSummary(locationId: LocationId): string {
+export function rollGatherableResource(locationId: LocationId, resourceId: string): GatheredLoot {
   const table = getLocationGatheringTable(locationId);
-  if (!table?.entries.length) {
+  const entry = table?.entries.find((candidate) => candidate.id === resourceId);
+  if (!table || !entry) {
+    return {
+      resources: {},
+      message: "Cameron searches carefully, but finds nothing useful."
+    };
+  }
+
+  const amount = randomInt(entry.minAmount, entry.maxAmount);
+  return {
+    resources: { [entry.id]: amount },
+    message: `Cameron gathers ${amount} ${getResourceLabel(entry.id)} from the ${table.locationId}.`
+  };
+}
+
+export function getGatheringTableSummary(locationId: LocationId, category?: GatherableIngredientCategory): string {
+  const table = getLocationGatheringTable(locationId);
+  const entries = category ? table?.entries.filter((entry) => entry.category === category) : table?.entries;
+  if (!table || !entries?.length) {
     return "No known gatherables.";
   }
 
-  const categories = table.categories.map((category) => category[0].toUpperCase() + category.slice(1));
+  if (category) {
+    return `${getGatherableCategoryLabel(category)} from weighted ${table.label.toLowerCase()} table`;
+  }
+
+  const categories = table.categories.map((entryCategory) => getGatherableCategoryLabel(entryCategory));
   return `${categories.join(", ")} from weighted ${table.label.toLowerCase()} table`;
 }
 

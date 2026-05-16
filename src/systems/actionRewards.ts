@@ -1,5 +1,10 @@
 import { primitiveToolCraftDefinitions, toolDefinitions } from "../data/craftables";
 import { getAlchemyRecipe } from "../data/alchemy";
+import {
+  getForageIngredientActionDefinition,
+  getForageResourceActionDefinition,
+  type GatherableIngredientCategory
+} from "../data/gatherables";
 import { getSmithingRecipe } from "../data/smithing";
 import { getTextileRecipe } from "../data/textiles";
 import {
@@ -15,7 +20,7 @@ import {
   getCharacterInventory,
   hasResourceQuantity
 } from "./inventory";
-import { rollGatheringTable } from "./gathering";
+import { rollGatherableResource, rollGatheringTable } from "./gathering";
 import { addStackedLog } from "./log";
 import { randomFloat, randomInt } from "./math";
 import {
@@ -100,6 +105,14 @@ function rollBaseRewards(
       message: `Cameron finishes ${textileRecipe.label.toLowerCase()}.`,
       tone: "craft"
     };
+  }
+  const forageAction = getForageIngredientActionDefinition(actionId);
+  if (forageAction) {
+    return gatherIngredients(forageAction.locationId, forageAction.category);
+  }
+  const forageResourceAction = getForageResourceActionDefinition(actionId);
+  if (forageResourceAction) {
+    return gatherIngredientResource(forageResourceAction.locationId, forageResourceAction.resourceId);
   }
 
   switch (actionId) {
@@ -346,6 +359,14 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
   if (textileRecipe) {
     return `${characterName} completed ${textileRecipe.label.toLowerCase()}`;
   }
+  const forageAction = getForageIngredientActionDefinition(actionId);
+  if (forageAction) {
+    return `${characterName} gathered ${forageAction.label.replace("Gather ", "").toLowerCase()}`;
+  }
+  const forageResourceAction = getForageResourceActionDefinition(actionId);
+  if (forageResourceAction) {
+    return `${characterName} gathered ${forageResourceAction.resourceLabel.toLowerCase()}`;
+  }
 
   switch (actionId) {
     case "gatherSticks":
@@ -452,8 +473,23 @@ function applyRewardMultiplier(rewards: ActionRewards): ActionRewards {
   };
 }
 
-function gatherIngredients(locationId: "meadow" | "forest" | "river" | "mine" | "desert"): ActionRewards {
-  const gathered = rollGatheringTable(locationId);
+function gatherIngredients(
+  locationId: "meadow" | "forest" | "river" | "mine" | "desert",
+  category?: GatherableIngredientCategory
+): ActionRewards {
+  const gathered = rollGatheringTable(locationId, category);
+  return {
+    resources: gathered.resources,
+    message: gathered.message,
+    tone: "gain"
+  };
+}
+
+function gatherIngredientResource(
+  locationId: "meadow" | "forest" | "river" | "mine" | "desert",
+  resourceId: ResourceId
+): ActionRewards {
+  const gathered = rollGatherableResource(locationId, resourceId);
   return {
     resources: gathered.resources,
     message: gathered.message,

@@ -1,4 +1,9 @@
 import type {
+  ActionId,
+  ForageCategoryName,
+  ForageIngredientActionId,
+  ForageLocationName,
+  ForageResourceActionId,
   IngredientCategory,
   ItemRarity,
   LocationId,
@@ -7,10 +12,12 @@ import type {
   ResourceNutrition
 } from "../types";
 
+export type GatherableIngredientCategory = Exclude<IngredientCategory, "meat">;
+
 export interface GatherableDefinition {
   id: ResourceId;
   displayName: string;
-  category: IngredientCategory;
+  category: GatherableIngredientCategory;
   description: string;
   gatherWeight: number;
   gatherTimeModifier: number;
@@ -22,7 +29,7 @@ export interface GatherableDefinition {
 
 export interface GatherableLootEntry {
   id: ResourceId;
-  category: IngredientCategory;
+  category: GatherableIngredientCategory;
   weight: number;
   minAmount: number;
   maxAmount: number;
@@ -34,11 +41,105 @@ export interface GatherableLootEntry {
 export interface LocationGatheringTable {
   locationId: LocationId;
   label: string;
-  categories: IngredientCategory[];
+  categories: GatherableIngredientCategory[];
   entries: GatherableLootEntry[];
   seasonalTags: string[];
   biomeTags: string[];
 }
+
+export interface ForageIngredientActionDefinition {
+  actionId: ForageIngredientActionId;
+  locationId: LocationId;
+  category: GatherableIngredientCategory;
+  label: string;
+  verb: string;
+  durationMs: number;
+  blurb: string;
+  xp: number;
+}
+
+export interface ForageResourceActionDefinition {
+  actionId: ForageResourceActionId;
+  locationId: LocationId;
+  category: GatherableIngredientCategory;
+  resourceId: ResourceId;
+  resourceLabel: string;
+  tags: string[];
+  label: string;
+  verb: string;
+  durationMs: number;
+  blurb: string;
+  minAmount: number;
+  maxAmount: number;
+  xp: number;
+}
+
+export interface LocationGatherableDefinition extends GatherableDefinition {
+  locationId: LocationId;
+}
+
+const forageCategoryDefinitions: Array<{
+  category: GatherableIngredientCategory;
+  actionName: ForageCategoryName;
+  label: string;
+  verbNoun: string;
+  summary: string;
+}> = [
+  { category: "herb", actionName: "Herbs", label: "Herbs", verbNoun: "herbs", summary: "leafy herbs" },
+  { category: "flower", actionName: "Flowers", label: "Flowers", verbNoun: "flowers", summary: "edible and useful flowers" },
+  { category: "berry", actionName: "Berries", label: "Berries", verbNoun: "berries", summary: "berries" },
+  { category: "root", actionName: "Roots", label: "Roots/Tubers", verbNoun: "roots and tubers", summary: "roots and tubers" },
+  {
+    category: "vegetable",
+    actionName: "Vegetables",
+    label: "Vegetables/Hearty Plants",
+    verbNoun: "hearty plants",
+    summary: "vegetables and hearty plants"
+  },
+  {
+    category: "seasoning",
+    actionName: "Seasonings",
+    label: "Seasoning/Aromatics",
+    verbNoun: "seasonings and aromatics",
+    summary: "seasonings and aromatics"
+  }
+];
+
+export const gatherableIngredientCategories: GatherableIngredientCategory[] = forageCategoryDefinitions.map(
+  (definition) => definition.category
+);
+
+const forageLocationDefinitions: Array<{
+  locationId: LocationId;
+  actionName: ForageLocationName;
+  label: string;
+  baseDurationMs: number;
+  baseXp: number;
+}> = [
+  { locationId: "meadow", actionName: "Meadow", label: "Meadow", baseDurationMs: 12000, baseXp: 120 },
+  { locationId: "forest", actionName: "Forest", label: "Forest", baseDurationMs: 14000, baseXp: 140 },
+  { locationId: "river", actionName: "River", label: "River", baseDurationMs: 13500, baseXp: 135 },
+  { locationId: "mine", actionName: "Mine", label: "Mine", baseDurationMs: 17000, baseXp: 170 },
+  { locationId: "desert", actionName: "Desert", label: "Desert", baseDurationMs: 18000, baseXp: 180 }
+];
+
+export const forageIngredientActionDefinitions: ForageIngredientActionDefinition[] = forageLocationDefinitions.flatMap(
+  (location) =>
+    forageCategoryDefinitions.map((category) => ({
+      actionId: getForageIngredientActionId(location.actionName, category.actionName),
+      locationId: location.locationId,
+      category: category.category,
+      label: `Gather ${location.label} ${category.label}`,
+      verb: `gathering ${location.label.toLowerCase()} ${category.verbNoun}`,
+      durationMs: Math.round(location.baseDurationMs * getCategoryGatherTimeModifier(category.category)),
+      blurb: `Search the ${location.label.toLowerCase()} for ${category.summary}.`,
+      xp: Math.round(location.baseXp * getCategoryGatherTimeModifier(category.category))
+    }))
+);
+
+export const forageIngredientActionIds: ForageIngredientActionId[] = forageIngredientActionDefinitions.map(
+  (definition) => definition.actionId
+);
 
 export const meadowGatherableDefinitions: GatherableDefinition[] = [
   meadowHerb("wildGarlic", "Wild Garlic", "Sharp green shoots with a clean bite. Good for waking up thin broth.", 9, [
@@ -81,6 +182,7 @@ export const meadowGatherableDefinitions: GatherableDefinition[] = [
     "meadow"
   ]),
   meadowSeasoning("hearthcap", "Hearthcap", "Russet caps with a peppery smell when warmed by the fire.", 3, [
+    "fungus",
     "peppery",
     "savory",
     "meadow"
@@ -116,10 +218,14 @@ export const meadowGatherableDefinitions: GatherableDefinition[] = [
 export const forestGatherableDefinitions: GatherableDefinition[] = [
   forestGatherable("blackberries", "Blackberries", "berry", 10, ["fruit", "sweet"]),
   forestGatherable("juniperBerries", "Juniper Berries", "berry", 6, ["resinous", "aromatic"]),
+  forestGatherable("woodViolets", "Wood Violets", "flower", 7, ["floral", "shade"]),
+  forestGatherable("trilliumBlossoms", "Trillium Blossoms", "flower", 4, ["floral", "rare"]),
   forestGatherable("pineNeedles", "Pine Needles", "seasoning", 10, ["resinous", "evergreen"]),
   forestGatherable("birchBark", "Birch Bark", "seasoning", 8, ["woody", "bitter"]),
   forestGatherable("acorns", "Acorns", "vegetable", 9, ["nut", "earthy"]),
   forestGatherable("hazelnuts", "Hazelnuts", "vegetable", 7, ["nut", "rich"]),
+  forestGatherable("burdockRoots", "Burdock Roots", "root", 7, ["root", "earthy"]),
+  forestGatherable("fernrootTubers", "Fernroot Tubers", "root", 5, ["tuber", "starchy"]),
   forestGatherable("nettles", "Nettles", "herb", 9, ["leafy", "stinging"]),
   forestGatherable("mossHerbs", "Moss Herbs", "herb", 8, ["moss", "damp"]),
   forestGatherable("bloodleaf", "Bloodleaf", "herb", 4, ["medicinal", "red"]),
@@ -133,6 +239,8 @@ export const forestGatherableDefinitions: GatherableDefinition[] = [
 export const riverGatherableDefinitions: GatherableDefinition[] = [
   riverGatherable("watercress", "Watercress", "vegetable", 11, ["leafy", "peppery"]),
   riverGatherable("riverMint", "River Mint", "herb", 8, ["cooling", "aromatic"]),
+  riverGatherable("waterLilies", "Water Lilies", "flower", 5, ["floral", "calming"]),
+  riverGatherable("marshIris", "Marsh Iris", "flower", 4, ["floral", "wetland"]),
   riverGatherable("cattailShoots", "Cattail Shoots", "vegetable", 9, ["shoot", "marsh"]),
   riverGatherable("reedGrass", "Reed Grass", "herb", 10, ["grass", "fibrous"]),
   riverGatherable("marshParsley", "Marsh Parsley", "seasoning", 7, ["aromatic", "green"]),
@@ -149,6 +257,10 @@ export const riverGatherableDefinitions: GatherableDefinition[] = [
 ];
 
 export const mineGatherableDefinitions: GatherableDefinition[] = [
+  mineGatherable("glimmerberries", "Glimmerberries", "berry", 5, ["fruit", "glowing"]),
+  mineGatherable("caveCurrants", "Cave Currants", "berry", 4, ["fruit", "tart"]),
+  mineGatherable("palecapFlowers", "Palecap Flowers", "flower", 5, ["floral", "pale"]),
+  mineGatherable("crystalBlooms", "Crystal Blooms", "flower", 3, ["floral", "mineral"]),
   mineGatherable("glowcaps", "Glowcaps", "herb", 6, ["fungus", "glowing"]),
   mineGatherable("crystalMoss", "Crystal Moss", "herb", 5, ["moss", "mineral"]),
   mineGatherable("stoneTruffle", "Stone Truffle", "root", 5, ["fungus", "earthy"]),
@@ -181,7 +293,6 @@ export const desertGatherableDefinitions: GatherableDefinition[] = [
   desertGatherable("redNeedleHerb", "Red Needle Herb", "herb", 5, ["needle", "red"]),
   desertGatherable("scorchleaf", "Scorchleaf", "herb", 4, ["heat", "leafy"]),
   desertGatherable("sandOnion", "Sand Onion", "vegetable", 6, ["allium", "pungent"]),
-  desertGatherable("desertLavender", "Desert Lavender", "flower", 5, ["floral", "aromatic"]),
   desertGatherable("duneFennel", "Dune Fennel", "seasoning", 5, ["aromatic", "sweet"]),
   desertGatherable("ironThornPods", "Iron Thorn Pods", "vegetable", 4, ["pod", "thorn"]),
   desertGatherable("wildMesquiteBeans", "Wild Mesquite Beans", "vegetable", 6, ["bean", "sweet"]),
@@ -201,6 +312,39 @@ export const allGatherableDefinitions: GatherableDefinition[] = [
   ...mineGatherableDefinitions,
   ...desertGatherableDefinitions
 ];
+
+export const allLocationGatherableDefinitions: LocationGatherableDefinition[] = [
+  ...withLocation("meadow", meadowGatherableDefinitions),
+  ...withLocation("forest", forestGatherableDefinitions),
+  ...withLocation("river", riverGatherableDefinitions),
+  ...withLocation("mine", mineGatherableDefinitions),
+  ...withLocation("desert", desertGatherableDefinitions)
+];
+
+export const forageResourceActionDefinitions: ForageResourceActionDefinition[] = allLocationGatherableDefinitions.map(
+  (entry) => {
+    const location = getForageLocationDefinition(entry.locationId);
+    return {
+      actionId: getForageResourceActionId(entry.id),
+      locationId: entry.locationId,
+      category: entry.category,
+      resourceId: entry.id,
+      resourceLabel: entry.displayName,
+      tags: entry.tags,
+      label: `Gather ${entry.displayName}`,
+      verb: `gathering ${entry.displayName.toLowerCase()}`,
+      durationMs: Math.round(location.baseDurationMs * entry.gatherTimeModifier),
+      blurb: entry.description,
+      minAmount: getGatherableMinAmount(entry.category),
+      maxAmount: getGatherableMaxAmount(entry.category),
+      xp: Math.round(location.baseXp * entry.gatherTimeModifier)
+    };
+  }
+);
+
+export const forageResourceActionIds: ForageResourceActionId[] = forageResourceActionDefinitions.map(
+  (definition) => definition.actionId
+);
 
 export const meadowIngredientIds: ResourceId[] = meadowGatherableDefinitions.map((entry) => entry.id);
 export const forestIngredientIds: ResourceId[] = forestGatherableDefinitions.map((entry) => entry.id);
@@ -283,6 +427,63 @@ export function getLocationGatheringTable(locationId: LocationId): LocationGathe
   return locationGatheringTables[locationId];
 }
 
+export function getForageIngredientActionDefinition(
+  actionId: ActionId
+): ForageIngredientActionDefinition | undefined {
+  return forageIngredientActionDefinitions.find((definition) => definition.actionId === actionId);
+}
+
+export function getForageIngredientActionIdsForLocation(locationId: LocationId): ForageIngredientActionId[] {
+  return forageIngredientActionDefinitions
+    .filter((definition) => definition.locationId === locationId)
+    .map((definition) => definition.actionId);
+}
+
+export function getForageResourceActionDefinition(actionId: ActionId): ForageResourceActionDefinition | undefined {
+  return forageResourceActionDefinitions.find((definition) => definition.actionId === actionId);
+}
+
+export function getForageResourceActionDefinitionsForLocation(
+  locationId: LocationId
+): ForageResourceActionDefinition[] {
+  return forageResourceActionDefinitions.filter((definition) => definition.locationId === locationId);
+}
+
+export function getForageResourceActionIdsForLocation(locationId: LocationId): ForageResourceActionId[] {
+  return getForageResourceActionDefinitionsForLocation(locationId).map((definition) => definition.actionId);
+}
+
+export function isForageIngredientAction(actionId: ActionId): actionId is ForageIngredientActionId {
+  return forageIngredientActionIds.includes(actionId as ForageIngredientActionId);
+}
+
+export function isForageResourceAction(actionId: ActionId): actionId is ForageResourceActionId {
+  return forageResourceActionIds.includes(actionId as ForageResourceActionId);
+}
+
+export function getGatherableCategoryLabel(category: GatherableIngredientCategory): string {
+  return forageCategoryDefinitions.find((definition) => definition.category === category)?.label ?? category;
+}
+
+function getForageIngredientActionId(
+  locationName: ForageLocationName,
+  categoryName: ForageCategoryName
+): ForageIngredientActionId {
+  return `gather${locationName}${categoryName}` as ForageIngredientActionId;
+}
+
+function getForageResourceActionId(resourceId: ResourceId): ForageResourceActionId {
+  return `gatherIngredient:${resourceId}` as ForageResourceActionId;
+}
+
+function getForageLocationDefinition(locationId: LocationId): (typeof forageLocationDefinitions)[number] {
+  return forageLocationDefinitions.find((definition) => definition.locationId === locationId) ?? forageLocationDefinitions[0];
+}
+
+function withLocation(locationId: LocationId, definitions: GatherableDefinition[]): LocationGatherableDefinition[] {
+  return definitions.map((definition) => ({ ...definition, locationId }));
+}
+
 function createGatheringTable(
   locationId: LocationId,
   label: string,
@@ -312,7 +513,7 @@ function createGatheringTable(
 function forestGatherable(
   id: ResourceId,
   displayName: string,
-  category: IngredientCategory,
+  category: GatherableIngredientCategory,
   gatherWeight: number,
   tags: string[]
 ): GatherableDefinition {
@@ -322,7 +523,7 @@ function forestGatherable(
 function riverGatherable(
   id: ResourceId,
   displayName: string,
-  category: IngredientCategory,
+  category: GatherableIngredientCategory,
   gatherWeight: number,
   tags: string[]
 ): GatherableDefinition {
@@ -332,7 +533,7 @@ function riverGatherable(
 function mineGatherable(
   id: ResourceId,
   displayName: string,
-  category: IngredientCategory,
+  category: GatherableIngredientCategory,
   gatherWeight: number,
   tags: string[]
 ): GatherableDefinition {
@@ -342,7 +543,7 @@ function mineGatherable(
 function desertGatherable(
   id: ResourceId,
   displayName: string,
-  category: IngredientCategory,
+  category: GatherableIngredientCategory,
   gatherWeight: number,
   tags: string[]
 ): GatherableDefinition {
@@ -354,7 +555,7 @@ function biomeGatherable(
   biomeLabel: string,
   id: ResourceId,
   displayName: string,
-  category: IngredientCategory,
+  category: GatherableIngredientCategory,
   gatherWeight: number,
   tags: string[]
 ): GatherableDefinition {
@@ -510,7 +711,7 @@ function getGatherableRarity(gatherWeight: number): ItemRarity {
   return "common";
 }
 
-function getCategoryGatherTimeModifier(category: IngredientCategory): number {
+function getCategoryGatherTimeModifier(category: GatherableIngredientCategory): number {
   switch (category) {
     case "flower":
       return 1.08;
@@ -542,7 +743,7 @@ function getBiomeGatherTimeModifier(locationId: LocationId): number {
   }
 }
 
-function getIngredientValue(category: IngredientCategory, rarity: ItemRarity): number {
+function getIngredientValue(category: GatherableIngredientCategory, rarity: ItemRarity): number {
   const rarityBonus = rarity === "rare" ? 3 : rarity === "uncommon" ? 1 : 0;
   switch (category) {
     case "root":
@@ -557,7 +758,7 @@ function getIngredientValue(category: IngredientCategory, rarity: ItemRarity): n
   }
 }
 
-function getIngredientNutrition(category: IngredientCategory): ResourceNutrition | undefined {
+function getIngredientNutrition(category: GatherableIngredientCategory): ResourceNutrition | undefined {
   switch (category) {
     case "berry":
       return { hunger: 2, hydration: 1 };
@@ -570,11 +771,11 @@ function getIngredientNutrition(category: IngredientCategory): ResourceNutrition
   }
 }
 
-function getGatherableMinAmount(category: IngredientCategory): number {
+function getGatherableMinAmount(category: GatherableIngredientCategory): number {
   return category === "berry" ? 2 : 1;
 }
 
-function getGatherableMaxAmount(category: IngredientCategory): number {
+function getGatherableMaxAmount(category: GatherableIngredientCategory): number {
   switch (category) {
     case "berry":
       return 4;
@@ -586,7 +787,7 @@ function getGatherableMaxAmount(category: IngredientCategory): number {
   }
 }
 
-function getIngredientWeight(category: IngredientCategory): number {
+function getIngredientWeight(category: GatherableIngredientCategory): number {
   switch (category) {
     case "root":
     case "vegetable":
@@ -598,7 +799,7 @@ function getIngredientWeight(category: IngredientCategory): number {
   }
 }
 
-function getIngredientCompatibility(category: IngredientCategory, tags: string[]): string[] {
+function getIngredientCompatibility(category: GatherableIngredientCategory, tags: string[]): string[] {
   const compatibility = ["stew", "campfire"];
   if (category === "berry" || tags.includes("sweet")) {
     compatibility.push("preserve", "brew");

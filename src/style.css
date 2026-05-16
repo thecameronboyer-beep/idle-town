@@ -1297,6 +1297,8 @@ h3 {
 
 .smithing-panel-card.crafting-panel-card {
   width: min(100%, 66rem);
+  --crafting-recipe-gap: 0.38rem;
+  --crafting-recipe-size: 90px;
 }
 
 .smithing-workbench.crafting-workbench {
@@ -1327,7 +1329,98 @@ h3 {
 }
 
 .smithing-craft-columns.crafting-craft-columns {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.forage-category-columns {
+  --crafting-recipe-gap: 0.38rem;
+  --crafting-recipe-size: 90px;
+}
+
+.crafting-category-card {
+  gap: 0.7rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(236, 229, 213, 0.14);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(115, 168, 160, 0.1), rgba(214, 164, 81, 0.08)),
+    rgba(17, 18, 14, 0.68);
+  box-shadow: inset 0 0 0 1px rgba(7, 8, 6, 0.4);
+}
+
+.crafting-category-heading {
+  min-height: auto;
+  padding: 0 0.1rem 0.45rem;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.smithing-craft-column .smithing-recipe-grid.crafting-category-recipes {
+  grid-template-columns: repeat(auto-fit, minmax(var(--crafting-recipe-size), var(--crafting-recipe-size)));
+  gap: var(--crafting-recipe-gap);
+  justify-content: start;
+  justify-items: center;
+}
+
+.smithing-recipe-card.crafting-recipe-card {
+  width: var(--crafting-recipe-size);
+  height: var(--crafting-recipe-size);
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  justify-items: center;
+  min-height: var(--crafting-recipe-size);
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  touch-action: manipulation;
+}
+
+.smithing-recipe-card.crafting-recipe-card.active {
+  border-color: rgba(214, 164, 81, 0.46);
+  background: rgba(72, 62, 39, 0.68);
+}
+
+.smithing-recipe-card.crafting-recipe-card:not([data-disabled="true"]):hover {
+  border-color: rgba(236, 229, 213, 0.1);
+  background: rgba(236, 229, 213, 0.04);
+}
+
+.crafting-recipe-card .smithing-recipe-icon {
+  grid-row: auto;
+  width: var(--crafting-recipe-size);
+  height: var(--crafting-recipe-size);
+}
+
+.crafting-recipe-card .smithing-recipe-icon .action-card-icon {
+  width: var(--crafting-recipe-size);
+  min-width: var(--crafting-recipe-size);
+  height: var(--crafting-recipe-size);
+}
+
+.crafting-recipe-card .smithing-recipe-icon .action-card-icon img {
+  width: var(--crafting-recipe-size);
+  height: var(--crafting-recipe-size);
+}
+
+.crafting-recipe-card .smithing-recipe-icon .action-card-icon.multi {
+  width: calc(var(--crafting-recipe-size) + 6px);
+  min-width: calc(var(--crafting-recipe-size) + 6px);
+  height: var(--crafting-recipe-size);
+}
+
+.crafting-recipe-card .smithing-recipe-icon .action-card-icon.multi img {
+  width: calc(var(--crafting-recipe-size) * 0.8);
+  height: calc(var(--crafting-recipe-size) * 0.8);
+  margin-left: calc(var(--crafting-recipe-size) * -0.31);
+}
+
+.crafting-recipe-card .smithing-recipe-icon .action-card-glyph {
+  width: calc(var(--crafting-recipe-size) - 8px);
+  height: calc(var(--crafting-recipe-size) - 8px);
+  font-size: 1.05rem;
 }
 
 .smithing-recipe-card.craft-priority-button {
@@ -2625,22 +2718,6 @@ h3 {
   white-space: normal;
 }
 
-.equipment-slot.image-empty {
-  overflow: hidden;
-  border-style: solid;
-  border-color: rgba(214, 164, 81, 0.2);
-  background: rgba(12, 13, 10, 0.72);
-}
-
-.slot-shadow-icon {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.72;
-}
-
 .slot-item-icon {
   position: absolute;
   inset: 0;
@@ -2701,16 +2778,6 @@ h3 {
   padding: 0.12rem 0.18rem;
   border-radius: 5px;
   background: rgba(8, 9, 7, 0.52);
-}
-
-.equipment-slot.image-empty > strong {
-  position: relative;
-  z-index: 1;
-  align-self: end;
-  padding: 0.12rem 0.2rem;
-  border-radius: 5px;
-  color: rgba(236, 229, 213, 0.74);
-  background: rgba(8, 9, 7, 0.46);
 }
 
 .slot-glyph {
@@ -3144,6 +3211,8 @@ h3 {
 
   .crafting-panel-card {
     width: 100%;
+    --crafting-recipe-gap: 0.34rem;
+    --crafting-recipe-size: clamp(76px, 18vw, 88px);
   }
 
   .smithing-panel-card {
@@ -3164,6 +3233,42 @@ h3 {
 
   .smithing-active-row > strong {
     text-align: left;
+  }
+
+  .smithing-panel-card.crafting-panel-card {
+    gap: 0.6rem;
+    padding: 0.6rem;
+  }
+
+  .forage-category-columns {
+    --crafting-recipe-gap: 0.34rem;
+    --crafting-recipe-size: clamp(76px, 18vw, 88px);
+  }
+
+  .smithing-smelt-grid.crafting-material-grid {
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  }
+
+  .smithing-smelt-select.crafting-material-select {
+    grid-template-columns: 2.6rem minmax(0, 1fr);
+    min-height: 5rem;
+    padding: 0.48rem;
+  }
+
+  .smithing-smelt-select.crafting-material-select .smithing-recipe-icon {
+    width: 2.6rem;
+  }
+
+  .smithing-smelt-select.crafting-material-select .smithing-recipe-meta {
+    grid-column: 2;
+  }
+
+  .crafting-material-select .smithing-recipe-meta small {
+    display: none;
+  }
+
+  .crafting-category-card {
+    padding: 0.62rem;
   }
 
   .combat-field {
@@ -3229,6 +3334,65 @@ h3 {
 @media (max-width: 560px) {
   .skills-screen {
     grid-template-columns: 1fr;
+  }
+
+  .smithing-panel-card.crafting-panel-card {
+    padding: 0.5rem;
+    --crafting-recipe-gap: 0.32rem;
+    --crafting-recipe-size: 74px;
+  }
+
+  .forage-category-columns {
+    --crafting-recipe-gap: 0.32rem;
+    --crafting-recipe-size: 74px;
+  }
+
+  .smithing-smelt-grid.crafting-material-grid {
+    display: flex;
+    gap: 0.45rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.18rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+  }
+
+  .smithing-smelt-card.crafting-material-card {
+    flex: 0 0 min(10.75rem, 78vw);
+    padding: 0.38rem;
+    scroll-snap-align: start;
+  }
+
+  .smithing-smelt-select.crafting-material-select {
+    grid-template-columns: 2.35rem minmax(0, 1fr);
+    min-height: 4.4rem;
+    gap: 0.3rem 0.48rem;
+  }
+
+  .smithing-smelt-select.crafting-material-select .smithing-recipe-icon {
+    width: 2.35rem;
+  }
+
+  .smithing-smelt-select.crafting-material-select .smithing-recipe-meta {
+    gap: 0;
+  }
+
+  .smithing-smelt-select.crafting-material-select .smithing-recipe-meta b {
+    font-size: 0.72rem;
+  }
+
+  .crafting-category-card {
+    gap: 0.52rem;
+    padding: 0.5rem;
+  }
+
+  .crafting-category-heading {
+    padding-bottom: 0.34rem;
+  }
+
+  .smithing-craft-column .smithing-recipe-grid.crafting-category-recipes {
+    grid-template-columns: repeat(auto-fit, minmax(var(--crafting-recipe-size), var(--crafting-recipe-size)));
+    justify-content: center;
   }
 }
 

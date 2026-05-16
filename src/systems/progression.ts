@@ -1,4 +1,5 @@
 import { primitiveToolCraftDefinitions } from "../data/craftables";
+import { isForageIngredientAction, isForageResourceAction } from "../data/gatherables";
 import { fishResourceIds, resourceDefinitions } from "../data/resources";
 import { getTextileRecipe } from "../data/textiles";
 import type { ActionId, BuildingId, GameState } from "../types";
@@ -65,6 +66,12 @@ export function isActionUnlocked(state: GameState, actionId: ActionId, now = Dat
     return true;
   }
   if (actionId === "craftWoodenBowl") {
+    return true;
+  }
+  if (isForageIngredientAction(actionId)) {
+    return true;
+  }
+  if (isForageResourceAction(actionId)) {
     return true;
   }
 
