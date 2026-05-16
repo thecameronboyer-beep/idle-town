@@ -51,7 +51,7 @@ export const alchemyRecipeDefinitions: AlchemyRecipeDefinition[] = [
     panel: "brewing",
     kind: "potion",
     durationMs: 26000,
-    cost: { glassVial: 1, water: 1, riverMint: 1, silverleafHerb: 1 },
+    cost: { glassVial: 1, water: 1, silverleafHerb: 1 },
     output: { manaPotion: 1 },
     blurb: "Steep river herbs into a vial for future mana recovery.",
     unlockHint: "Craft Glass Vial and find River Ingredients"

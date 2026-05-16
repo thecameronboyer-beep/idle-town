@@ -38,7 +38,7 @@ export const actionDefinitions: ActionDefinition[] = [
     label: "Gather Meadow Ingredients",
     verb: "gathering meadow ingredients",
     durationMs: 12000,
-    blurb: "Search the meadow for herbs, flowers, roots, and small fruit."
+    blurb: "Search the meadow for herbs, flowers, berries, fruit, roots, and hearty plants."
   },
   {
     id: "gatherForestIngredients",
@@ -66,7 +66,7 @@ export const actionDefinitions: ActionDefinition[] = [
     label: "Gather Desert Forage",
     verb: "gathering desert forage",
     durationMs: 18000,
-    blurb: "Search the desert scrub for hardy herbs, fruits, roots, flowers, and fungus."
+    blurb: "Search the desert scrub for hardy herbs, fruit, roots, flowers, and fungus."
   },
   ...forageIngredientActionDefinitions.map((definition): ActionDefinition => ({
     id: definition.actionId,

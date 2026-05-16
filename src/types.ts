@@ -12,9 +12,24 @@ export type ResourceGroup =
   | "utensils";
 
 export type ItemRarity = "common" | "uncommon" | "rare" | "special";
-export type IngredientCategory = "meat" | "herb" | "flower" | "berry" | "root" | "vegetable" | "seasoning";
+export type IngredientCategory =
+  | "meat"
+  | "herb"
+  | "flower"
+  | "berry"
+  | "fruit"
+  | "root"
+  | "vegetable"
+  | "seasoning";
 export type ForageLocationName = "Meadow" | "Forest" | "River" | "Mine" | "Desert";
-export type ForageCategoryName = "Herbs" | "Flowers" | "Berries" | "Roots" | "Vegetables" | "Seasonings";
+export type ForageCategoryName =
+  | "Herbs"
+  | "Flowers"
+  | "Berries"
+  | "Fruit"
+  | "Roots"
+  | "Vegetables"
+  | "Seasonings";
 export type ForageIngredientActionId = `gather${ForageLocationName}${ForageCategoryName}`;
 export type ForageResourceActionId = `gatherIngredient:${ResourceId}`;
 

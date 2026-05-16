@@ -56,6 +56,7 @@ import campfireUnlitUrl from "../assets/buildings/campfire-unlit-2x2.png";
 import chamomileIconUrl from "../assets/items/chamomile-icon.png";
 import coalIconUrl from "../assets/items/coal-icon.png";
 import copperIconUrl from "../assets/items/copper-icon.png";
+import crystalBloomIconUrl from "../assets/items/crystal-bloom-icon.png";
 import craftMaterialsBundleButtonUrl from "../assets/items/craft-materials-bundle-button.png";
 import fishFiletIconUrl from "../assets/items/fish-filet-icon.png";
 import fishingPoleEquippedSlotUrl from "../assets/items/fishing-pole-background-1-border-1.png";
@@ -63,6 +64,7 @@ import flaxFiberIconUrl from "../assets/items/flax-fiber-icon.png";
 import forestLocationIconUrl from "../assets/locations/forest-location-icon.png";
 import desertLocationIconUrl from "../assets/locations/desert-location-icon.svg";
 import berryIconUrl from "../assets/items/berry-icon.png";
+import blueberryIconUrl from "../assets/items/blueberry-icon.png";
 import elderFlowersIconUrl from "../assets/items/elder-flowers-icon.png";
 import hideIconUrl from "../assets/items/hide-icon.png";
 import leatherBackpackEquippedSlotUrl from "../assets/items/leather-backpack-equipped-slot.png";
@@ -76,6 +78,7 @@ import pebblePerchIconUrl from "../assets/items/pebble-perch-icon.png";
 import rabbitIconUrl from "../assets/items/rabbit-icon.png";
 import rabbitMeatIconUrl from "../assets/items/rabbit-meat-icon.png";
 import riverLocationIconUrl from "../assets/locations/river-location-icon-v2.png";
+import roseHipsIconUrl from "../assets/items/rose-hips-icon.png";
 import squirrelIconUrl from "../assets/items/squirrel-icon.png";
 import squirrelMeatIconUrl from "../assets/items/squirrel-meat-icon.png";
 import stickIconUrl from "../assets/items/stick-icon.png";
@@ -87,6 +90,7 @@ import stoneIconUrl from "../assets/items/stone-icon.png";
 import stoneLoachIconUrl from "../assets/items/stone-loach-icon.png";
 import stoneFurnaceUrl from "../assets/buildings/stone-furnace-2x2.png";
 import shortBowEquippedSlotUrl from "../assets/items/short-bow-background-1-border-1.png";
+import strawberryIconUrl from "../assets/items/strawberry-icon.png";
 import tinIconUrl from "../assets/items/tin-icon.png";
 import hideTentUrl from "../assets/buildings/hide-tent-2x2.png";
 import tanningRackUrl from "../assets/buildings/tanning-rack-2x2.png";
@@ -265,6 +269,7 @@ const forageDisplayCategories: ForageDisplayCategory[] = [
   "herb",
   "flower",
   "berry",
+  "fruit",
   "fungal",
   "root",
   "vegetable",
@@ -571,12 +576,13 @@ const emptySlotLabels: Partial<Record<ToolId, string>> = {
 
 const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   aloeLeaves: aloeLeavesIconUrl,
-  blueberries: berryIconUrl,
+  blueberries: blueberryIconUrl,
   bone: boneIconUrl,
   brookStickleback: brookSticklebackIconUrl,
   brookSticklebackFilet: fishFiletIconUrl,
   coal: coalIconUrl,
   copper: copperIconUrl,
+  crystalBlooms: crystalBloomIconUrl,
   minnowFilet: fishFiletIconUrl,
   mudskipperFilet: fishFiletIconUrl,
   pebblePerchFilet: fishFiletIconUrl,
@@ -599,13 +605,13 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   rabbit: rabbitIconUrl,
   rabbitMeat: rabbitMeatIconUrl,
   rabbitStew: rabbitIconUrl,
-  roseHips: berryIconUrl,
+  roseHips: roseHipsIconUrl,
   rootStew: mushroomIconUrl,
   sorrel: flaxFiberIconUrl,
   squirrelHerbStew: squirrelIconUrl,
   squirrel: squirrelIconUrl,
   squirrelMeat: squirrelMeatIconUrl,
-  strawberries: berryIconUrl,
+  strawberries: strawberryIconUrl,
   stick: stickIconUrl,
   stone: stoneIconUrl,
   stoneLoach: stoneLoachIconUrl,
@@ -4052,6 +4058,7 @@ function getForageCategoryIconUrl(category: ForageDisplayCategory): string {
     case "fungal":
       return mushroomIconUrl;
     case "berry":
+    case "fruit":
       return berryIconUrl;
     case "root":
       return mushroomIconUrl;
@@ -4194,7 +4201,7 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
         ...rows,
         { label: "Table", value: getGatheringTableSummary("meadow") },
         { label: "Pickup", value: "1-2 weighted ingredient rolls" },
-        { label: "Kinds", value: "Herbs, flowers, berries, roots, vegetables, seasonings" }
+        { label: "Kinds", value: "Herbs, flowers, berries, fruit, roots, vegetables, seasonings" }
       ];
     case "gatherForestIngredients":
       return [
@@ -4222,7 +4229,7 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
         ...rows,
         { label: "Table", value: getGatheringTableSummary("desert") },
         { label: "Pickup", value: "1-2 weighted ingredient rolls" },
-        { label: "Kinds", value: "Desert herbs, fruits, roots, flowers, fungus" }
+        { label: "Kinds", value: "Desert herbs, fruit, roots, flowers, fungus" }
       ];
     case "gatherSand":
       return [...rows, { label: "Pickup", value: "2-5 Sand" }, { label: "Place", value: "Desert" }];

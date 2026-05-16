@@ -4,7 +4,7 @@ import type { GameState, ResourceId } from "../types";
 import { hasCrudeStoneFurnace } from "./smithing";
 
 const HEALTH_POTION_INGREDIENTS: ResourceId[] = ["yarrow", "plantainLeaf"];
-const MANA_POTION_INGREDIENTS: ResourceId[] = ["riverMint", "silverleafHerb"];
+const MANA_POTION_INGREDIENTS: ResourceId[] = ["silverleafHerb"];
 
 export function getAlchemyStationStatus(state: GameState): { furnaceBuilt: boolean; coal: number; vials: number } {
   return {

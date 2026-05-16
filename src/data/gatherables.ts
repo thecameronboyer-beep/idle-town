@@ -88,6 +88,7 @@ const forageCategoryDefinitions: Array<{
   { category: "herb", actionName: "Herbs", label: "Herbs", verbNoun: "herbs", summary: "leafy herbs" },
   { category: "flower", actionName: "Flowers", label: "Flowers", verbNoun: "flowers", summary: "edible and useful flowers" },
   { category: "berry", actionName: "Berries", label: "Berries", verbNoun: "berries", summary: "berries" },
+  { category: "fruit", actionName: "Fruit", label: "Fruit", verbNoun: "fruit", summary: "fruit" },
   { category: "root", actionName: "Roots", label: "Roots/Tubers", verbNoun: "roots and tubers", summary: "roots and tubers" },
   {
     category: "vegetable",
@@ -147,7 +148,7 @@ export const meadowGatherableDefinitions: GatherableDefinition[] = [
     "pungent",
     "meadow"
   ]),
-  meadowHerb("dandelionGreens", "Dandelion Greens", "Bitter young leaves that soften in hot water.", 13, [
+  meadowHerb("dandelionGreens", "Dandelion", "Bitter young leaves that soften in hot water.", 13, [
     "bitter",
     "leafy",
     "meadow"
@@ -212,7 +213,7 @@ export const meadowGatherableDefinitions: GatherableDefinition[] = [
     "sweet",
     "meadow"
   ]),
-  meadowBerry("roseHips", "Rose Hips", "Tart red hips that stain the fingers.", 4, ["tart", "fruit", "meadow"])
+  meadowFruit("roseHips", "Rose Hips", "Tart red hips that stain the fingers.", 4, ["tart", "fruit", "meadow"])
 ];
 
 export const forestGatherableDefinitions: GatherableDefinition[] = [
@@ -238,7 +239,6 @@ export const forestGatherableDefinitions: GatherableDefinition[] = [
 
 export const riverGatherableDefinitions: GatherableDefinition[] = [
   riverGatherable("watercress", "Watercress", "vegetable", 11, ["leafy", "peppery"]),
-  riverGatherable("riverMint", "River Mint", "herb", 8, ["cooling", "aromatic"]),
   riverGatherable("waterLilies", "Water Lilies", "flower", 5, ["floral", "calming"]),
   riverGatherable("marshIris", "Marsh Iris", "flower", 4, ["floral", "wetland"]),
   riverGatherable("cattailShoots", "Cattail Shoots", "vegetable", 9, ["shoot", "marsh"]),
@@ -264,7 +264,6 @@ export const mineGatherableDefinitions: GatherableDefinition[] = [
   mineGatherable("glowcaps", "Glowcaps", "herb", 6, ["fungus", "glowing"]),
   mineGatherable("crystalMoss", "Crystal Moss", "herb", 5, ["moss", "mineral"]),
   mineGatherable("stoneTruffle", "Stone Truffle", "root", 5, ["fungus", "earthy"]),
-  mineGatherable("batMint", "Bat Mint", "herb", 7, ["cooling", "cave"]),
   mineGatherable("sulfurHerb", "Sulfur Herb", "herb", 5, ["sulfur", "sharp"]),
   mineGatherable("ironroot", "Ironroot", "root", 6, ["root", "mineral"]),
   mineGatherable("deepFungus", "Deep Fungus", "herb", 6, ["fungus", "deep"]),
@@ -278,18 +277,17 @@ export const mineGatherableDefinitions: GatherableDefinition[] = [
 ];
 
 export const desertGatherableDefinitions: GatherableDefinition[] = [
-  desertGatherable("pricklyPear", "Prickly Pear", "berry", 9, ["fruit", "cactus"]),
+  desertGatherable("pricklyPear", "Prickly Pear", "fruit", 9, ["fruit", "cactus"]),
   desertGatherable("agaveHearts", "Agave Hearts", "vegetable", 7, ["sweet", "succulent"]),
   desertGatherable("desertSage", "Desert Sage", "seasoning", 7, ["aromatic", "dry"]),
   desertGatherable("sandThyme", "Sand Thyme", "seasoning", 6, ["aromatic", "dry"]),
   desertGatherable("sunleafHerb", "Sunleaf Herb", "herb", 6, ["sun", "leafy"]),
-  desertGatherable("dustMint", "Dust Mint", "herb", 6, ["cooling", "dust"]),
   desertGatherable("aloeLeaves", "Aloe Leaves", "herb", 8, ["succulent", "soothing"]),
   desertGatherable("dryrootTubers", "Dryroot Tubers", "root", 7, ["tuber", "dry"]),
   desertGatherable("fireBlossom", "Fire Blossom", "flower", 4, ["flower", "warm"]),
   desertGatherable("saltbrush", "Saltbrush", "herb", 7, ["salty", "brush"]),
   desertGatherable("bitterYucca", "Bitter Yucca", "vegetable", 6, ["bitter", "succulent"]),
-  desertGatherable("cactusFruit", "Cactus Fruit", "berry", 8, ["fruit", "cactus"]),
+  desertGatherable("cactusFruit", "Cactus Fruit", "fruit", 8, ["fruit", "cactus"]),
   desertGatherable("redNeedleHerb", "Red Needle Herb", "herb", 5, ["needle", "red"]),
   desertGatherable("scorchleaf", "Scorchleaf", "herb", 4, ["heat", "leafy"]),
   desertGatherable("sandOnion", "Sand Onion", "vegetable", 6, ["allium", "pungent"]),
@@ -638,6 +636,27 @@ function meadowBerry(
   };
 }
 
+function meadowFruit(
+  id: ResourceId,
+  displayName: string,
+  description: string,
+  gatherWeight: number,
+  tags: string[]
+): GatherableDefinition {
+  return {
+    id,
+    displayName,
+    category: "fruit",
+    description,
+    gatherWeight,
+    gatherTimeModifier: 1.04,
+    tags,
+    value: 3,
+    rarity: gatherWeight <= 4 ? "uncommon" : "common",
+    nutrition: { hunger: 2, hydration: 1 }
+  };
+}
+
 function meadowRoot(
   id: ResourceId,
   displayName: string,
@@ -722,6 +741,7 @@ function getCategoryGatherTimeModifier(category: GatherableIngredientCategory): 
     case "seasoning":
       return 1.2;
     case "berry":
+    case "fruit":
       return 1.04;
     default:
       return 1;
@@ -752,6 +772,7 @@ function getIngredientValue(category: GatherableIngredientCategory, rarity: Item
     case "seasoning":
       return 5 + rarityBonus;
     case "berry":
+    case "fruit":
       return 3 + rarityBonus;
     default:
       return 2 + rarityBonus;
@@ -761,6 +782,7 @@ function getIngredientValue(category: GatherableIngredientCategory, rarity: Item
 function getIngredientNutrition(category: GatherableIngredientCategory): ResourceNutrition | undefined {
   switch (category) {
     case "berry":
+    case "fruit":
       return { hunger: 2, hydration: 1 };
     case "root":
       return { hunger: 4 };
@@ -772,12 +794,13 @@ function getIngredientNutrition(category: GatherableIngredientCategory): Resourc
 }
 
 function getGatherableMinAmount(category: GatherableIngredientCategory): number {
-  return category === "berry" ? 2 : 1;
+  return category === "berry" || category === "fruit" ? 2 : 1;
 }
 
 function getGatherableMaxAmount(category: GatherableIngredientCategory): number {
   switch (category) {
     case "berry":
+    case "fruit":
       return 4;
     case "root":
     case "vegetable":
@@ -793,6 +816,7 @@ function getIngredientWeight(category: GatherableIngredientCategory): number {
     case "vegetable":
       return 0.4;
     case "berry":
+    case "fruit":
       return 0.1;
     default:
       return 0.1;
@@ -801,7 +825,7 @@ function getIngredientWeight(category: GatherableIngredientCategory): number {
 
 function getIngredientCompatibility(category: GatherableIngredientCategory, tags: string[]): string[] {
   const compatibility = ["stew", "campfire"];
-  if (category === "berry" || tags.includes("sweet")) {
+  if (category === "berry" || category === "fruit" || tags.includes("sweet")) {
     compatibility.push("preserve", "brew");
   }
   if (category === "seasoning" || tags.includes("aromatic")) {

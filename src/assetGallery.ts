@@ -189,7 +189,6 @@ const locationLabels: Record<LocationId, string> = {
   desert: "Desert"
 };
 
-const fruitGatherableIds = new Set(["roseHips", "pricklyPear", "cactusFruit"]);
 const fungalTags = new Set(["fungus", "mushroom", "truffle", "cap", "spore"]);
 const medicinalTags = new Set(["medicinal", "calming", "soothing", "mana"]);
 
@@ -340,7 +339,9 @@ function getIngredientGroupId(definition: LocationGatherableDefinition): AssetGr
     case "flower":
       return "flowers";
     case "berry":
-      return fruitGatherableIds.has(definition.id) ? "fruit" : "berries";
+      return "berries";
+    case "fruit":
+      return "fruit";
     case "root":
       return "rootsTubers";
     case "vegetable":
@@ -364,7 +365,9 @@ function getIngredientCategoryLabel(
     case "flower":
       return "Flower";
     case "berry":
-      return groupId === "fruit" ? "Fruit" : "Berry";
+      return "Berry";
+    case "fruit":
+      return "Fruit";
     case "root":
       return "Root/Tuber";
     case "vegetable":
@@ -383,6 +386,10 @@ function getIngredientIconFileName(definition: GatherableDefinition): string {
     return "chamomile-icon.png";
   }
 
+  if (definition.id === "crystalBlooms") {
+    return "crystal-bloom-icon.png";
+  }
+
   if (definition.id === "elderflowers") {
     return "elder-flowers-icon.png";
   }
@@ -391,11 +398,15 @@ function getIngredientIconFileName(definition: GatherableDefinition): string {
     return "lavender-icon.png";
   }
 
+  if (definition.id === "roseHips") {
+    return "rose-hips-icon.png";
+  }
+
   if (definition.id === "yarrow") {
     return "yarrow-icon.png";
   }
 
-  if (definition.category === "berry") {
+  if (definition.category === "berry" || definition.category === "fruit") {
     return "berry-icon.png";
   }
 
