@@ -120,6 +120,7 @@ const forageLocationDefinitions: Array<{
   { locationId: "meadow", actionName: "Meadow", label: "Meadow", baseDurationMs: 12000, baseXp: 120 },
   { locationId: "forest", actionName: "Forest", label: "Forest", baseDurationMs: 14000, baseXp: 140 },
   { locationId: "river", actionName: "River", label: "River", baseDurationMs: 13500, baseXp: 135 },
+  { locationId: "beach", actionName: "Beach", label: "Beach", baseDurationMs: 15000, baseXp: 150 },
   { locationId: "mine", actionName: "Mine", label: "Mine", baseDurationMs: 17000, baseXp: 170 },
   { locationId: "desert", actionName: "Desert", label: "Desert", baseDurationMs: 18000, baseXp: 180 }
 ];
@@ -188,9 +189,14 @@ export const meadowGatherableDefinitions: GatherableDefinition[] = [
     "savory",
     "meadow"
   ]),
-  meadowVegetable("sunrootTubers", "Sunroot Tubers", "Knobbly tubers with a nutty bite after boiling.", 6, [
+  meadowVegetable("sunrootTubers", "Sunheart Tubers", "Knobbly tubers with a nutty bite after boiling.", 6, [
     "tuber",
     "starchy",
+    "earthy",
+    "meadow"
+  ]),
+  meadowRoot("earthroot", "Earthroot", "Dense brown roots with a mineral smell and a steady, filling bite.", 5, [
+    "root",
     "earthy",
     "meadow"
   ]),
@@ -257,6 +263,27 @@ export const riverGatherableDefinitions: GatherableDefinition[] = [
   riverGatherable("driftwoodFungus", "Driftwood Fungus", "herb", 5, ["fungus", "wood"])
 ];
 
+export const beachGatherableDefinitions: GatherableDefinition[] = [
+  beachGatherable("seaRocket", "Sea Rocket", "herb", 9, ["leafy", "peppery"]),
+  beachGatherable("oysterleaf", "Oysterleaf", "herb", 6, ["leafy", "briny"]),
+  beachGatherable("dulseSeaweed", "Dulse Seaweed", "vegetable", 9, ["seaweed", "briny"]),
+  beachGatherable("kelpFronds", "Kelp Fronds", "vegetable", 8, ["kelp", "briny"]),
+  beachGatherable("samphire", "Samphire", "vegetable", 7, ["succulent", "salty"]),
+  beachGatherable("beachPeas", "Beach Peas", "vegetable", 7, ["legume", "pod", "sweet"]),
+  beachGatherable("seaBeans", "Sea Beans", "vegetable", 6, ["succulent", "salty"]),
+  beachGatherable("beachOnion", "Beach Onion", "vegetable", 5, ["allium", "pungent"]),
+  beachGatherable("beachPlums", "Beach Plums", "fruit", 5, ["fruit", "tart"]),
+  beachGatherable("crowberries", "Crowberries", "berry", 5, ["fruit", "dark"]),
+  beachGatherable("seaLavender", "Sea Lavender", "flower", 5, ["floral", "salt"]),
+  beachGatherable("sandVerbena", "Sand Verbena", "flower", 4, ["floral", "dune"]),
+  beachGatherable("shoreMint", "Shore Mint", "seasoning", 6, ["aromatic", "cooling"]),
+  beachGatherable("saltwort", "Saltwort", "seasoning", 7, ["salty", "mineral"]),
+  beachGatherable("bayberryLeaves", "Bayberry Leaves", "seasoning", 5, ["aromatic", "waxy"]),
+  beachGatherable("razorroots", "Razorroots", "root", 5, ["root", "coastal"]),
+  beachGatherable("tidepoolLichen", "Tidepool Lichen", "herb", 4, ["lichen", "mineral"]),
+  beachGatherable("driftcapMushrooms", "Driftcap Mushrooms", "herb", 4, ["fungus", "wood"])
+];
+
 export const mineGatherableDefinitions: GatherableDefinition[] = [
   mineGatherable("glimmerberries", "Glimmerberries", "berry", 5, ["fruit", "glowing"]),
   mineGatherable("caveCurrants", "Cave Currants", "berry", 4, ["fruit", "tart"]),
@@ -308,6 +335,7 @@ export const allGatherableDefinitions: GatherableDefinition[] = [
   ...meadowGatherableDefinitions,
   ...forestGatherableDefinitions,
   ...riverGatherableDefinitions,
+  ...beachGatherableDefinitions,
   ...mineGatherableDefinitions,
   ...desertGatherableDefinitions
 ];
@@ -316,6 +344,7 @@ export const allLocationGatherableDefinitions: LocationGatherableDefinition[] = 
   ...withLocation("meadow", meadowGatherableDefinitions),
   ...withLocation("forest", forestGatherableDefinitions),
   ...withLocation("river", riverGatherableDefinitions),
+  ...withLocation("beach", beachGatherableDefinitions),
   ...withLocation("mine", mineGatherableDefinitions),
   ...withLocation("desert", desertGatherableDefinitions)
 ];
@@ -348,6 +377,7 @@ export const forageResourceActionIds: ForageResourceActionId[] = forageResourceA
 export const meadowIngredientIds: ResourceId[] = meadowGatherableDefinitions.map((entry) => entry.id);
 export const forestIngredientIds: ResourceId[] = forestGatherableDefinitions.map((entry) => entry.id);
 export const riverIngredientIds: ResourceId[] = riverGatherableDefinitions.map((entry) => entry.id);
+export const beachIngredientIds: ResourceId[] = beachGatherableDefinitions.map((entry) => entry.id);
 export const mineIngredientIds: ResourceId[] = mineGatherableDefinitions.map((entry) => entry.id);
 export const desertIngredientIds: ResourceId[] = desertGatherableDefinitions.map((entry) => entry.id);
 
@@ -375,6 +405,14 @@ export const riverGatheringTable = createGatheringTable(
   ["river", "marsh", "bank"]
 );
 
+export const beachGatheringTable = createGatheringTable(
+  "beach",
+  "Beach Forage",
+  beachGatherableDefinitions,
+  ["spring", "summer", "coastal"],
+  ["beach", "shore", "tidepool"]
+);
+
 export const mineGatheringTable = createGatheringTable(
   "mine",
   "Mine Forage",
@@ -395,6 +433,7 @@ export const locationGatheringTables: Partial<Record<LocationId, LocationGatheri
   meadow: meadowGatheringTable,
   forest: forestGatheringTable,
   river: riverGatheringTable,
+  beach: beachGatheringTable,
   mine: mineGatheringTable,
   desert: desertGatheringTable
 };
@@ -527,6 +566,16 @@ function riverGatherable(
   tags: string[]
 ): GatherableDefinition {
   return biomeGatherable("river", "riverbank", id, displayName, category, gatherWeight, tags);
+}
+
+function beachGatherable(
+  id: ResourceId,
+  displayName: string,
+  category: GatherableIngredientCategory,
+  gatherWeight: number,
+  tags: string[]
+): GatherableDefinition {
+  return biomeGatherable("beach", "beach", id, displayName, category, gatherWeight, tags);
 }
 
 function mineGatherable(
@@ -679,6 +728,27 @@ function meadowVegetable(
   };
 }
 
+function meadowRoot(
+  id: ResourceId,
+  displayName: string,
+  description: string,
+  gatherWeight: number,
+  tags: string[]
+): GatherableDefinition {
+  return {
+    id,
+    displayName,
+    category: "root",
+    description,
+    gatherWeight,
+    gatherTimeModifier: 1.18,
+    tags,
+    value: 4,
+    rarity: gatherWeight <= 5 ? "uncommon" : "common",
+    nutrition: { hunger: 4 }
+  };
+}
+
 function meadowSeasoning(
   id: ResourceId,
   displayName: string,
@@ -734,6 +804,8 @@ function getBiomeGatherTimeModifier(locationId: LocationId): number {
       return 1.08;
     case "river":
       return 1.06;
+    case "beach":
+      return 1.1;
     case "mine":
       return 1.18;
     case "desert":
