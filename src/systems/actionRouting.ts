@@ -13,6 +13,7 @@ export type StartActionOptions = {
 const LOCATION_TRAVEL_MS: Record<LocationId, number> = {
   meadow: 10000,
   river: 15000,
+  beach: 45000,
   forest: 30000,
   mine: 60000,
   desert: 75000
@@ -41,7 +42,7 @@ export function isCarryAction(actionId: ActionId): boolean {
 }
 
 export function getLoopLocation(actionId: ActionId, locationId: LocationId | undefined): LocationId | null {
-  return isCarryAction(actionId) ? (locationId ?? getDefaultActionLocation(actionId)) : null;
+  return isCarryAction(actionId) ? getActionLocation(actionId, locationId) : null;
 }
 
 export function getRunningActionLoopLocations(
@@ -74,7 +75,7 @@ export function getLoopTargetLocationId(running: RunningAction, index: number): 
 }
 
 export function getActionTargetLocation(actionId: ActionId, locationId: LocationId | undefined): CharacterLocationId {
-  return isCarryAction(actionId) ? (locationId ?? getDefaultActionLocation(actionId)) : "camp";
+  return isCarryAction(actionId) ? getActionLocation(actionId, locationId) : "camp";
 }
 
 export function getRunningTargetLocation(running: RunningAction): CharacterLocationId {
@@ -202,6 +203,15 @@ function getDefaultActionLocation(actionId: ActionId): LocationId {
     return "desert";
   }
   return "meadow";
+}
+
+function getActionLocation(actionId: ActionId, locationId: LocationId | undefined): LocationId {
+  const defaultLocation = getDefaultActionLocation(actionId);
+  if (actionId === "fishRiver") {
+    return locationId === "river" || locationId === "beach" ? locationId : defaultLocation;
+  }
+
+  return locationId ?? defaultLocation;
 }
 
 function getLocationTravelMs(locationId: LocationId): number {
