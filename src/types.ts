@@ -21,7 +21,7 @@ export type IngredientCategory =
   | "root"
   | "vegetable"
   | "seasoning";
-export type ForageLocationName = "Meadow" | "Forest" | "River" | "Mine" | "Desert";
+export type ForageLocationName = "Meadow" | "Forest" | "River" | "Beach" | "Mine" | "Desert";
 export type ForageCategoryName =
   | "Herbs"
   | "Flowers"
@@ -32,6 +32,17 @@ export type ForageCategoryName =
   | "Seasonings";
 export type ForageIngredientActionId = `gather${ForageLocationName}${ForageCategoryName}`;
 export type ForageResourceActionId = `gatherIngredient:${ResourceId}`;
+export type ForagingSkillTreeCategory =
+  | "resources"
+  | "herb"
+  | "flower"
+  | "berries"
+  | "fruit"
+  | "fungal"
+  | "roots"
+  | "vegetables"
+  | "staples"
+  | "seasonings";
 
 export interface ResourceNutrition {
   hunger?: number;
@@ -261,7 +272,7 @@ export interface CombatState {
   log: CombatLogEntry[];
 }
 
-export type LocationId = "meadow" | "river" | "forest" | "mine" | "desert";
+export type LocationId = "meadow" | "river" | "beach" | "forest" | "mine" | "desert";
 export type CharacterLocationId = "camp" | LocationId;
 
 export type RunningActionPhase = "travelingTo" | "working" | "followUp" | "travelingBack";
@@ -293,6 +304,7 @@ export interface SkillState {
   totalXp: number;
   prestige: number;
   bonuses: SkillPrestigeBonus[];
+  selectedForagingTreeCategory: ForagingSkillTreeCategory | null;
 }
 
 export type Skills = Record<SkillId, SkillState>;
@@ -424,7 +436,7 @@ export interface CookingState {
 }
 
 export interface GameState {
-  version: 10;
+  version: 11;
   createdAt: number;
   updatedAt: number;
   lastSimulatedAt: number;
