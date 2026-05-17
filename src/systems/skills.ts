@@ -4,6 +4,7 @@ import type {
   BuildingId,
   ForageIngredientActionId,
   ForageResourceActionId,
+  ForagingSkillTreeCategory,
   GameState,
   SkillId,
   SkillPrestigeBonus,
@@ -16,6 +17,7 @@ export const MAX_SKILL_LEVEL = 1000;
 export const PRESTIGE_INTERVAL = 100;
 export const MAX_SKILL_PRESTIGE = 9;
 export const TRAVEL_XP_PER_SECOND = 2;
+export const FORAGING_SKILL_TREE_UNLOCK_LEVEL = 10;
 
 export type SkillDefinition = {
   id: SkillId;
@@ -34,10 +36,16 @@ export type SkillProgress = {
   canPrestige: boolean;
 };
 
+export type ForagingSkillTreeDefinition = {
+  id: ForagingSkillTreeCategory;
+  label: string;
+  description: string;
+};
+
 export const skillDefinitions: SkillDefinition[] = [
   { id: "foraging", label: "Foraging", description: "Gathering loose food and camp materials." },
   { id: "mining", label: "Mining", description: "Breaking stone for ore and fuel." },
-  { id: "fishing", label: "Fishing", description: "Catching river fish." },
+  { id: "fishing", label: "Fishing", description: "Catching river and beach fish." },
   { id: "woodcutting", label: "Woodcutting", description: "Chopping trees into useful wood." },
   { id: "hunting", label: "Hunting", description: "Tracking and taking small animals." },
   { id: "crafting", label: "Crafting", description: "Making tools and useful camp goods." },
@@ -52,6 +60,63 @@ export const skillDefinitions: SkillDefinition[] = [
 ];
 
 export const skillIds: SkillId[] = skillDefinitions.map((definition) => definition.id);
+
+export const foragingSkillTreeDefinitions: ForagingSkillTreeDefinition[] = [
+  {
+    id: "resources",
+    label: "Resources",
+    description: "General camp forage such as sticks, stone, water, fiber, and sand."
+  },
+  {
+    id: "herb",
+    label: "Herb",
+    description: "Leafy, medicinal, and aromatic greens gathered from wild places."
+  },
+  {
+    id: "flower",
+    label: "Flower",
+    description: "Edible, useful, and alchemical blossoms from every biome."
+  },
+  {
+    id: "berries",
+    label: "Berries",
+    description: "Small sweet, tart, resinous, and strange wild berries."
+  },
+  {
+    id: "fruit",
+    label: "Fruit",
+    description: "Larger wild fruits, rose hips, and desert fruits."
+  },
+  {
+    id: "fungal",
+    label: "Fungal",
+    description: "Mushrooms, caps, spores, lichen, and deep growths."
+  },
+  {
+    id: "roots",
+    label: "Roots",
+    description: "Roots, bulbs, and buried edible plants."
+  },
+  {
+    id: "vegetables",
+    label: "Vegetables",
+    description: "Shoots, greens, and sturdy fresh vegetables."
+  },
+  {
+    id: "staples",
+    label: "Staples",
+    description: "Tubers, grains, nuts, pods, beans, and filling plants."
+  },
+  {
+    id: "seasonings",
+    label: "Seasonings",
+    description: "Aromatic, resinous, mineral, salty, and pungent accents."
+  }
+];
+
+export const foragingSkillTreeCategories: ForagingSkillTreeCategory[] = foragingSkillTreeDefinitions.map(
+  (definition) => definition.id
+);
 
 const FORAGE_ACTION_SKILL_XP = Object.fromEntries(
   forageIngredientActionDefinitions.map((definition) => [
@@ -169,6 +234,95 @@ export function getSkillDefinition(skillId: SkillId): SkillDefinition {
   return skillDefinitions.find((definition) => definition.id === skillId) ?? skillDefinitions[0];
 }
 
+export function isForagingSkillTreeCategory(value: string | undefined): value is ForagingSkillTreeCategory {
+  return foragingSkillTreeCategories.some((category) => category === value);
+}
+
+export function normalizeForagingSkillTreeCategory(value: unknown): ForagingSkillTreeCategory | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  switch (value.trim().toLowerCase().replace(/[\s_-]+/gu, "")) {
+    case "resource":
+    case "resources":
+      return "resources";
+    case "herb":
+    case "herbs":
+      return "herb";
+    case "flower":
+    case "flowers":
+      return "flower";
+    case "berry":
+    case "berries":
+      return "berries";
+    case "fruit":
+    case "fruits":
+      return "fruit";
+    case "fungal":
+    case "fungus":
+    case "mushroom":
+    case "mushrooms":
+      return "fungal";
+    case "root":
+    case "roots":
+      return "roots";
+    case "vegetable":
+    case "vegetables":
+      return "vegetables";
+    case "staple":
+    case "staples":
+      return "staples";
+    case "seasoning":
+    case "seasonings":
+      return "seasonings";
+    default:
+      return null;
+  }
+}
+
+export function getForagingSkillTreeDefinition(
+  category: ForagingSkillTreeCategory
+): ForagingSkillTreeDefinition {
+  return foragingSkillTreeDefinitions.find((definition) => definition.id === category) ?? foragingSkillTreeDefinitions[0];
+}
+
+export function getForagingSkillTreeSelectionLockReason(
+  state: GameState,
+  category: ForagingSkillTreeCategory
+): string | null {
+  const foragingSkill = state.skills.foraging;
+  const selectedCategory = foragingSkill.selectedForagingTreeCategory;
+  if (selectedCategory) {
+    return selectedCategory === category
+      ? null
+      : `${getForagingSkillTreeDefinition(selectedCategory).label} is chosen until Foraging prestige.`;
+  }
+
+  if (foragingSkill.level < FORAGING_SKILL_TREE_UNLOCK_LEVEL) {
+    return `Requires Foraging Lv ${FORAGING_SKILL_TREE_UNLOCK_LEVEL}.`;
+  }
+
+  return null;
+}
+
+export function selectForagingSkillTree(
+  state: GameState,
+  category: ForagingSkillTreeCategory,
+  now = Date.now()
+): boolean {
+  ensureSkills(state);
+  const lockReason = getForagingSkillTreeSelectionLockReason(state, category);
+  if (lockReason) {
+    return false;
+  }
+
+  state.skills.foraging.selectedForagingTreeCategory = category;
+  state.updatedAt = now;
+  state.lastSimulatedAt = now;
+  return true;
+}
+
 export function getXpForNextSkillLevel(currentLevel: number): number {
   const level = clampInteger(currentLevel, 1, MAX_SKILL_LEVEL);
   return level >= MAX_SKILL_LEVEL ? 0 : 50 * level * level;
@@ -217,6 +371,9 @@ export function prestigeSkill(state: GameState, skillId: SkillId, now = Date.now
   skill.prestige = clampInteger(skill.prestige + 1, 0, MAX_SKILL_PRESTIGE);
   skill.level = 1;
   skill.xp = 0;
+  if (skillId === "foraging") {
+    skill.selectedForagingTreeCategory = null;
+  }
   state.updatedAt = now;
   state.lastSimulatedAt = now;
   return true;
@@ -291,7 +448,8 @@ function createInitialSkillState(): SkillState {
     xp: 0,
     totalXp: 0,
     prestige: 0,
-    bonuses: []
+    bonuses: [],
+    selectedForagingTreeCategory: null
   };
 }
 
@@ -309,7 +467,8 @@ function normalizeSkill(savedSkill: Partial<SkillState> | undefined): SkillState
     xp,
     totalXp,
     prestige,
-    bonuses: normalizePrestigeBonuses(savedSkill.bonuses)
+    bonuses: normalizePrestigeBonuses(savedSkill.bonuses),
+    selectedForagingTreeCategory: normalizeForagingSkillTreeCategory(savedSkill.selectedForagingTreeCategory)
   };
 }
 
