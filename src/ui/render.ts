@@ -319,6 +319,7 @@ type LocationImageDefinition = {
 };
 type CurrentActionBarVisual = {
   label: string;
+  skillId?: SkillId;
   bannerUrl?: string;
 };
 type ForageDisplayCategory = GatherableIngredientCategory | "fungal" | "staple";
@@ -3931,7 +3932,7 @@ function renderCurrentActionSkillBanner(visual: CurrentActionBarVisual): string 
   }
 
   return `
-    <div class="current-action-skill-banner ${visual.bannerUrl ? "has-image" : "has-title"}" aria-label="${visual.label}">
+    <div class="current-action-skill-banner ${visual.bannerUrl ? "has-image" : "has-title"} ${visual.skillId ? `skill-${visual.skillId}` : ""}" aria-label="${visual.label}">
       ${
         visual.bannerUrl
           ? `<img src="${visual.bannerUrl}" alt="" aria-hidden="true" />`
@@ -4168,6 +4169,7 @@ function getCurrentActionBarVisual(
   const skillId = filterSkillIds[filter.id];
   return {
     label: getSkillDefinition(skillId).label,
+    skillId,
     bannerUrl: characterSkillBannerUrls[skillId]
   };
 }
@@ -5641,7 +5643,7 @@ function renderCharacterSkillBanner(
   const actionLabel = filterId ? getActionFilter(filterId).label : label;
 
   return `
-    <div class="character-skill-banner-control">
+    <div class="character-skill-banner-control skill-${skillId}">
       <button
         class="character-skill-banner-button"
         type="button"

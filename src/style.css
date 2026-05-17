@@ -1329,6 +1329,11 @@ h3 {
   object-fit: contain;
 }
 
+.current-action-skill-banner.skill-foraging,
+.current-action-skill-banner.skill-foraging img {
+  aspect-ratio: 1944 / 720;
+}
+
 .current-action-skill-title {
   display: grid;
   width: 100%;
@@ -2634,6 +2639,10 @@ h3 {
   min-width: 0;
 }
 
+.character-skill-banner-control.skill-foraging {
+  grid-template-columns: minmax(0, 2.7fr) minmax(0, 1fr);
+}
+
 .character-skill-banner-button {
   position: relative;
   isolation: isolate;
@@ -2649,6 +2658,10 @@ h3 {
   line-height: 0;
   transform: none;
   transition: none;
+}
+
+.character-skill-banner-control.skill-foraging .character-skill-banner-button {
+  aspect-ratio: 1944 / 720;
 }
 
 .character-skill-banner-button:hover:not(:disabled) {
