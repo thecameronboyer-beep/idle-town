@@ -55,7 +55,7 @@ import { normalizeInventory } from "./inventory";
 import { normalizeSkills } from "./skills";
 
 const SAVE_KEY = "idle-town:first-survival-slice:v1";
-const CURRENT_SAVE_VERSION = 10;
+const CURRENT_SAVE_VERSION = 11;
 const LEGACY_CAMPFIRE_DURATION_MS = 15 * 60 * 1000;
 const WHOLE_RESOURCE_AVERAGE_WEIGHTS: Partial<Record<ResourceId, number>> = {
   minnow: 1,
@@ -547,11 +547,19 @@ function isRunningActionPhase(value: unknown): value is RunningAction["phase"] {
 }
 
 function isCharacterLocationId(value: unknown): value is CharacterLocationId {
-  return value === "camp" || value === "meadow" || value === "river" || value === "forest" || value === "mine" || value === "desert";
+  return (
+    value === "camp" ||
+    value === "meadow" ||
+    value === "river" ||
+    value === "beach" ||
+    value === "forest" ||
+    value === "mine" ||
+    value === "desert"
+  );
 }
 
 function isLocationId(value: unknown): value is LocationId {
-  return value === "meadow" || value === "river" || value === "forest" || value === "mine" || value === "desert";
+  return value === "meadow" || value === "river" || value === "beach" || value === "forest" || value === "mine" || value === "desert";
 }
 
 function isResourceId(value: unknown): value is ResourceId {
