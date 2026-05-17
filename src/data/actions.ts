@@ -38,7 +38,7 @@ export const actionDefinitions: ActionDefinition[] = [
     label: "Gather Meadow Ingredients",
     verb: "gathering meadow ingredients",
     durationMs: 12000,
-    blurb: "Search the meadow for herbs, flowers, berries, fruit, roots, and hearty plants."
+    blurb: "Search the meadow for herbs, flowers, berries, fruit, roots, vegetables, and staples."
   },
   {
     id: "gatherForestIngredients",

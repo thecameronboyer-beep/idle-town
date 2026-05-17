@@ -122,7 +122,7 @@ export const resourceDefinitions: ResourceDefinition[] = [
     id: "clothWrap",
     label: "Cloth Wrap",
     group: "crafted",
-    blurb: "A simple folded linen wrap for bundling small supplies."
+    blurb: "A simple folded linen wrap for bundling small resources."
   },
   {
     id: "linenBandage",

@@ -668,36 +668,34 @@ h3 {
   background: rgba(214, 164, 81, 0.14);
 }
 
-.skill-button {
+.focused-skill-panel {
+  display: grid;
+  padding: 0.34rem;
+  overflow: hidden;
+  border-color: rgba(123, 168, 103, 0.36);
+  background:
+    linear-gradient(180deg, rgba(7, 8, 6, 0.38), rgba(14, 15, 12, 0.72)),
+    rgba(17, 18, 14, 0.68);
+}
+
+.focused-skill-banner,
+.focused-skill-title {
+  min-width: 0;
+}
+
+.focused-skill-banner-image {
   display: block;
   width: 100%;
-  padding: 0.65rem 0.72rem;
-  text-align: left;
-  background: rgba(17, 18, 14, 0.56);
+  border-radius: 6px;
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.24),
+    inset 0 0 0 1px rgba(236, 229, 213, 0.12);
 }
 
-.skill-button span {
-  display: block;
-  font-weight: 900;
-}
-
-.skill-button small {
-  display: block;
-  margin-top: 0.1rem;
-  color: var(--amber);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.skill-button.active {
-  border-color: rgba(214, 164, 81, 0.66);
-  background:
-    linear-gradient(90deg, rgba(124, 155, 99, 0.34), rgba(214, 164, 81, 0.16)),
-    rgba(24, 25, 19, 0.88);
-}
-
-.skill-button.current:not(.active) {
-  border-color: rgba(115, 168, 160, 0.5);
+.focused-skill-title {
+  padding: 0.6rem 0.68rem;
+  color: #f4e6c8;
+  font-weight: 950;
 }
 
 .sidebar-footer {
@@ -1038,7 +1036,6 @@ h3 {
 
 .action-panel,
 .location-panel,
-.skill-panel,
 .camp-panel {
   padding: 1rem;
 }
@@ -1196,8 +1193,23 @@ h3 {
 }
 
 .action-loop-step {
+  display: grid;
+  gap: 0.08rem;
   width: 100%;
   text-align: left;
+}
+
+.action-loop-step span,
+.action-loop-step small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-loop-step small {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 800;
 }
 
 .action-loop-icon {
@@ -1278,16 +1290,6 @@ h3 {
   transform: none;
 }
 
-.skill-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.65rem;
-}
-
-.skill-button {
-  min-height: 52px;
-}
-
 .action-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(88px, 96px));
@@ -1333,9 +1335,20 @@ h3 {
   align-items: start;
 }
 
-.forage-category-columns {
+.forage-category-columns,
+.camp-forage-inventory-group {
   --crafting-recipe-gap: 0.38rem;
   --crafting-recipe-size: 90px;
+}
+
+.camp-forage-inventory-grid.inventory-resource-grid {
+  grid-template-columns: repeat(auto-fit, minmax(var(--crafting-recipe-size), var(--crafting-recipe-size)));
+  gap: var(--crafting-recipe-gap);
+}
+
+.camp-forage-inventory-grid .inventory-resource-slot {
+  width: var(--crafting-recipe-size);
+  height: var(--crafting-recipe-size);
 }
 
 .crafting-category-card {
@@ -2254,6 +2267,59 @@ h3 {
   height: 6px;
 }
 
+.character-skill-banner-button {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  line-height: 0;
+  transform: none;
+  transition: none;
+}
+
+.character-skill-banner-button:hover:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  transform: none;
+}
+
+.character-skill-banner-button:focus-visible {
+  outline: 0;
+}
+
+.character-skill-banner-button::after {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+  background:
+    radial-gradient(ellipse at center, rgba(255, 226, 158, 0.42) 0%, rgba(214, 164, 81, 0.3) 54%, rgba(214, 164, 81, 0.14) 72%, transparent 100%),
+    linear-gradient(135deg, rgba(255, 210, 116, 0.28), rgba(214, 164, 81, 0.08) 48%, rgba(255, 235, 176, 0.2));
+  filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.character-skill-banner-button:hover:not(:disabled)::after,
+.character-skill-banner-button:focus-visible::after {
+  opacity: 1;
+}
+
+.character-skill-banner-image {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  border-radius: 5px;
+}
+
 .skill-row.prestige-ready {
   border-color: rgba(214, 164, 81, 0.52);
   background:
@@ -2421,6 +2487,231 @@ h3 {
 
 .loop-editor-heading strong {
   color: #f4e6c8;
+}
+
+.loop-name-field {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.loop-name-field span,
+.loop-step-field span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.loop-name-field input,
+.loop-step-field input,
+.loop-step-field select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(236, 229, 213, 0.16);
+  border-radius: 7px;
+  color: #f4e6c8;
+  background: rgba(7, 8, 6, 0.38);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.loop-name-field input {
+  min-height: 36px;
+  padding: 0.34rem 0.48rem;
+}
+
+.loop-step-editor {
+  display: grid;
+  gap: 0.55rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+.loop-step-editor-heading strong,
+.loop-step-editor-heading small {
+  display: block;
+}
+
+.loop-step-editor-heading strong {
+  color: #f4e6c8;
+  font-size: 0.88rem;
+}
+
+.loop-step-field-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: end;
+}
+
+.loop-step-field {
+  display: grid;
+  flex: 1 1 8.5rem;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.loop-location-field,
+.loop-skill-field {
+  align-self: start;
+  flex: 0 0 7.25rem;
+}
+
+.loop-location-picker,
+.loop-skill-picker {
+  position: relative;
+  width: 7.25rem;
+  max-width: 100%;
+}
+
+.loop-location-button,
+.loop-location-option,
+.loop-skill-button,
+.loop-skill-option {
+  position: relative;
+  display: block;
+  width: 7.25rem;
+  max-width: 100%;
+  height: 3.625rem;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  border-color: rgba(236, 229, 213, 0.16);
+  border-radius: 7px;
+  background: rgba(17, 18, 14, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(7, 8, 6, 0.42);
+}
+
+.loop-location-button::after,
+.loop-location-option::after,
+.loop-skill-button::after,
+.loop-skill-option::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    linear-gradient(180deg, rgba(7, 8, 6, 0.02), rgba(7, 8, 6, 0.7)),
+    linear-gradient(90deg, rgba(7, 8, 6, 0.4), transparent 42%, rgba(7, 8, 6, 0.32));
+  pointer-events: none;
+}
+
+.loop-skill-button,
+.loop-skill-option {
+  background:
+    radial-gradient(circle at 72% 20%, var(--skill-shade), transparent 58%),
+    linear-gradient(135deg, rgba(18, 20, 15, 0.96), rgba(7, 8, 6, 0.9));
+}
+
+.loop-skill-button::before,
+.loop-skill-option::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  border-left: 5px solid var(--skill-accent);
+  opacity: 0.86;
+  pointer-events: none;
+}
+
+.loop-location-button img,
+.loop-location-option img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.loop-skill-mark {
+  position: absolute;
+  top: 0.42rem;
+  left: 0.48rem;
+  z-index: 1;
+  color: var(--skill-accent);
+  font-size: 1rem;
+  font-weight: 1000;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.82);
+  text-transform: none;
+}
+
+.loop-location-picker .loop-location-label,
+.loop-skill-picker .loop-skill-label {
+  position: absolute;
+  left: 0.42rem;
+  bottom: 0.34rem;
+  z-index: 1;
+  overflow: hidden;
+  max-width: calc(100% - 0.84rem);
+  color: #f4e6c8;
+  font-size: 0.68rem;
+  font-weight: 1000;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.82);
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.loop-location-button[aria-expanded="true"],
+.loop-location-option.active,
+.loop-skill-button[aria-expanded="true"],
+.loop-skill-option.active {
+  border-color: rgba(214, 164, 81, 0.66);
+  box-shadow:
+    0 0 0 1px rgba(214, 164, 81, 0.22),
+    0 10px 26px rgba(0, 0, 0, 0.28);
+}
+
+.loop-location-button[aria-expanded="true"] .loop-location-label,
+.loop-location-option.active .loop-location-label,
+.loop-skill-button[aria-expanded="true"] .loop-skill-label,
+.loop-skill-option.active .loop-skill-label {
+  color: #ffe3a6;
+}
+
+.loop-location-menu,
+.loop-skill-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(236, 229, 213, 0.18);
+  border-radius: 8px;
+  background: rgba(13, 14, 11, 0.98);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.44);
+}
+
+.loop-step-field input,
+.loop-step-field select {
+  min-height: 34px;
+  padding: 0.28rem 0.42rem;
+}
+
+.loop-step-field.readonly {
+  min-height: 58px;
+  align-content: center;
+  padding: 0.42rem 0.5rem;
+  border: 1px solid rgba(236, 229, 213, 0.12);
+  border-radius: 7px;
+  background: rgba(7, 8, 6, 0.28);
+}
+
+.loop-step-field.readonly strong {
+  overflow: hidden;
+  color: #f4e6c8;
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loop-step-hint {
+  color: var(--muted);
+  font-size: 0.74rem;
 }
 
 .action-loop-panel .action-loop-controls {
@@ -3179,7 +3470,6 @@ h3 {
   .work-area,
   .camp-work-area,
   .combat-work-area,
-  .skill-grid,
   .character-overview-content,
   .character-overview-pair {
     grid-template-columns: 1fr;
@@ -3193,7 +3483,6 @@ h3 {
   .combat-side-panel,
   .action-panel,
   .location-panel,
-  .skill-panel,
   .camp-panel,
   .camp-stats-panel {
     padding: 0.75rem;
@@ -3240,7 +3529,8 @@ h3 {
     padding: 0.6rem;
   }
 
-  .forage-category-columns {
+  .forage-category-columns,
+  .camp-forage-inventory-group {
     --crafting-recipe-gap: 0.34rem;
     --crafting-recipe-size: clamp(76px, 18vw, 88px);
   }
@@ -3342,7 +3632,8 @@ h3 {
     --crafting-recipe-size: 74px;
   }
 
-  .forage-category-columns {
+  .forage-category-columns,
+  .camp-forage-inventory-group {
     --crafting-recipe-gap: 0.32rem;
     --crafting-recipe-size: 74px;
   }

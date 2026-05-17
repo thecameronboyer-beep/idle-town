@@ -328,11 +328,29 @@ export interface RunningAction {
   repeat: boolean;
 }
 
+export type ActionLoopAdvanceMode =
+  | "smart"
+  | "afterCompletion"
+  | "whenInventoryFull"
+  | "whenResourceAtLeast"
+  | "whenCannotStart"
+  | "manual";
+
+export type ActionLoopResourceScope = "camp" | "character";
+
+export interface ActionLoopAdvanceRule {
+  mode: ActionLoopAdvanceMode;
+  resourceId?: ResourceId;
+  amount?: number;
+  scope?: ActionLoopResourceScope;
+}
+
 export interface ActionLoop {
   id: string;
   name: string;
   actionIds: ActionId[];
   locationIds: Array<LocationId | null>;
+  advanceRules: ActionLoopAdvanceRule[];
   createdAt: number;
   updatedAt: number;
 }

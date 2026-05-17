@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const permanentUrl = "https://idle-town-assets.vercel.app/assets";
 
-await runStep("Build the app", "npm", ["run", "build"]);
+await runStep("Build the asset app", "npm", ["run", "build:assets"]);
 await runStep("Deploy to Vercel production", "npx", ["vercel", "--prod", "--yes", "--no-color"]);
 
 console.log("");

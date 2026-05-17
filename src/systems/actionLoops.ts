@@ -1,10 +1,21 @@
-import type { ActionId, ActionLoop, GameState, LocationId } from "../types";
+import type {
+  ActionId,
+  ActionLoop,
+  ActionLoopAdvanceMode,
+  ActionLoopAdvanceRule,
+  ActionLoopResourceScope,
+  GameState,
+  LocationId,
+  ResourceId
+} from "../types";
 import {
   clampLoopIndex,
   getLoopLocation,
   type StartActionOptions
 } from "./actionRouting";
 import { getCurrentAction, setRunningAction, touch } from "./actionState";
+
+const MAX_LOOP_NAME_LENGTH = 42;
 
 export function createActionLoop(state: GameState, now = Date.now()): ActionLoop {
   ensureActionLoops(state, now);
@@ -14,6 +25,7 @@ export function createActionLoop(state: GameState, now = Date.now()): ActionLoop
     name: `Loop ${nextNumber}`,
     actionIds: ["gatherSticks"],
     locationIds: ["meadow"],
+    advanceRules: [getDefaultActionLoopAdvanceRule("gatherSticks")],
     createdAt: now,
     updatedAt: now
   };
@@ -54,6 +66,7 @@ export function getAssignedActionLoop(state: GameState, characterId = state.sele
 }
 
 export function canInsertActionInSavedLoop(loop: ActionLoop, afterIndex: number, actionId: ActionId): boolean {
+  normalizeActionLoopAdvanceRules(loop);
   const safeAfterIndex = clampActionLoopIndex(afterIndex, loop);
   if (actionId === "butcherFish") {
     return loop.actionIds[safeAfterIndex] === "fishRiver";
@@ -77,8 +90,10 @@ export function insertActionInSavedLoop(
 
   const safeAfterIndex = clampActionLoopIndex(afterIndex, loop);
   const insertIndex = safeAfterIndex + 1;
+  normalizeActionLoopAdvanceRules(loop);
   loop.actionIds.splice(insertIndex, 0, actionId);
   loop.locationIds.splice(insertIndex, 0, getLoopLocation(actionId, options.locationId));
+  loop.advanceRules.splice(insertIndex, 0, getDefaultActionLoopAdvanceRule(actionId));
   loop.updatedAt = now;
   refreshRunningLoopAssignments(state, loop);
   touch(state, now);
@@ -92,8 +107,10 @@ export function removeActionFromSavedLoop(state: GameState, loopId: string, inde
   }
 
   const safeIndex = clampActionLoopIndex(index, loop);
+  normalizeActionLoopAdvanceRules(loop);
   loop.actionIds.splice(safeIndex, 1);
   loop.locationIds.splice(safeIndex, 1);
+  loop.advanceRules.splice(safeIndex, 1);
   loop.updatedAt = now;
   refreshRunningLoopAssignments(state, loop);
   touch(state, now);
@@ -102,6 +119,121 @@ export function removeActionFromSavedLoop(state: GameState, loopId: string, inde
 
 export function normalizeActionLoopLocations(loop: ActionLoop): Array<LocationId | null> {
   return loop.actionIds.map((actionId, index) => getLoopLocation(actionId, loop.locationIds[index] ?? undefined));
+}
+
+export function normalizeActionLoopAdvanceRules(loop: ActionLoop): ActionLoopAdvanceRule[] {
+  const savedRules = Array.isArray(loop.advanceRules) ? loop.advanceRules : [];
+  loop.advanceRules = loop.actionIds.map((actionId, index) =>
+    normalizeActionLoopAdvanceRule(savedRules[index], actionId)
+  );
+  return loop.advanceRules;
+}
+
+export function getActionLoopAdvanceRule(loop: ActionLoop, index: number): ActionLoopAdvanceRule {
+  const rules = normalizeActionLoopAdvanceRules(loop);
+  return rules[clampActionLoopIndex(index, loop)] ?? getDefaultActionLoopAdvanceRule(loop.actionIds[0] ?? "gatherSticks");
+}
+
+export function updateActionLoopName(
+  state: GameState,
+  loopId: string,
+  name: string,
+  now = Date.now()
+): boolean {
+  const loop = getActionLoop(state, loopId);
+  if (!loop) {
+    return false;
+  }
+
+  const normalizedName = normalizeActionLoopName(name);
+  if (loop.name === normalizedName) {
+    return false;
+  }
+
+  loop.name = normalizedName;
+  loop.updatedAt = now;
+  touch(state, now);
+  return true;
+}
+
+export function updateActionLoopStepAdvanceRule(
+  state: GameState,
+  loopId: string,
+  index: number,
+  patch: Partial<ActionLoopAdvanceRule>,
+  now = Date.now()
+): boolean {
+  const loop = getActionLoop(state, loopId);
+  if (!loop) {
+    return false;
+  }
+
+  const safeIndex = clampActionLoopIndex(index, loop);
+  const rules = normalizeActionLoopAdvanceRules(loop);
+  const current = rules[safeIndex] ?? getDefaultActionLoopAdvanceRule(loop.actionIds[safeIndex]);
+  const next = normalizeActionLoopAdvanceRule({ ...current, ...patch }, loop.actionIds[safeIndex]);
+  loop.advanceRules[safeIndex] = next;
+  loop.updatedAt = now;
+  touch(state, now);
+  return true;
+}
+
+export function updateActionLoopStepAction(
+  state: GameState,
+  loopId: string,
+  index: number,
+  actionId: ActionId,
+  options: StartActionOptions = {},
+  now = Date.now()
+): boolean {
+  const loop = getActionLoop(state, loopId);
+  if (!loop) {
+    return false;
+  }
+
+  const safeIndex = clampActionLoopIndex(index, loop);
+  normalizeActionLoopAdvanceRules(loop);
+  const nextLocation = getLoopLocation(actionId, options.locationId ?? loop.locationIds[safeIndex] ?? undefined);
+  if (loop.actionIds[safeIndex] === actionId && loop.locationIds[safeIndex] === nextLocation) {
+    return false;
+  }
+
+  loop.actionIds[safeIndex] = actionId;
+  loop.locationIds[safeIndex] = nextLocation;
+  loop.advanceRules[safeIndex] = getDefaultActionLoopAdvanceRule(actionId);
+  loop.updatedAt = now;
+  refreshRunningLoopAssignments(state, loop);
+  touch(state, now);
+  return true;
+}
+
+export function updateActionLoopStepLocation(
+  state: GameState,
+  loopId: string,
+  index: number,
+  locationId: LocationId,
+  now = Date.now()
+): boolean {
+  const loop = getActionLoop(state, loopId);
+  if (!loop) {
+    return false;
+  }
+
+  const safeIndex = clampActionLoopIndex(index, loop);
+  const normalizedLocation = getLoopLocation(loop.actionIds[safeIndex], locationId);
+  if (loop.locationIds[safeIndex] === normalizedLocation) {
+    return false;
+  }
+
+  loop.locationIds[safeIndex] = normalizedLocation;
+  loop.updatedAt = now;
+  refreshRunningLoopAssignments(state, loop);
+  touch(state, now);
+  return true;
+}
+
+export function getDefaultActionLoopAdvanceRule(_actionId: ActionId): ActionLoopAdvanceRule {
+  return { mode: "smart" };
 }
 
 function ensureActionLoops(state: GameState, now = Date.now()): void {
@@ -126,6 +258,7 @@ function ensureActionLoops(state: GameState, now = Date.now()): void {
       locationIds: fallback.actionIds.map((actionId, index) =>
         getLoopLocation(actionId, fallback.locationIds[index] ?? undefined)
       ),
+      advanceRules: fallback.actionIds.map((actionId) => getDefaultActionLoopAdvanceRule(actionId)),
       createdAt: now,
       updatedAt: now
     }
@@ -159,4 +292,50 @@ function clampActionLoopIndex(index: number, loop: ActionLoop): number {
   }
 
   return Math.min(loop.actionIds.length - 1, Math.max(0, Math.floor(index)));
+}
+
+function normalizeActionLoopAdvanceRule(
+  rule: Partial<ActionLoopAdvanceRule> | undefined,
+  actionId: ActionId
+): ActionLoopAdvanceRule {
+  const mode = isActionLoopAdvanceMode(rule?.mode) ? rule.mode : getDefaultActionLoopAdvanceRule(actionId).mode;
+  if (mode !== "whenResourceAtLeast") {
+    return { mode };
+  }
+
+  return {
+    mode,
+    resourceId: typeof rule?.resourceId === "string" ? (rule.resourceId as ResourceId) : undefined,
+    amount: normalizeTargetAmount(rule?.amount),
+    scope: isActionLoopResourceScope(rule?.scope) ? rule.scope : "camp"
+  };
+}
+
+function normalizeActionLoopName(name: string): string {
+  const trimmed = name.trim().replace(/\s+/g, " ");
+  return (trimmed || "Action Loop").slice(0, MAX_LOOP_NAME_LENGTH);
+}
+
+function normalizeTargetAmount(amount: unknown): number {
+  const parsed = Number(amount ?? 1);
+  if (!Number.isFinite(parsed)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.floor(parsed));
+}
+
+function isActionLoopAdvanceMode(mode: unknown): mode is ActionLoopAdvanceMode {
+  return (
+    mode === "smart" ||
+    mode === "afterCompletion" ||
+    mode === "whenInventoryFull" ||
+    mode === "whenResourceAtLeast" ||
+    mode === "whenCannotStart" ||
+    mode === "manual"
+  );
+}
+
+function isActionLoopResourceScope(scope: unknown): scope is ActionLoopResourceScope {
+  return scope === "camp" || scope === "character";
 }

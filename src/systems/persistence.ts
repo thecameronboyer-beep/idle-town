@@ -2,7 +2,7 @@ import { actionDefinitions } from "../data/actions";
 import { combatClassIds, combatEnemyIds, combatLocationIds } from "../data/combat";
 import { cookingRecipeIds } from "../data/cooking";
 import { toolDefinitions } from "../data/craftables";
-import { wholeCountResourceIds } from "../data/resources";
+import { resourceOrder, wholeCountResourceIds } from "../data/resources";
 import {
   createEmptyBuildingCounts,
   createEmptyCombatClassProgressMap,
@@ -18,6 +18,9 @@ import {
 import type {
   ActionId,
   ActionLoop,
+  ActionLoopAdvanceMode,
+  ActionLoopAdvanceRule,
+  ActionLoopResourceScope,
   CharacterLocationId,
   CharacterCombatStats,
   CharacterNeeds,
@@ -412,6 +415,7 @@ function normalizeActionLoop(savedLoop: unknown, index: number): ActionLoop | nu
     name: typeof candidate.name === "string" && candidate.name ? candidate.name : `Loop ${index + 1}`,
     actionIds,
     locationIds: normalizeLoopLocations(actionIds, candidate.locationIds),
+    advanceRules: normalizeLoopAdvanceRules(actionIds, candidate.advanceRules),
     createdAt: typeof candidate.createdAt === "number" ? candidate.createdAt : Date.now(),
     updatedAt: typeof candidate.updatedAt === "number" ? candidate.updatedAt : Date.now()
   };
@@ -440,6 +444,7 @@ function normalizeLegacyActionLoop(legacyCurrentAction: unknown): ActionLoop | n
     name: "Saved Work Loop",
     actionIds,
     locationIds: normalizeLoopLocations(actionIds, running.loopLocationIds),
+    advanceRules: actionIds.map((actionId) => createDefaultLoopAdvanceRule(actionId)),
     createdAt: now,
     updatedAt: now
   };
@@ -451,6 +456,34 @@ function normalizeLoopLocations(actionIds: ActionId[], savedLocations: unknown):
     const locationId = locations[index];
     return isLocationId(locationId) ? locationId : null;
   });
+}
+
+function normalizeLoopAdvanceRules(actionIds: ActionId[], savedRules: unknown): ActionLoopAdvanceRule[] {
+  const rules = Array.isArray(savedRules) ? savedRules : [];
+  return actionIds.map((actionId, index) => normalizeLoopAdvanceRule(actionId, rules[index]));
+}
+
+function normalizeLoopAdvanceRule(actionId: ActionId, savedRule: unknown): ActionLoopAdvanceRule {
+  if (!savedRule || typeof savedRule !== "object") {
+    return createDefaultLoopAdvanceRule(actionId);
+  }
+
+  const candidate = savedRule as Partial<ActionLoopAdvanceRule>;
+  const mode = isActionLoopAdvanceMode(candidate.mode) ? candidate.mode : createDefaultLoopAdvanceRule(actionId).mode;
+  if (mode !== "whenResourceAtLeast") {
+    return { mode };
+  }
+
+  return {
+    mode,
+    resourceId: isResourceId(candidate.resourceId) ? candidate.resourceId : undefined,
+    amount: clampNumber(candidate.amount, 1, 999999),
+    scope: isActionLoopResourceScope(candidate.scope) ? candidate.scope : "camp"
+  };
+}
+
+function createDefaultLoopAdvanceRule(_actionId: ActionId): ActionLoopAdvanceRule {
+  return { mode: "smart" };
 }
 
 function normalizeCurrentActions(savedActions: unknown, legacyCurrentAction: unknown): RunningAction[] {
@@ -519,6 +552,25 @@ function isCharacterLocationId(value: unknown): value is CharacterLocationId {
 
 function isLocationId(value: unknown): value is LocationId {
   return value === "meadow" || value === "river" || value === "forest" || value === "mine" || value === "desert";
+}
+
+function isResourceId(value: unknown): value is ResourceId {
+  return typeof value === "string" && resourceOrder.includes(value);
+}
+
+function isActionLoopAdvanceMode(value: unknown): value is ActionLoopAdvanceMode {
+  return (
+    value === "smart" ||
+    value === "afterCompletion" ||
+    value === "whenInventoryFull" ||
+    value === "whenResourceAtLeast" ||
+    value === "whenCannotStart" ||
+    value === "manual"
+  );
+}
+
+function isActionLoopResourceScope(value: unknown): value is ActionLoopResourceScope {
+  return value === "camp" || value === "character";
 }
 
 function isCombatLocationId(value: unknown): value is CombatLocationId {

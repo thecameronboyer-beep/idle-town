@@ -89,20 +89,20 @@ const forageCategoryDefinitions: Array<{
   { category: "flower", actionName: "Flowers", label: "Flowers", verbNoun: "flowers", summary: "edible and useful flowers" },
   { category: "berry", actionName: "Berries", label: "Berries", verbNoun: "berries", summary: "berries" },
   { category: "fruit", actionName: "Fruit", label: "Fruit", verbNoun: "fruit", summary: "fruit" },
-  { category: "root", actionName: "Roots", label: "Roots/Tubers", verbNoun: "roots and tubers", summary: "roots and tubers" },
+  { category: "root", actionName: "Roots", label: "Roots", verbNoun: "roots", summary: "roots" },
   {
     category: "vegetable",
     actionName: "Vegetables",
-    label: "Vegetables/Hearty Plants",
-    verbNoun: "hearty plants",
-    summary: "vegetables and hearty plants"
+    label: "Vegetables/Staples",
+    verbNoun: "staples",
+    summary: "vegetables and staples"
   },
   {
     category: "seasoning",
     actionName: "Seasonings",
-    label: "Seasoning/Aromatics",
-    verbNoun: "seasonings and aromatics",
-    summary: "seasonings and aromatics"
+    label: "Seasonings",
+    verbNoun: "seasonings",
+    summary: "seasonings"
   }
 ];
 
@@ -188,12 +188,13 @@ export const meadowGatherableDefinitions: GatherableDefinition[] = [
     "savory",
     "meadow"
   ]),
-  meadowRoot("sunrootTubers", "Sunroot Tubers", "Knobbly tubers with a nutty bite after boiling.", 6, [
+  meadowVegetable("sunrootTubers", "Sunroot Tubers", "Knobbly tubers with a nutty bite after boiling.", 6, [
+    "tuber",
     "starchy",
     "earthy",
     "meadow"
   ]),
-  meadowVegetable("wildCarrot", "Wild Carrot", "Thin pale roots with more scent than flesh.", 5, [
+  meadowVegetable("wildCarrot", "Carrot", "Thin pale roots with more scent than flesh.", 5, [
     "root",
     "sweet",
     "meadow"
@@ -226,7 +227,7 @@ export const forestGatherableDefinitions: GatherableDefinition[] = [
   forestGatherable("acorns", "Acorns", "vegetable", 9, ["nut", "earthy"]),
   forestGatherable("hazelnuts", "Hazelnuts", "vegetable", 7, ["nut", "rich"]),
   forestGatherable("burdockRoots", "Burdock Roots", "root", 7, ["root", "earthy"]),
-  forestGatherable("fernrootTubers", "Fernroot Tubers", "root", 5, ["tuber", "starchy"]),
+  forestGatherable("fernrootTubers", "Fernroot Tubers", "vegetable", 5, ["tuber", "starchy"]),
   forestGatherable("nettles", "Nettles", "herb", 9, ["leafy", "stinging"]),
   forestGatherable("mossHerbs", "Moss Herbs", "herb", 8, ["moss", "damp"]),
   forestGatherable("bloodleaf", "Bloodleaf", "herb", 4, ["medicinal", "red"]),
@@ -267,7 +268,7 @@ export const mineGatherableDefinitions: GatherableDefinition[] = [
   mineGatherable("sulfurHerb", "Sulfur Herb", "herb", 5, ["sulfur", "sharp"]),
   mineGatherable("ironroot", "Ironroot", "root", 6, ["root", "mineral"]),
   mineGatherable("deepFungus", "Deep Fungus", "herb", 6, ["fungus", "deep"]),
-  mineGatherable("blindrootTubers", "Blindroot Tubers", "root", 5, ["tuber", "dark"]),
+  mineGatherable("blindrootTubers", "Blindroot Tubers", "vegetable", 5, ["tuber", "dark"]),
   mineGatherable("caveGarlic", "Cave Garlic", "vegetable", 6, ["allium", "pungent"]),
   mineGatherable("saltCrystals", "Salt Crystals", "seasoning", 7, ["salt", "mineral"]),
   mineGatherable("mineralLichen", "Mineral Lichen", "herb", 7, ["lichen", "mineral"]),
@@ -283,7 +284,7 @@ export const desertGatherableDefinitions: GatherableDefinition[] = [
   desertGatherable("sandThyme", "Sand Thyme", "seasoning", 6, ["aromatic", "dry"]),
   desertGatherable("sunleafHerb", "Sunleaf Herb", "herb", 6, ["sun", "leafy"]),
   desertGatherable("aloeLeaves", "Aloe Leaves", "herb", 8, ["succulent", "soothing"]),
-  desertGatherable("dryrootTubers", "Dryroot Tubers", "root", 7, ["tuber", "dry"]),
+  desertGatherable("dryrootTubers", "Dryroot Tubers", "vegetable", 7, ["tuber", "dry"]),
   desertGatherable("fireBlossom", "Fire Blossom", "flower", 4, ["flower", "warm"]),
   desertGatherable("saltbrush", "Saltbrush", "herb", 7, ["salty", "brush"]),
   desertGatherable("bitterYucca", "Bitter Yucca", "vegetable", 6, ["bitter", "succulent"]),
@@ -654,27 +655,6 @@ function meadowFruit(
     value: 3,
     rarity: gatherWeight <= 4 ? "uncommon" : "common",
     nutrition: { hunger: 2, hydration: 1 }
-  };
-}
-
-function meadowRoot(
-  id: ResourceId,
-  displayName: string,
-  description: string,
-  gatherWeight: number,
-  tags: string[]
-): GatherableDefinition {
-  return {
-    id,
-    displayName,
-    category: "root",
-    description,
-    gatherWeight,
-    gatherTimeModifier: 1.18,
-    tags,
-    value: 4,
-    rarity: "uncommon",
-    nutrition: { hunger: 4 }
   };
 }
 

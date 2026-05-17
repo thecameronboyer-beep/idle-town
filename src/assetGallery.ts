@@ -16,8 +16,9 @@ type AssetGroupId =
   | "flowers"
   | "berries"
   | "fruit"
-  | "rootsTubers"
+  | "roots"
   | "vegetables"
+  | "staples"
   | "seasonings"
   | "camp"
   | "tools"
@@ -68,7 +69,7 @@ const activeAssetFileNames = new Set([
   "coal-icon.png",
   "copper-icon.png",
   "craft-materials-bundle-button.png",
-  "desert-location-icon.svg",
+  "desert-location-icon.png",
   "fish-filet-icon.png",
   "fishing-pole-background-1-border-1.png",
   "flax-fiber-icon.png",
@@ -118,9 +119,10 @@ const groups: AssetGroup[] = [
   { id: "flowers", label: "Flowers", note: "Edible and useful blossoms" },
   { id: "berries", label: "Berries", note: "Small sweet, tart, and wild berry forage" },
   { id: "fruit", label: "Fruit", note: "Wild fruits, cactus fruit, and edible hips" },
-  { id: "rootsTubers", label: "Roots/Tubers", note: "Earthy roots, tubers, and underground food" },
-  { id: "vegetables", label: "Vegetables/Hearty Plants", note: "Shoots, greens, nuts, grains, and sturdy plants" },
-  { id: "seasonings", label: "Seasonings/Aromatics", note: "Aromatic, resinous, salty, and pungent accents" },
+  { id: "roots", label: "Roots", note: "Earthy roots and underground food" },
+  { id: "vegetables", label: "Vegetables", note: "Shoots, greens, and fresh vegetable forage" },
+  { id: "staples", label: "Staples", note: "Tubers, nuts, grains, beans, and sturdy plants" },
+  { id: "seasonings", label: "Seasonings", note: "Aromatic, resinous, salty, and pungent accents" },
   { id: "camp", label: "Camp Constructions", note: "Buildable camp structures" },
   { id: "tools", label: "Tools & Weapons", note: "Equipped and framed tool icons" },
   { id: "food", label: "Wildlife & Fish", note: "Whole animals and fish before cooking" },
@@ -191,6 +193,41 @@ const locationLabels: Record<LocationId, string> = {
 
 const fungalTags = new Set(["fungus", "mushroom", "truffle", "cap", "spore"]);
 const medicinalTags = new Set(["medicinal", "calming", "soothing", "mana"]);
+const stapleTags = new Set(["bean", "grain", "nut", "pod", "succulent", "thorn", "tuber"]);
+const ingredientIconFileNames: Partial<Record<GatherableDefinition["id"], string>> = {
+  aloeLeaves: "aloe-leaves-icon.png",
+  blackberries: "blackberry-icon.png",
+  bloodleaf: "bloodleaf-icon.png",
+  blueberries: "blueberry-icon.png",
+  caveCurrants: "cave-currant-icon.png",
+  chamomile: "chamomile-icon.png",
+  clover: "clover-icon.png",
+  cranberries: "cranberry-icon.png",
+  crystalBlooms: "crystal-bloom-icon.png",
+  dandelionGreens: "dandelion-icon.png",
+  elderflowers: "elder-flowers-icon.png",
+  fireBlossom: "fire-blossom-icon.png",
+  glimmerberries: "glimmerberry-icon.png",
+  hearthcap: "hearthcap-icon.png",
+  juniperBerries: "juniper-berry-icon.png",
+  lavender: "lavender-icon.png",
+  marshIris: "marsh-iris-icon.png",
+  mint: "mint-icon.png",
+  mossHerbs: "moss-herbs-icon.png",
+  nettles: "nettles-icon.png",
+  palecapFlowers: "palecap-flowers-icon.png",
+  plantainLeaf: "plantain-leaf-icon.png",
+  roseHips: "rose-hips-icon.png",
+  sorrel: "sorrel-icon.png",
+  strawberries: "strawberry-icon.png",
+  sunbloomPetals: "sunbloom-petals-icon.png",
+  trilliumBlossoms: "trillium-blossoms-icon.png",
+  waterLilies: "water-lilies-icon.png",
+  wildGarlic: "wild-garlic-icon.png",
+  wildOnion: "wild-onion-icon.png",
+  woodViolets: "wood-violets-icon.png",
+  yarrow: "yarrow-icon.png"
+};
 
 const assets = [
   ...Object.entries(assetModules)
@@ -343,9 +380,9 @@ function getIngredientGroupId(definition: LocationGatherableDefinition): AssetGr
     case "fruit":
       return "fruit";
     case "root":
-      return "rootsTubers";
+      return definition.tags.some((tag) => stapleTags.has(tag)) ? "staples" : "roots";
     case "vegetable":
-      return "vegetables";
+      return definition.tags.some((tag) => stapleTags.has(tag)) ? "staples" : "vegetables";
     case "seasoning":
       return "seasonings";
   }
@@ -369,41 +406,18 @@ function getIngredientCategoryLabel(
     case "fruit":
       return "Fruit";
     case "root":
-      return "Root/Tuber";
+      return groupId === "staples" ? "Staple" : "Root";
     case "vegetable":
-      return "Vegetable/Hearty Plant";
+      return groupId === "staples" ? "Staple" : "Vegetable";
     case "seasoning":
-      return "Seasoning/Aromatic";
+      return "Seasoning";
   }
 }
 
 function getIngredientIconFileName(definition: GatherableDefinition): string {
-  if (definition.id === "aloeLeaves") {
-    return "aloe-leaves-icon.png";
-  }
-
-  if (definition.id === "chamomile") {
-    return "chamomile-icon.png";
-  }
-
-  if (definition.id === "crystalBlooms") {
-    return "crystal-bloom-icon.png";
-  }
-
-  if (definition.id === "elderflowers") {
-    return "elder-flowers-icon.png";
-  }
-
-  if (definition.id === "lavender") {
-    return "lavender-icon.png";
-  }
-
-  if (definition.id === "roseHips") {
-    return "rose-hips-icon.png";
-  }
-
-  if (definition.id === "yarrow") {
-    return "yarrow-icon.png";
+  const iconFileName = ingredientIconFileNames[definition.id];
+  if (iconFileName) {
+    return iconFileName;
   }
 
   if (definition.category === "berry" || definition.category === "fruit") {

@@ -49,6 +49,7 @@ export function createStarterActionLoop(now = Date.now()): ActionLoop {
     name: "Forage Sticks",
     actionIds: ["gatherSticks"],
     locationIds: ["meadow"],
+    advanceRules: [{ mode: "smart" }],
     createdAt: now,
     updatedAt: now
   };

@@ -54,31 +54,41 @@ import campLocationIconUrl from "../assets/locations/camp-location-icon.png";
 import campfireLitUrl from "../assets/buildings/campfire-2x2.png";
 import campfireUnlitUrl from "../assets/buildings/campfire-unlit-2x2.png";
 import chamomileIconUrl from "../assets/items/chamomile-icon.png";
+import cloverIconUrl from "../assets/items/clover-icon.png";
 import coalIconUrl from "../assets/items/coal-icon.png";
 import copperIconUrl from "../assets/items/copper-icon.png";
 import crystalBloomIconUrl from "../assets/items/crystal-bloom-icon.png";
 import craftMaterialsBundleButtonUrl from "../assets/items/craft-materials-bundle-button.png";
+import dandelionIconUrl from "../assets/items/dandelion-icon.png";
+import fireBlossomIconUrl from "../assets/items/fire-blossom-icon.png";
 import fishFiletIconUrl from "../assets/items/fish-filet-icon.png";
 import fishingPoleEquippedSlotUrl from "../assets/items/fishing-pole-background-1-border-1.png";
 import flaxFiberIconUrl from "../assets/items/flax-fiber-icon.png";
 import forestLocationIconUrl from "../assets/locations/forest-location-icon.png";
-import desertLocationIconUrl from "../assets/locations/desert-location-icon.svg";
+import desertLocationIconUrl from "../assets/locations/desert-location-icon.png";
+import foragingSkillBannerUrl from "../assets/skills/foraging-skill-banner.png";
 import berryIconUrl from "../assets/items/berry-icon.png";
 import blueberryIconUrl from "../assets/items/blueberry-icon.png";
 import elderFlowersIconUrl from "../assets/items/elder-flowers-icon.png";
+import hearthcapIconUrl from "../assets/items/hearthcap-icon.png";
 import hideIconUrl from "../assets/items/hide-icon.png";
 import leatherBackpackEquippedSlotUrl from "../assets/items/leather-backpack-equipped-slot.png";
 import lavenderIconUrl from "../assets/items/lavender-icon.png";
+import marshIrisIconUrl from "../assets/items/marsh-iris-icon.png";
 import meadowLocationIconUrl from "../assets/locations/meadow-location-icon-v2.png";
 import mineLocationIconUrl from "../assets/locations/mine-location-icon.png";
+import mintIconUrl from "../assets/items/mint-icon.png";
 import minnowIconUrl from "../assets/items/minnow-icon.png";
 import mudskipperIconUrl from "../assets/items/mudskipper-icon.png";
 import mushroomIconUrl from "../assets/items/mushroom-icon.png";
+import palecapFlowersIconUrl from "../assets/items/palecap-flowers-icon.png";
 import pebblePerchIconUrl from "../assets/items/pebble-perch-icon.png";
+import plantainLeafIconUrl from "../assets/items/plantain-leaf-icon.png";
 import rabbitIconUrl from "../assets/items/rabbit-icon.png";
 import rabbitMeatIconUrl from "../assets/items/rabbit-meat-icon.png";
 import riverLocationIconUrl from "../assets/locations/river-location-icon-v2.png";
 import roseHipsIconUrl from "../assets/items/rose-hips-icon.png";
+import sorrelIconUrl from "../assets/items/sorrel-icon.png";
 import squirrelIconUrl from "../assets/items/squirrel-icon.png";
 import squirrelMeatIconUrl from "../assets/items/squirrel-meat-icon.png";
 import stickIconUrl from "../assets/items/stick-icon.png";
@@ -91,9 +101,12 @@ import stoneLoachIconUrl from "../assets/items/stone-loach-icon.png";
 import stoneFurnaceUrl from "../assets/buildings/stone-furnace-2x2.png";
 import shortBowEquippedSlotUrl from "../assets/items/short-bow-background-1-border-1.png";
 import strawberryIconUrl from "../assets/items/strawberry-icon.png";
+import sunbloomPetalsIconUrl from "../assets/items/sunbloom-petals-icon.png";
 import tinIconUrl from "../assets/items/tin-icon.png";
 import hideTentUrl from "../assets/buildings/hide-tent-2x2.png";
 import tanningRackUrl from "../assets/buildings/tanning-rack-2x2.png";
+import trilliumBlossomsIconUrl from "../assets/items/trillium-blossoms-icon.png";
+import waterLiliesIconUrl from "../assets/items/water-lilies-icon.png";
 import woodenBowlIconUrl from "../assets/items/wooden-bowl-background-1-border-1.png";
 import woodenClubEquippedSlotUrl from "../assets/items/wooden-club-background-1-border-1.png";
 import woodenSpoonIconUrl from "../assets/items/wooden-spoon-background-1-border-1.png";
@@ -101,7 +114,10 @@ import woodenSwordEquippedSlotUrl from "../assets/items/wooden-sword-background-
 import woodenTotemEquippedSlotUrl from "../assets/items/wooden-totem-background-1-border-1.png";
 import woodenTwoHandedClubEquippedSlotUrl from "../assets/items/wooden-two-handed-club-background-1-border-1.png";
 import woodenTwoHandedSwordEquippedSlotUrl from "../assets/items/wooden-two-handed-sword-background-1-border-1.png";
+import wildGarlicIconUrl from "../assets/items/wild-garlic-icon.png";
+import wildOnionIconUrl from "../assets/items/wild-onion-icon.png";
 import woodIconUrl from "../assets/items/wood-icon.png";
+import woodVioletsIconUrl from "../assets/items/wood-violets-icon.png";
 import yarrowIconUrl from "../assets/items/yarrow-icon.png";
 import { getCampfireRemainingMs, isCampfireLit } from "../systems/buildings";
 import { getBuildingCount, getPopulationCapacity, getPopulationCount } from "../systems/camp";
@@ -134,6 +150,7 @@ import {
   createActionLoop,
   deleteActionLoop,
   getActionLoop,
+  getActionLoopAdvanceRule,
   getLowestQuantityCraftAction,
   canStartAction,
   depositCarriedResources,
@@ -144,8 +161,13 @@ import {
   insertActionInSavedLoop,
   removeActionFromSavedLoop,
   startAction,
-  stopAction
+  stopAction,
+  updateActionLoopName,
+  updateActionLoopStepAction,
+  updateActionLoopStepAdvanceRule,
+  updateActionLoopStepLocation
 } from "../systems/actions";
+import { isCarryAction } from "../systems/actionRouting";
 import { getLogScope } from "../systems/log";
 import {
   getActionLockReason,
@@ -184,6 +206,10 @@ import { getGatheringTableSummary } from "../systems/gathering";
 import { canEatFood, eatFood, getEatFoodLockReason, getFoodEffectPreview, isEdibleFood } from "../systems/needs";
 import type {
   ActionId,
+  ActionLoop,
+  ActionLoopAdvanceMode,
+  ActionLoopAdvanceRule,
+  ActionLoopResourceScope,
   BuildingId,
   CharacterLocationId,
   CookingRecipeDefinition,
@@ -194,6 +220,7 @@ import type {
   LocationId,
   LogEntry,
   LogScope,
+  ResourceDefinition,
   ResourceId,
   SkillId,
   ToolId
@@ -230,11 +257,18 @@ type ActionCategory = {
 type CharacterDetailTab = "inventory" | "equipment" | "skills" | "log";
 type InventorySource = "camp" | "character";
 type ActionLoopTarget = { loopId: string; afterIndex: number } | null;
+type ActionLoopLocationMenu = { loopId: string; index: number } | null;
+type ActionLoopSkillMenu = { loopId: string; index: number } | null;
 type CraftingMaterialId = "primitive";
 type CraftingProductCategory = "tool" | "weapon";
 type SkillGroup = {
   label: string;
   skillIds: SkillId[];
+};
+
+type ActionLoopSkillOption = {
+  skillId: SkillId;
+  actionId: ActionId;
 };
 
 type EquipmentPlaceholderGroup = {
@@ -263,7 +297,22 @@ type LocationImageDefinition = {
   label: string;
   iconUrl: string;
 };
-type ForageDisplayCategory = GatherableIngredientCategory | "fungal";
+type ForageDisplayCategory = GatherableIngredientCategory | "fungal" | "staple";
+type CampInventoryResourceGroup = {
+  id: string;
+  label: string;
+  ids: ResourceId[];
+  usePlaceholderIcons?: boolean;
+};
+
+const actionLoopAdvanceOptions: Array<{ id: ActionLoopAdvanceMode; label: string }> = [
+  { id: "smart", label: "Smart default" },
+  { id: "afterCompletion", label: "After one completion" },
+  { id: "whenInventoryFull", label: "When pack is full" },
+  { id: "whenResourceAtLeast", label: "When stock reaches" },
+  { id: "whenCannotStart", label: "When blocked" },
+  { id: "manual", label: "Stay on this step" }
+];
 
 const forageDisplayCategories: ForageDisplayCategory[] = [
   "herb",
@@ -273,8 +322,11 @@ const forageDisplayCategories: ForageDisplayCategory[] = [
   "fungal",
   "root",
   "vegetable",
+  "staple",
   "seasoning"
 ];
+
+const stapleForageTags = new Set(["bean", "grain", "nut", "pod", "succulent", "thorn", "tuber"]);
 
 const actionFilters: ActionFilter[] = [
   {
@@ -400,6 +452,33 @@ const filterSkillIds: Record<ActionFilterId, SkillId> = {
   butchering: "butchering",
   cooking: "cooking",
   leatherworking: "leatherworking"
+};
+
+const actionLoopSkillDefaultActions: Partial<Record<SkillId, ActionId>> = {
+  butchering: "butcherRabbit"
+};
+
+const actionLoopSkillOptions: ActionLoopSkillOption[] = actionFilters.flatMap((filter) => {
+  const skillId = filterSkillIds[filter.id];
+  const actionId = actionLoopSkillDefaultActions[skillId] ?? filter.actionIds?.[0];
+  return actionId ? [{ skillId, actionId }] : [];
+});
+
+const skillTileVisuals: Record<SkillId, { shortLabel: string; accent: string; shade: string }> = {
+  foraging: { shortLabel: "Fg", accent: "#7ba867", shade: "rgba(123, 168, 103, 0.38)" },
+  mining: { shortLabel: "Mi", accent: "#9ca3af", shade: "rgba(104, 116, 139, 0.42)" },
+  fishing: { shortLabel: "Fi", accent: "#73a8a0", shade: "rgba(72, 139, 168, 0.38)" },
+  woodcutting: { shortLabel: "Wd", accent: "#b88955", shade: "rgba(124, 91, 59, 0.44)" },
+  hunting: { shortLabel: "Hu", accent: "#d6a451", shade: "rgba(159, 89, 63, 0.36)" },
+  crafting: { shortLabel: "Cr", accent: "#c7b27a", shade: "rgba(199, 178, 122, 0.34)" },
+  smithing: { shortLabel: "Sm", accent: "#d08b6a", shade: "rgba(145, 76, 60, 0.42)" },
+  alchemy: { shortLabel: "Al", accent: "#9bc96c", shade: "rgba(82, 123, 82, 0.4)" },
+  textiles: { shortLabel: "Ta", accent: "#caa0c8", shade: "rgba(122, 85, 128, 0.36)" },
+  butchering: { shortLabel: "Bu", accent: "#c96458", shade: "rgba(135, 55, 50, 0.42)" },
+  cooking: { shortLabel: "Co", accent: "#e0b05e", shade: "rgba(156, 94, 45, 0.38)" },
+  leatherworking: { shortLabel: "Le", accent: "#a8784f", shade: "rgba(109, 72, 48, 0.42)" },
+  construction: { shortLabel: "Cn", accent: "#b7a781", shade: "rgba(112, 103, 79, 0.38)" },
+  agility: { shortLabel: "Ag", accent: "#8fc4b7", shade: "rgba(81, 129, 120, 0.38)" }
 };
 
 const characterSkillGroups: SkillGroup[] = [
@@ -589,38 +668,46 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   stoneLoachFilet: fishFiletIconUrl,
   flaxFiber: flaxFiberIconUrl,
   chamomile: chamomileIconUrl,
-  clover: flaxFiberIconUrl,
-  dandelionGreens: flaxFiberIconUrl,
+  clover: cloverIconUrl,
+  dandelionGreens: dandelionIconUrl,
   dirtyBowl: woodIconUrl,
   elderflowers: elderFlowersIconUrl,
   fennel: flaxFiberIconUrl,
-  hearthcap: mushroomIconUrl,
+  fireBlossom: fireBlossomIconUrl,
+  hearthcap: hearthcapIconUrl,
   hide: hideIconUrl,
   lavender: lavenderIconUrl,
+  marshIris: marshIrisIconUrl,
   meadowStew: mushroomIconUrl,
   minnow: minnowIconUrl,
-  mint: flaxFiberIconUrl,
+  mint: mintIconUrl,
   mudskipper: mudskipperIconUrl,
+  palecapFlowers: palecapFlowersIconUrl,
   pebblePerch: pebblePerchIconUrl,
+  plantainLeaf: plantainLeafIconUrl,
   rabbit: rabbitIconUrl,
   rabbitMeat: rabbitMeatIconUrl,
   rabbitStew: rabbitIconUrl,
   roseHips: roseHipsIconUrl,
   rootStew: mushroomIconUrl,
-  sorrel: flaxFiberIconUrl,
+  sorrel: sorrelIconUrl,
   squirrelHerbStew: squirrelIconUrl,
   squirrel: squirrelIconUrl,
   squirrelMeat: squirrelMeatIconUrl,
   strawberries: strawberryIconUrl,
+  sunbloomPetals: sunbloomPetalsIconUrl,
   stick: stickIconUrl,
   stone: stoneIconUrl,
   stoneLoach: stoneLoachIconUrl,
   tin: tinIconUrl,
+  trilliumBlossoms: trilliumBlossomsIconUrl,
   water: riverLocationIconUrl,
+  waterLilies: waterLiliesIconUrl,
   wildCarrot: flaxFiberIconUrl,
-  wildGarlic: flaxFiberIconUrl,
+  wildGarlic: wildGarlicIconUrl,
   wildGarlicRabbitStew: rabbitIconUrl,
-  wildOnion: flaxFiberIconUrl,
+  wildOnion: wildOnionIconUrl,
+  woodViolets: woodVioletsIconUrl,
   yarrow: yarrowIconUrl,
   woodenBowl: woodenBowlIconUrl,
   woodenSpoon: woodenSpoonIconUrl,
@@ -755,15 +842,81 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
   let settingsPanelVisible = false;
   let actionLoopsPanelVisible = false;
   let actionLoopTarget: ActionLoopTarget = null;
+  let actionLoopLocationMenu: ActionLoopLocationMenu = null;
+  let actionLoopSkillMenu: ActionLoopSkillMenu = null;
   let selectedLoopId: string | null = null;
   let selectedLoopIndex = 0;
   let currentState: GameState | null = null;
   let activeTooltipSlot: HTMLElement | null = null;
 
+  root.addEventListener("change", (event) => {
+    const field = event.target;
+    const state = currentState;
+    if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement) || !state) {
+      return;
+    }
+
+    const loopId = field.dataset.loopId;
+    const loopField = field.dataset.loopField;
+    if (!loopId || !loopField) {
+      return;
+    }
+
+    const now = handlers.getNow();
+    const index = getLoopIndex(field.dataset.id, selectedLoopIndex);
+    let changed = false;
+
+    if (loopField === "name") {
+      changed = updateActionLoopName(state, loopId, field.value, now);
+    }
+
+    if (loopField === "step-location" && isLocationId(field.value)) {
+      changed = updateActionLoopStepLocation(state, loopId, index, field.value, now);
+    }
+
+    if (loopField === "advance-mode" && isActionLoopAdvanceMode(field.value)) {
+      changed = updateActionLoopStepAdvanceRule(
+        state,
+        loopId,
+        index,
+        getAdvanceModePatch(state, loopId, index, field.value),
+        now
+      );
+    }
+
+    if (loopField === "advance-resource" && isResourceId(field.value)) {
+      changed = updateActionLoopStepAdvanceRule(state, loopId, index, { resourceId: field.value }, now);
+    }
+
+    if (loopField === "advance-scope" && isActionLoopResourceScope(field.value)) {
+      changed = updateActionLoopStepAdvanceRule(state, loopId, index, { scope: field.value }, now);
+    }
+
+    if (loopField === "advance-amount") {
+      changed = updateActionLoopStepAdvanceRule(state, loopId, index, { amount: Number(field.value) }, now);
+    }
+
+    if (changed) {
+      selectedLoopId = loopId;
+      selectedLoopIndex = index;
+      handlers.persist();
+      handlers.requestRender();
+    }
+  });
+
   root.addEventListener("click", (event) => {
     const target = event.target as HTMLElement;
     const button = target.closest<HTMLButtonElement>("[data-command]");
     if (!button || button.disabled || button.dataset.disabled === "true") {
+      if (
+        (actionLoopLocationMenu || actionLoopSkillMenu) &&
+        !target.closest(".loop-location-picker") &&
+        !target.closest(".loop-skill-picker")
+      ) {
+        actionLoopLocationMenu = null;
+        actionLoopSkillMenu = null;
+        handlers.requestRender();
+      }
       return;
     }
 
@@ -772,6 +925,14 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     const state = currentState;
     if (!state) {
       return;
+    }
+    const isLoopLocationCommand = command === "toggle-loop-location-menu" || command === "set-loop-step-location";
+    const isLoopSkillCommand = command === "toggle-loop-skill-menu" || command === "set-loop-step-skill";
+    if (!isLoopLocationCommand) {
+      actionLoopLocationMenu = null;
+    }
+    if (!isLoopSkillCommand) {
+      actionLoopSkillMenu = null;
     }
 
     if (command === "set-test-reward-multiplier" && (id === "10" || id === "100")) {
@@ -804,6 +965,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       activeActionFilter = id;
+      activeActionCategory = getActionCategoryIdForFilter(id) ?? activeActionCategory;
       handlers.requestRender();
       return;
     }
@@ -827,13 +989,13 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
 
     if (command === "set-location" && isLocationId(id)) {
+      activeLocation = id;
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
-      activeLocation = id;
       handlers.requestRender();
       return;
     }
@@ -892,6 +1054,20 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = true;
+      combatPanelVisible = false;
+      settingsPanelVisible = false;
+      actionLoopsPanelVisible = false;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "open-character-skill-panel" && id === "foraging") {
+      activeActionCategory = "gather";
+      activeActionFilter = "foraging";
+      campLogVisible = false;
+      partyPanelVisible = false;
+      characterPanelVisible = false;
+      characterDetailsVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
@@ -980,6 +1156,87 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       selectedLoopId = getLoopCommandId(button, state, selectedLoopId);
       selectedLoopIndex = getLoopIndex(id, selectedLoopIndex);
       actionLoopTarget = null;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "toggle-loop-location-menu") {
+      const loopId = getLoopCommandId(button, state, selectedLoopId);
+      if (!loopId) {
+        return;
+      }
+
+      const index = getLoopIndex(id, selectedLoopIndex);
+      selectedLoopId = loopId;
+      selectedLoopIndex = index;
+      actionLoopTarget = null;
+      actionLoopLocationMenu =
+        actionLoopLocationMenu?.loopId === loopId && actionLoopLocationMenu.index === index ? null : { loopId, index };
+      actionLoopSkillMenu = null;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "set-loop-step-location") {
+      const loopId = getLoopCommandId(button, state, selectedLoopId);
+      const locationId = button.dataset.locationId;
+      if (!loopId || !isLocationId(locationId)) {
+        return;
+      }
+
+      const index = getLoopIndex(id, selectedLoopIndex);
+      selectedLoopId = loopId;
+      selectedLoopIndex = index;
+      actionLoopTarget = null;
+      actionLoopLocationMenu = null;
+      actionLoopSkillMenu = null;
+      if (updateActionLoopStepLocation(state, loopId, index, locationId, handlers.getNow())) {
+        handlers.persist();
+      }
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "toggle-loop-skill-menu") {
+      const loopId = getLoopCommandId(button, state, selectedLoopId);
+      if (!loopId) {
+        return;
+      }
+
+      const index = getLoopIndex(id, selectedLoopIndex);
+      selectedLoopId = loopId;
+      selectedLoopIndex = index;
+      actionLoopTarget = null;
+      actionLoopLocationMenu = null;
+      actionLoopSkillMenu =
+        actionLoopSkillMenu?.loopId === loopId && actionLoopSkillMenu.index === index ? null : { loopId, index };
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "set-loop-step-skill") {
+      const loopId = getLoopCommandId(button, state, selectedLoopId);
+      const skillId = button.dataset.skillId;
+      const option = actionLoopSkillOptions.find((candidate) => candidate.skillId === skillId);
+      if (!loopId || !option) {
+        return;
+      }
+
+      const index = getLoopIndex(id, selectedLoopIndex);
+      const loop = getActionLoop(state, loopId);
+      const safeIndex = loop ? Math.min(loop.actionIds.length - 1, Math.max(0, index)) : 0;
+      const currentActionId = loop?.actionIds[safeIndex];
+      const currentLocationId = currentActionId
+        ? getActionLoopStepLocationId(currentActionId, loop?.locationIds[safeIndex] ?? null)
+        : undefined;
+      selectedLoopId = loopId;
+      selectedLoopIndex = safeIndex;
+      actionLoopTarget = null;
+      actionLoopLocationMenu = null;
+      actionLoopSkillMenu = null;
+      if (updateActionLoopStepAction(state, loopId, safeIndex, option.actionId, { locationId: currentLocationId }, handlers.getNow())) {
+        handlers.persist();
+      }
       handlers.requestRender();
       return;
     }
@@ -1177,6 +1434,18 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     if (actionLoopTarget && !getActionLoop(state, actionLoopTarget.loopId)) {
       actionLoopTarget = null;
     }
+    if (actionLoopLocationMenu) {
+      const menuLoop = getActionLoop(state, actionLoopLocationMenu.loopId);
+      if (!menuLoop || actionLoopLocationMenu.index < 0 || actionLoopLocationMenu.index >= menuLoop.actionIds.length) {
+        actionLoopLocationMenu = null;
+      }
+    }
+    if (actionLoopSkillMenu) {
+      const menuLoop = getActionLoop(state, actionLoopSkillMenu.loopId);
+      if (!menuLoop || actionLoopSkillMenu.index < 0 || actionLoopSkillMenu.index >= menuLoop.actionIds.length) {
+        actionLoopSkillMenu = null;
+      }
+    }
     const scrollPositions = captureScrollPositions(root);
     root.innerHTML = renderApp(
       state,
@@ -1195,6 +1464,8 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       settingsPanelVisible,
       actionLoopsPanelVisible,
       actionLoopTarget,
+      actionLoopLocationMenu,
+      actionLoopSkillMenu,
       selectedLoopId,
       selectedLoopIndex,
       now,
@@ -1222,6 +1493,8 @@ function renderApp(
   settingsPanelVisible: boolean,
   actionLoopsPanelVisible: boolean,
   actionLoopTarget: ActionLoopTarget,
+  actionLoopLocationMenu: ActionLoopLocationMenu,
+  actionLoopSkillMenu: ActionLoopSkillMenu,
   selectedLoopId: string | null,
   selectedLoopIndex: number,
   now: number,
@@ -1247,7 +1520,14 @@ function renderApp(
           characterDetailsVisible
             ? renderCharacterDetailsPanel(state, activeCharacterDetailTab)
             : actionLoopsPanelVisible
-            ? renderActionLoopsPanel(state, selectedLoopId, selectedLoopIndex, actionLoopTarget)
+            ? renderActionLoopsPanel(
+                state,
+                selectedLoopId,
+                selectedLoopIndex,
+                actionLoopTarget,
+                actionLoopLocationMenu,
+                actionLoopSkillMenu
+              )
             : settingsPanelVisible
             ? renderSettingsPanel()
             : characterPanelVisible
@@ -1323,6 +1603,7 @@ function renderCharacterSidebar(
           <nav class="sidebar-actions" aria-label="Action filters">
             <div class="category-buttons">
               ${actionCategories
+                .filter((category) => category.id !== "gather" && category.id !== "processing")
                 .map((category) => renderCategoryButton(category, activeActionCategory, workAreaVisible))
                 .join("")}
               ${renderCharactersButton(characterPanelVisible)}
@@ -1731,8 +2012,8 @@ function renderWorkArea(
   }
 
   return `
-      <div class="work-area">
-      ${renderActionCategoryPanel(state, activeActionCategory, activeActionFilter)}
+    <div class="work-area">
+      ${renderFocusedActionPanelBanner(getActionFilter(activeActionFilter))}
       ${renderActionStack(
         state,
         activeActionFilter,
@@ -1830,44 +2111,19 @@ function renderActionStack(
   `;
 }
 
-function renderActionCategoryPanel(
-  state: GameState,
-  activeActionCategory: ActionCategoryId,
-  activeActionFilter: ActionFilterId
-): string {
-  const filters = getCategoryFilters(activeActionCategory);
+function renderFocusedActionPanelBanner(filter: ActionFilter): string {
+  const bannerUrl = filter.id === "foraging" ? foragingSkillBannerUrl : null;
 
   return `
-    <section class="panel skill-panel" data-editor-id="skill-filter-panel" data-editor-label="Skill filter panel" data-editor-files="src/ui/render.ts, src/style.css">
-      <div class="skill-grid">
-        ${filters.map((filter) => renderSkillButton(state, filter, activeActionFilter)).join("")}
-      </div>
+    <section class="panel focused-skill-panel" aria-label="${filter.label} panel" data-editor-id="focused-action-panel-${filter.id}" data-editor-label="${filter.label} focused action panel" data-editor-files="src/ui/render.ts, src/style.css">
+      ${
+        bannerUrl
+          ? `<div class="focused-skill-banner" aria-label="${filter.label}">
+              <img class="focused-skill-banner-image" src="${bannerUrl}" alt="" aria-hidden="true" />
+            </div>`
+          : `<div class="focused-skill-title">${filter.label}</div>`
+      }
     </section>
-  `;
-}
-
-function renderSkillButton(state: GameState, filter: ActionFilter, activeActionFilter: ActionFilterId): string {
-  const active = filter.id === activeActionFilter;
-  const currentActionLabel = getCurrentActionLabel(state, filter.actionIds ?? []);
-  const skill = state.skills[filterSkillIds[filter.id]];
-  const progress = getSkillProgress(skill);
-  const status = currentActionLabel
-    ? currentActionLabel
-    : progress.canPrestige
-      ? "Prestige ready"
-      : `Lv ${skill.level} - ${formatSkillXp(progress.xpIntoLevel)}/${formatSkillXp(progress.xpForLevel)} XP`;
-
-  return `
-    <button
-      class="skill-button ${active ? "active" : ""} ${currentActionLabel ? "current" : ""}"
-      type="button"
-      data-command="set-action-filter"
-      data-id="${filter.id}"
-      aria-pressed="${active}"
-    >
-      <span>${filter.label}</span>
-      <small>${status}</small>
-    </button>
   `;
 }
 
@@ -1972,10 +2228,10 @@ function renderForageUtilityCategoryCard(
   actionLoopTarget: ActionLoopTarget
 ): string {
   return renderForageActionCategoryCard(
-    "Forage supplies",
-    "Supplies",
+    "Forage resources",
+    "Resources",
     actionIds.map((actionId) => renderForageUtilityCard(state, actionId, actionLoopTarget)),
-    "No supplies here."
+    "No resources here."
   );
 }
 
@@ -2002,12 +2258,35 @@ function renderForageActionCategoryCard(
   `;
 }
 
-function getForageDisplayCategory(definition: ForageResourceActionDefinition): ForageDisplayCategory {
-  return definition.tags.includes("fungus") ? "fungal" : definition.category;
+function getForageDisplayCategory(definition: {
+  category: GatherableIngredientCategory;
+  tags: string[];
+}): ForageDisplayCategory {
+  if (definition.tags.includes("fungus")) {
+    return "fungal";
+  }
+
+  if (
+    (definition.category === "vegetable" || definition.category === "root") &&
+    definition.tags.some((tag) => stapleForageTags.has(tag))
+  ) {
+    return "staple";
+  }
+
+  return definition.category;
 }
 
 function getForageDisplayCategoryLabel(category: ForageDisplayCategory): string {
-  return category === "fungal" ? "Fungal" : getGatherableCategoryLabel(category);
+  if (category === "fungal") {
+    return "Fungal";
+  }
+  if (category === "staple") {
+    return "Staples";
+  }
+  if (category === "vegetable") {
+    return "Vegetables";
+  }
+  return getGatherableCategoryLabel(category);
 }
 
 function renderForageResourceCard(
@@ -3354,7 +3633,7 @@ function renderActionLoopControls(
     <div class="action-loop-controls" aria-label="Action loop">
       ${loop.actionIds
         .map((actionId, index) =>
-          renderActionLoopStep(loop.id, actionId, index, safeSelectedIndex, actionLoopTarget, loop.actionIds.length)
+          renderActionLoopStep(state, loop, actionId, index, safeSelectedIndex, actionLoopTarget)
         )
         .join("")}
     </div>
@@ -3362,15 +3641,16 @@ function renderActionLoopControls(
 }
 
 function renderActionLoopStep(
-  loopId: string,
+  state: GameState,
+  loop: ActionLoop,
   actionId: ActionId,
   index: number,
   selectedLoopIndex: number,
-  actionLoopTarget: ActionLoopTarget,
-  loopLength: number
+  actionLoopTarget: ActionLoopTarget
 ): string {
   const selected = index === selectedLoopIndex;
-  const assigning = actionLoopTarget?.loopId === loopId && actionLoopTarget.afterIndex === index;
+  const assigning = actionLoopTarget?.loopId === loop.id && actionLoopTarget.afterIndex === index;
+  const label = getActionLoopLabel(actionId);
 
   return `
     <div class="action-loop-row ${selected ? "selected" : ""}">
@@ -3378,17 +3658,18 @@ function renderActionLoopStep(
         class="action-loop-step ${selected ? "selected" : ""} ${assigning ? "assigning" : ""}"
         type="button"
         data-command="select-loop-step"
-        data-loop-id="${loopId}"
+        data-loop-id="${loop.id}"
         data-id="${index}"
         aria-pressed="${selected}"
       >
-        ${getActionLoopLabel(actionId)}
+        <span>${label}</span>
+        <small>${getActionLoopStepSummary(state, loop, index)}</small>
       </button>
       ${
         selected
           ? `<span class="action-loop-row-tools">
-              <button class="action-loop-icon" type="button" data-command="insert-loop-after" data-loop-id="${loopId}" data-id="${index}" title="Add action after ${getActionLoopLabel(actionId)}">+</button>
-              <button class="action-loop-icon" type="button" data-command="remove-loop-step" data-loop-id="${loopId}" data-id="${index}" title="Remove ${getActionLoopLabel(actionId)}" ${loopLength <= 1 ? "disabled" : ""}>-</button>
+              <button class="action-loop-icon" type="button" data-command="insert-loop-after" data-loop-id="${loop.id}" data-id="${index}" title="Add action after ${label}">+</button>
+              <button class="action-loop-icon" type="button" data-command="remove-loop-step" data-loop-id="${loop.id}" data-id="${index}" title="Remove ${label}" ${loop.actionIds.length <= 1 ? "disabled" : ""}>-</button>
             </span>`
           : ""
       }
@@ -3402,6 +3683,13 @@ function getActionLoopLabel(actionId: ActionId): string {
   }
 
   return getActionDefinition(actionId)?.label ?? "Action";
+}
+
+function getActionLoopStepSummary(state: GameState, loop: ActionLoop, index: number): string {
+  const actionId = loop.actionIds[index];
+  const locationLabel = getActionLoopStepLocationLabel(actionId, loop.locationIds[index] ?? null);
+  const rule = getActionLoopAdvanceRule(loop, index);
+  return `${locationLabel} - ${getActionLoopAdvanceRuleLabel(state, rule, actionId)}`;
 }
 
 function renderCurrentActionLocation(locationId: CharacterLocationId): string {
@@ -3460,20 +3748,6 @@ function getRunningActionTitle(state: GameState): string {
   return getActionDefinition(running.actionId)?.label ?? "Working";
 }
 
-function getCurrentActionLabel(state: GameState, actionIds: ActionId[]): string | null {
-  const running = getCurrentAction(state);
-  if (!running) {
-    return null;
-  }
-
-  const activeActionId = getActiveActionId(running);
-  if (!actionIds.includes(activeActionId)) {
-    return null;
-  }
-
-  return getActionDefinition(activeActionId)?.label ?? "Working";
-}
-
 function getSelectedCharacter(state: GameState): GameState["characters"][number] {
   return state.characters.find((character) => character.id === state.selectedCharacterId) ?? state.characters[0];
 }
@@ -3530,6 +3804,10 @@ function getCategoryFilters(categoryId: ActionCategoryId): ActionFilter[] {
   return category.filterIds.map((id) => getActionFilter(id));
 }
 
+function getActionCategoryIdForFilter(filterId: ActionFilterId): ActionCategoryId | null {
+  return actionCategories.find((category) => category.filterIds.includes(filterId))?.id ?? null;
+}
+
 function isActionCategoryId(id: string | undefined): id is ActionCategoryId {
   return actionCategories.some((category) => category.id === id);
 }
@@ -3562,6 +3840,180 @@ function getLoopCommandId(button: HTMLButtonElement, state: GameState, fallback:
 function getAssignedActionLoopId(state: GameState): string | null {
   const selectedCharacter = getSelectedCharacter(state);
   return getActionLoop(state, selectedCharacter.actionLoopId)?.id ?? null;
+}
+
+function getAdvanceModePatch(
+  state: GameState,
+  loopId: string,
+  index: number,
+  mode: ActionLoopAdvanceMode
+): Partial<ActionLoopAdvanceRule> {
+  const loop = getActionLoop(state, loopId);
+  const actionId = loop?.actionIds[index] ?? "gatherSticks";
+  const currentRule = loop ? getActionLoopAdvanceRule(loop, index) : ({ mode: "smart" } satisfies ActionLoopAdvanceRule);
+  if (mode !== "whenResourceAtLeast") {
+    return { mode };
+  }
+
+  return {
+    mode,
+    resourceId: currentRule.resourceId ?? getDefaultLoopTargetResourceId(actionId),
+    amount: currentRule.amount ?? 5,
+    scope: currentRule.scope ?? "camp"
+  };
+}
+
+function getActionLoopAdvanceRuleLabel(state: GameState, rule: ActionLoopAdvanceRule, actionId: ActionId): string {
+  switch (rule.mode) {
+    case "manual":
+      return "stays here";
+    case "afterCompletion":
+      return "next after one";
+    case "whenInventoryFull":
+      return "next when pack fills";
+    case "whenCannotStart":
+      return "next when blocked";
+    case "whenResourceAtLeast": {
+      const resourceId = getActionLoopRuleResourceId(rule, actionId);
+      const scope = rule.scope ?? "camp";
+      const current = getResourceQuantity(state, resourceId, scope);
+      return `${scope === "camp" ? "camp" : "carried"} ${getResourceLabel(resourceId)} ${current}/${rule.amount ?? 1}`;
+    }
+    case "smart":
+    default:
+      return "smart advance";
+  }
+}
+
+function getActionLoopAdvanceRuleDescription(mode: ActionLoopAdvanceMode): string {
+  switch (mode) {
+    case "manual":
+      return "This step repeats until the character can no longer perform it.";
+    case "afterCompletion":
+      return "The loop moves on after one finished work cycle.";
+    case "whenInventoryFull":
+      return "The loop moves on once carried inventory is full, then returns to camp if needed.";
+    case "whenResourceAtLeast":
+      return "The loop moves on when the selected stock reaches the target amount.";
+    case "whenCannotStart":
+      return "The loop repeats this step until materials, tools, or unlocks block it.";
+    case "smart":
+    default:
+      return "Field work repeats until the pack fills; camp work advances after one completion.";
+  }
+}
+
+function getActionLoopRuleResourceId(rule: ActionLoopAdvanceRule, actionId: ActionId): ResourceId {
+  return isResourceId(rule.resourceId) ? rule.resourceId : getDefaultLoopTargetResourceId(actionId);
+}
+
+function getDefaultLoopTargetResourceId(actionId: ActionId): ResourceId {
+  const forageResourceAction = getForageResourceActionDefinition(actionId);
+  if (forageResourceAction) {
+    return forageResourceAction.resourceId;
+  }
+
+  const outputId = getPrimaryActionOutputResourceId(actionId);
+  if (outputId) {
+    return outputId;
+  }
+
+  switch (actionId) {
+    case "gatherSticks":
+      return "stick";
+    case "gatherStones":
+      return "stone";
+    case "gatherFlaxPlants":
+      return "flaxPlant";
+    case "gatherFlaxFibers":
+      return "flaxFiber";
+    case "gatherSand":
+      return "sand";
+    case "gatherWater":
+      return "water";
+    case "mineCoal":
+      return "coal";
+    case "mineCopper":
+      return "copper";
+    case "mineTin":
+      return "tin";
+    case "chopTrees":
+      return "wood";
+    case "huntSmallAnimals":
+      return "rabbit";
+    case "fishRiver":
+      return "minnow";
+    default:
+      return "stick";
+  }
+}
+
+function getPrimaryActionOutputResourceId(actionId: ActionId): ResourceId | null {
+  const output =
+    getSmithingRecipe(actionId)?.output ??
+    getAlchemyRecipe(actionId)?.output ??
+    getTextileRecipe(actionId)?.output ??
+    getStaticActionOutput(actionId);
+  const resourceId = Object.keys(output)[0];
+  return isResourceId(resourceId) ? resourceId : null;
+}
+
+function getStaticActionOutput(actionId: ActionId): Partial<Record<ResourceId, number>> {
+  switch (actionId) {
+    case "craftWoodenSpoon":
+      return { woodenSpoon: 1 };
+    case "craftWoodenBowl":
+      return { woodenBowl: 1 };
+    case "cookRabbitMeat":
+      return { cookedRabbitMeat: 1 };
+    case "cookSquirrelMeat":
+      return { cookedSquirrelMeat: 1 };
+    case "tanHide":
+      return { leather: 1 };
+    default:
+      return {};
+  }
+}
+
+function getActionLoopStepLocationLabel(actionId: ActionId, locationId: LocationId | null): string {
+  if (!isCarryAction(actionId)) {
+    return "Camp";
+  }
+
+  return getLocation(getActionLoopStepLocationId(actionId, locationId)).label;
+}
+
+function getActionLoopStepLocationId(actionId: ActionId, locationId: LocationId | null): LocationId {
+  return locationId ?? getActionStartLocation(actionId, "meadow");
+}
+
+function getActionLoopLocationOptions(actionId: ActionId): typeof locationDefinitions {
+  return isCarryAction(actionId) ? locationDefinitions : [getLocation(getActionStartLocation(actionId, "meadow"))];
+}
+
+function renderSkillTileContent(skillId: SkillId, label: string): string {
+  const visual = skillTileVisuals[skillId];
+  return `
+    <span class="loop-skill-mark" aria-hidden="true">${visual.shortLabel}</span>
+    <span class="loop-skill-label">${label}</span>
+  `;
+}
+
+function getSkillTileStyle(skillId: SkillId): string {
+  const visual = skillTileVisuals[skillId];
+  return `--skill-accent: ${visual.accent}; --skill-shade: ${visual.shade};`;
+}
+
+function isActionLoopAdvanceMode(value: string): value is ActionLoopAdvanceMode {
+  return actionLoopAdvanceOptions.some((option) => option.id === value);
+}
+
+function isActionLoopResourceScope(value: string): value is ActionLoopResourceScope {
+  return value === "camp" || value === "character";
+}
+
+function isResourceId(value: unknown): value is ResourceId {
+  return typeof value === "string" && resourceOrder.includes(value);
 }
 
 function isLocationId(id: string | undefined): id is LocationId {
@@ -4063,6 +4515,7 @@ function getForageCategoryIconUrl(category: ForageDisplayCategory): string {
     case "root":
       return mushroomIconUrl;
     case "vegetable":
+    case "staple":
       return flaxFiberIconUrl;
     case "seasoning":
       return mushroomIconUrl;
@@ -4201,7 +4654,7 @@ function getActionTooltipRows(actionId: ActionId, durationMs: number): ActionToo
         ...rows,
         { label: "Table", value: getGatheringTableSummary("meadow") },
         { label: "Pickup", value: "1-2 weighted ingredient rolls" },
-        { label: "Kinds", value: "Herbs, flowers, berries, fruit, roots, vegetables, seasonings" }
+        { label: "Kinds", value: "Herbs, flowers, berries, fruit, roots, vegetables, staples, seasonings" }
       ];
     case "gatherForestIngredients":
       return [
@@ -4343,13 +4796,7 @@ function renderCampInventoryPanel(state: GameState): string {
   const visible = resourceOrder.filter((resourceId) => {
     return state.inventory[resourceId] > 0 || getResourceQuantity(state, resourceId) > 0;
   });
-  const groups = resourceDefinitions.reduce<Record<string, ResourceId[]>>((acc, resource) => {
-    if (visible.includes(resource.id)) {
-      acc[resource.group] = acc[resource.group] ?? [];
-      acc[resource.group].push(resource.id);
-    }
-    return acc;
-  }, {});
+  const groups = getCampInventoryResourceGroups(visible);
   const hasTools = toolDefinitions.some((tool) => state.tools[tool.id].quantity > 0);
 
   return `
@@ -4361,15 +4808,73 @@ function renderCampInventoryPanel(state: GameState): string {
         visible.length || hasTools
           ? `
             <div class="camp-inventory-content">
-              ${Object.entries(groups).map(([group, ids]) => renderResourceGroup(state, group, ids)).join("")}
+              ${groups.map((group) => renderResourceGroup(state, group)).join("")}
               ${renderToolInventory(state)}
               ${renderFoodUsePanel(state)}
             </div>
           `
-          : `<div class="empty-line">No supplies stored yet.</div>`
+          : `<div class="empty-line">No resources stored yet.</div>`
       }
     </div>
   `;
+}
+
+function getCampInventoryResourceGroups(visibleIds: ResourceId[]): CampInventoryResourceGroup[] {
+  const forageGroups = new Map<ForageDisplayCategory, ResourceId[]>(
+    forageDisplayCategories.map((category) => [category, []])
+  );
+  const standardGroups = new Map<string, ResourceId[]>();
+  const orderedGroupKeys: string[] = [];
+
+  for (const resourceId of visibleIds) {
+    const resource = resourceDefinitions.find((definition) => definition.id === resourceId);
+    if (!resource) {
+      continue;
+    }
+
+    const forageCategory = getResourceForageDisplayCategory(resource);
+    const groupKey = forageCategory ? "forage" : resource.group;
+
+    if (!orderedGroupKeys.includes(groupKey)) {
+      orderedGroupKeys.push(groupKey);
+    }
+
+    if (forageCategory) {
+      forageGroups.get(forageCategory)?.push(resourceId);
+    } else {
+      standardGroups.set(resource.group, [...(standardGroups.get(resource.group) ?? []), resourceId]);
+    }
+  }
+
+  return orderedGroupKeys.flatMap((groupKey): CampInventoryResourceGroup[] => {
+    if (groupKey === "forage") {
+      return forageDisplayCategories.flatMap((category) => {
+        const ids = forageGroups.get(category) ?? [];
+        return ids.length
+          ? [
+              {
+                id: `forage-${category}`,
+                label: getForageDisplayCategoryLabel(category),
+                ids,
+                usePlaceholderIcons: true
+              }
+            ]
+          : [];
+      });
+    }
+
+    const ids = standardGroups.get(groupKey) ?? [];
+    return ids.length ? [{ id: groupKey, label: labelGroup(groupKey), ids }] : [];
+  });
+}
+
+function getResourceForageDisplayCategory(resource: ResourceDefinition): ForageDisplayCategory | null {
+  const category = resource.cooking?.ingredientCategory;
+  if (!category || category === "meat") {
+    return null;
+  }
+
+  return getForageDisplayCategory({ category, tags: resource.cooking?.tags ?? [] });
 }
 
 function renderFoodUsePanel(state: GameState): string {
@@ -4556,7 +5061,10 @@ function getBuildingStatusText(
     : `Needs ${getMissingCostText(state, buildingDefinitions.find((building) => building.id === buildingId)?.recipe ?? {})}`;
 }
 
-function renderCharacterDetailsPanel(state: GameState, activeTab: CharacterDetailTab): string {
+function renderCharacterDetailsPanel(
+  state: GameState,
+  activeTab: CharacterDetailTab
+): string {
   const selectedCharacter = getSelectedCharacter(state);
 
   return `
@@ -4607,7 +5115,7 @@ function renderCharacterStatsPanel(state: GameState): string {
     { label: "Status", value: getCharacterStatusText(state, selectedCharacter) },
     { label: "Location", value: getCharacterLocationLabel(selectedCharacter.locationId) },
     { label: "Current", value: currentActionLabel },
-    { label: "Action Loop", value: assignedLoop?.name ?? "None" },
+    { label: "Action Loop", value: assignedLoop ? escapeHtml(assignedLoop.name) : "None" },
     { label: "Class", value: loadout.classLabel },
     { label: "Weapon", value: loadout.weaponLabel },
     { label: "Hunger", value: `${Math.round(selectedCharacter.needs.hunger)} / ${Math.round(selectedCharacter.needs.maxHunger)}` },
@@ -4687,6 +5195,7 @@ function renderSkillRow(state: GameState, skillId: SkillId): string {
 
   return `
     <article class="skill-row ${progress.canPrestige ? "prestige-ready" : ""}" data-editor-id="skill-row-${skillId}" data-editor-label="Skill row: ${definition.label}" data-editor-files="src/ui/render.ts, src/style.css">
+      ${skillId === "foraging" ? renderCharacterForagingSkillBanner() : ""}
       <div class="skill-row-heading">
         <span>
           <strong>${definition.label}</strong>
@@ -4707,6 +5216,20 @@ function renderSkillRow(state: GameState, skillId: SkillId): string {
           : ""
       }
     </article>
+  `;
+}
+
+function renderCharacterForagingSkillBanner(): string {
+  return `
+    <button
+      class="character-skill-banner-button"
+      type="button"
+      data-command="open-character-skill-panel"
+      data-id="foraging"
+      aria-label="Go to Gather Foraging actions"
+    >
+      <img class="character-skill-banner-image" src="${foragingSkillBannerUrl}" alt="" aria-hidden="true" />
+    </button>
   `;
 }
 
@@ -4761,7 +5284,9 @@ function renderActionLoopsPanel(
   state: GameState,
   selectedLoopId: string | null,
   selectedLoopIndex: number,
-  actionLoopTarget: ActionLoopTarget
+  actionLoopTarget: ActionLoopTarget,
+  actionLoopLocationMenu: ActionLoopLocationMenu,
+  actionLoopSkillMenu: ActionLoopSkillMenu
 ): string {
   const selectedLoop = getActionLoop(state, selectedLoopId);
   const activeAssignments = getCurrentActions(state).length;
@@ -4781,10 +5306,18 @@ function renderActionLoopsPanel(
             ? `
               <div class="loop-editor">
                 <div class="loop-editor-heading">
-                  <span>
-                    <strong>${selectedLoop.name}</strong>
+                  <label class="loop-name-field">
+                    <span>Name</span>
+                    <input
+                      type="text"
+                      value="${escapeHtml(selectedLoop.name)}"
+                      maxlength="42"
+                      data-loop-field="name"
+                      data-loop-id="${selectedLoop.id}"
+                      aria-label="Action loop name"
+                    />
                     <small>${selectedLoop.actionIds.length} ${selectedLoop.actionIds.length === 1 ? "step" : "steps"}; ${activeAssignments} active</small>
-                  </span>
+                  </label>
                   <button
                     class="loop-delete-button"
                     type="button"
@@ -4795,6 +5328,13 @@ function renderActionLoopsPanel(
                     Delete
                   </button>
                 </div>
+                ${renderActionLoopStepEditor(
+                  state,
+                  selectedLoop,
+                  selectedLoopIndex,
+                  actionLoopLocationMenu,
+                  actionLoopSkillMenu
+                )}
                 ${renderActionLoopControls(state, selectedLoop.id, actionLoopTarget, selectedLoopIndex)}
                 <div class="loop-assignment-list">
                   ${state.characters.map((character) => renderLoopAssignmentButton(state, selectedLoop.id, character)).join("")}
@@ -4805,6 +5345,223 @@ function renderActionLoopsPanel(
         }
       </section>
     </div>
+  `;
+}
+
+function renderActionLoopStepEditor(
+  state: GameState,
+  loop: ActionLoop,
+  selectedLoopIndex: number,
+  actionLoopLocationMenu: ActionLoopLocationMenu,
+  actionLoopSkillMenu: ActionLoopSkillMenu
+): string {
+  const safeIndex = Math.min(loop.actionIds.length - 1, Math.max(0, selectedLoopIndex));
+  const actionId = loop.actionIds[safeIndex];
+  const rule = getActionLoopAdvanceRule(loop, safeIndex);
+  const label = getActionLoopLabel(actionId);
+
+  return `
+    <section class="loop-step-editor" aria-label="Selected loop step" data-editor-id="loop-step-editor" data-editor-label="Loop step editor" data-editor-files="src/ui/render.ts, src/style.css">
+      <div class="loop-step-editor-heading">
+        <span>
+          <strong>Step ${safeIndex + 1}: ${label}</strong>
+          <small>${getActionLoopStepSummary(state, loop, safeIndex)}</small>
+        </span>
+      </div>
+      <div class="loop-step-field-grid">
+        ${renderActionLoopLocationField(loop, safeIndex, actionId, actionLoopLocationMenu)}
+        ${renderActionLoopSkillField(loop, safeIndex, actionId, actionLoopSkillMenu)}
+        <label class="loop-step-field">
+          <span>Advance</span>
+          <select data-loop-field="advance-mode" data-loop-id="${loop.id}" data-id="${safeIndex}">
+            ${actionLoopAdvanceOptions
+              .map((option) => `
+                <option value="${option.id}" ${rule.mode === option.id ? "selected" : ""}>${option.label}</option>
+              `)
+              .join("")}
+          </select>
+        </label>
+        ${renderActionLoopResourceRuleFields(loop, safeIndex, actionId, rule)}
+      </div>
+      <small class="loop-step-hint">${getActionLoopAdvanceRuleDescription(rule.mode)}</small>
+    </section>
+  `;
+}
+
+function renderActionLoopLocationField(
+  loop: ActionLoop,
+  index: number,
+  actionId: ActionId,
+  actionLoopLocationMenu: ActionLoopLocationMenu
+): string {
+  if (!isCarryAction(actionId)) {
+    return `
+      <div class="loop-step-field readonly">
+        <span>Location</span>
+        <strong>Camp</strong>
+      </div>
+    `;
+  }
+
+  const locations = getActionLoopLocationOptions(actionId);
+  const selectedLocationId = getActionLoopStepLocationId(actionId, loop.locationIds[index] ?? null);
+  const selectedLocation = getLocation(selectedLocationId);
+  if (locations.length <= 1) {
+    return `
+      <div class="loop-step-field readonly">
+        <span>Location</span>
+        <strong>${selectedLocation.label}</strong>
+      </div>
+    `;
+  }
+
+  const menuOpen = actionLoopLocationMenu?.loopId === loop.id && actionLoopLocationMenu.index === index;
+
+  return `
+    <div class="loop-step-field loop-location-field">
+      <span>Location</span>
+      <div class="loop-location-picker ${menuOpen ? "open" : ""}">
+        <button
+          class="loop-location-button"
+          type="button"
+          data-command="toggle-loop-location-menu"
+          data-loop-id="${loop.id}"
+          data-id="${index}"
+          aria-haspopup="menu"
+          aria-expanded="${menuOpen}"
+          aria-label="Location: ${selectedLocation.label}"
+        >
+          <img src="${selectedLocation.iconUrl}" alt="" aria-hidden="true" />
+          <span class="loop-location-label">${selectedLocation.label}</span>
+        </button>
+        ${
+          menuOpen
+            ? `<div class="loop-location-menu" role="menu" aria-label="Choose step location">
+                ${locations
+                  .map((location) => {
+                    const active = location.id === selectedLocationId;
+                    return `
+                      <button
+                        class="loop-location-option ${active ? "active" : ""}"
+                        type="button"
+                        data-command="set-loop-step-location"
+                        data-loop-id="${loop.id}"
+                        data-id="${index}"
+                        data-location-id="${location.id}"
+                        role="menuitemradio"
+                        aria-checked="${active}"
+                        title="${location.label}"
+                      >
+                        <img src="${location.iconUrl}" alt="" aria-hidden="true" />
+                        <span class="loop-location-label">${location.label}</span>
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>`
+            : ""
+        }
+      </div>
+    </div>
+  `;
+}
+
+function renderActionLoopSkillField(
+  loop: ActionLoop,
+  index: number,
+  actionId: ActionId,
+  actionLoopSkillMenu: ActionLoopSkillMenu
+): string {
+  const selectedSkillId = getSkillIdForAction(actionId);
+  const selectedSkill = getSkillDefinition(selectedSkillId);
+  const menuOpen = actionLoopSkillMenu?.loopId === loop.id && actionLoopSkillMenu.index === index;
+
+  return `
+    <div class="loop-step-field loop-skill-field">
+      <span>Skill</span>
+      <div class="loop-skill-picker ${menuOpen ? "open" : ""}">
+        <button
+          class="loop-skill-button"
+          type="button"
+          data-command="toggle-loop-skill-menu"
+          data-loop-id="${loop.id}"
+          data-id="${index}"
+          aria-haspopup="menu"
+          aria-expanded="${menuOpen}"
+          aria-label="Skill: ${selectedSkill.label}"
+          style="${getSkillTileStyle(selectedSkillId)}"
+        >
+          ${renderSkillTileContent(selectedSkillId, selectedSkill.label)}
+        </button>
+        ${
+          menuOpen
+            ? `<div class="loop-skill-menu" role="menu" aria-label="Choose step skill">
+                ${actionLoopSkillOptions
+                  .map((option) => {
+                    const skill = getSkillDefinition(option.skillId);
+                    const active = option.skillId === selectedSkillId;
+                    return `
+                      <button
+                        class="loop-skill-option ${active ? "active" : ""}"
+                        type="button"
+                        data-command="set-loop-step-skill"
+                        data-loop-id="${loop.id}"
+                        data-id="${index}"
+                        data-skill-id="${option.skillId}"
+                        role="menuitemradio"
+                        aria-checked="${active}"
+                        title="${skill.label}"
+                        style="${getSkillTileStyle(option.skillId)}"
+                      >
+                        ${renderSkillTileContent(option.skillId, skill.label)}
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>`
+            : ""
+        }
+      </div>
+    </div>
+  `;
+}
+
+function renderActionLoopResourceRuleFields(
+  loop: ActionLoop,
+  index: number,
+  actionId: ActionId,
+  rule: ActionLoopAdvanceRule
+): string {
+  if (rule.mode !== "whenResourceAtLeast") {
+    return "";
+  }
+
+  const resourceId = getActionLoopRuleResourceId(rule, actionId);
+  const scope = rule.scope ?? "camp";
+  const amount = Math.max(1, Math.floor(rule.amount ?? 1));
+
+  return `
+    <label class="loop-step-field">
+      <span>Stock</span>
+      <select data-loop-field="advance-resource" data-loop-id="${loop.id}" data-id="${index}">
+        ${resourceOrder
+          .map((id) => `
+            <option value="${id}" ${resourceId === id ? "selected" : ""}>${getResourceLabel(id)}</option>
+          `)
+          .join("")}
+      </select>
+    </label>
+    <label class="loop-step-field">
+      <span>Source</span>
+      <select data-loop-field="advance-scope" data-loop-id="${loop.id}" data-id="${index}">
+        <option value="camp" ${scope === "camp" ? "selected" : ""}>Camp</option>
+        <option value="character" ${scope === "character" ? "selected" : ""}>Character</option>
+      </select>
+    </label>
+    <label class="loop-step-field">
+      <span>Amount</span>
+      <input type="number" min="1" step="1" value="${amount}" data-loop-field="advance-amount" data-loop-id="${loop.id}" data-id="${index}" />
+    </label>
   `;
 }
 
@@ -4825,7 +5582,7 @@ function renderActionLoopPickerButton(state: GameState, loopId: string, selected
       data-id="0"
       aria-pressed="${selected}"
     >
-      <span>${loop.name}</span>
+      <span>${escapeHtml(loop.name)}</span>
       <small>${assignedCount} assigned</small>
     </button>
   `;
@@ -4900,17 +5657,30 @@ function renderCharacterInventory(state: GameState): string {
   `;
 }
 
-function renderResourceGroup(state: GameState, group: string, ids: ResourceId[]): string {
-  const iconIds = ids.filter((id) => Boolean(resourceSlotImages[id]));
-  const rowIds = ids.filter((id) => !resourceSlotImages[id]);
+function renderResourceGroup(state: GameState, group: CampInventoryResourceGroup): string {
+  const iconIds = group.usePlaceholderIcons ? group.ids : group.ids.filter((id) => Boolean(resourceSlotImages[id]));
+  const rowIds = group.usePlaceholderIcons ? [] : group.ids.filter((id) => !resourceSlotImages[id]);
+  const groupClass = group.usePlaceholderIcons ? " camp-forage-inventory-group" : "";
+  const gridClass = group.usePlaceholderIcons ? " camp-forage-inventory-grid" : "";
 
   return `
-    <div class="resource-group" data-editor-id="resource-group-${group}" data-editor-label="${labelGroup(group)} resource group" data-editor-files="src/ui/render.ts, src/style.css">
-      <h3>${labelGroup(group)}</h3>
+    <div class="resource-group${groupClass}" data-editor-id="resource-group-${group.id}" data-editor-label="${group.label} resource group" data-editor-files="src/ui/render.ts, src/style.css">
+      <h3>${group.label}</h3>
       ${
         iconIds.length
-          ? `<div class="inventory-resource-grid" aria-label="${labelGroup(group)} inventory">
-              ${iconIds.map((id) => renderInventoryResourceSlot(state, id)).join("")}
+          ? `<div class="inventory-resource-grid${gridClass}" aria-label="${group.label} inventory">
+              ${iconIds
+                .map((id) =>
+                  renderInventoryResourceSlot(
+                    state,
+                    id,
+                    state.inventory,
+                    "camp",
+                    state.selectedCharacterId,
+                    group.usePlaceholderIcons ? flaxFiberIconUrl : undefined
+                  )
+                )
+                .join("")}
             </div>`
           : ""
       }
@@ -4938,14 +5708,16 @@ function renderInventoryResourceSlot(
   resourceId: ResourceId,
   inventory: Inventory = state.inventory,
   source: InventorySource = "camp",
-  characterId = state.selectedCharacterId
+  characterId = state.selectedCharacterId,
+  placeholderIconUrl?: string
 ): string {
-  const imageUrl = resourceSlotImages[resourceId];
+  const imageUrl = resourceSlotImages[resourceId] ?? placeholderIconUrl;
   const definition = resourceDefinitions.find((resource) => resource.id === resourceId);
   if (!imageUrl || !definition) {
     return "";
   }
 
+  const typeLabel = getResourceInventoryTypeLabel(definition);
   const quantity = getResourceQuantity(state, resourceId, source, characterId);
   const quantityLabel = isWholeCountResource(resourceId) ? `, quantity ${quantity}` : "";
 
@@ -4960,7 +5732,7 @@ function renderInventoryResourceSlot(
         <dl>
           <div>
             <dt>Type</dt>
-            <dd>${labelGroup(definition.group)}</dd>
+            <dd>${typeLabel}</dd>
           </div>
           ${
             isWeightedResource(resourceId)
@@ -4986,6 +5758,11 @@ function renderInventoryResourceSlot(
       </div>
     </article>
   `;
+}
+
+function getResourceInventoryTypeLabel(resource: ResourceDefinition): string {
+  const forageCategory = getResourceForageDisplayCategory(resource);
+  return forageCategory ? getForageDisplayCategoryLabel(forageCategory) : labelGroup(resource.group);
 }
 
 function renderToolInventory(state: GameState): string {
@@ -5328,7 +6105,7 @@ function getTooltipLayer(root: HTMLElement): HTMLElement | null {
 }
 
 function captureScrollPositions(root: HTMLElement): Map<string, number> {
-  const selectors = [".log-list", ".side-panel-content"];
+  const selectors = [".log-list", ".side-panel-content", ".character-overview-content"];
   return new Map(
     selectors.map((selector) => {
       const element = root.querySelector<HTMLElement>(selector);
@@ -5449,6 +6226,25 @@ function formatLogResource(resourceId: ResourceId, amount: number): string {
   }
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case "\"":
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return character;
+    }
+  });
+}
+
 function labelGroup(group: string): string {
   switch (group) {
     case "resources":
@@ -5456,7 +6252,7 @@ function labelGroup(group: string): string {
     case "animals":
       return "Animals";
     case "hunted":
-      return "Hunted";
+      return "Meats";
     case "fish":
       return "Fish";
     case "crafted":

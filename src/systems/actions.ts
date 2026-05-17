@@ -2,13 +2,14 @@ import { actionDefinitions, getActionDefinition } from "../data/actions";
 import { getAlchemyRecipe } from "../data/alchemy";
 import { getSmithingRecipe } from "../data/smithing";
 import { getTextileRecipe } from "../data/textiles";
-import type { ActionId, Cost, GameState, RunningAction } from "../types";
+import type { ActionId, ActionLoopAdvanceRule, Cost, GameState, ResourceId, RunningAction } from "../types";
 import {
   addCharacterResources,
   addResources,
   depositCharacterResources,
   getCharacterInventoryWeight,
   getCharacterMaxWeight,
+  getResourceQuantity,
   hasResourceQuantity,
   hasCost,
   payCost
@@ -27,7 +28,6 @@ import {
   getLoopActionId,
   getLoopLocation,
   getLoopTargetLocationId,
-  getNextLoopIndex,
   getNextLoopIndexAfterCompletedAction,
   getNextLoopIndexAfterIndex,
   getRunningActionLoop,
@@ -41,6 +41,7 @@ import {
   type StartActionOptions
 } from "./actionRouting";
 import {
+  getActionLoopAdvanceRule,
   getActionLoop,
   normalizeActionLoopLocations
 } from "./actionLoops";
@@ -75,8 +76,13 @@ export {
   deleteActionLoop,
   getActionLoop,
   getAssignedActionLoop,
+  getActionLoopAdvanceRule,
   insertActionInSavedLoop,
-  removeActionFromSavedLoop
+  removeActionFromSavedLoop,
+  updateActionLoopName,
+  updateActionLoopStepAction,
+  updateActionLoopStepAdvanceRule,
+  updateActionLoopStepLocation
 } from "./actionLoops";
 
 export { getCurrentAction, getCurrentActions, syncCurrentAction } from "./actionState";
@@ -506,93 +512,221 @@ function completeFollowUpCycle(state: GameState, running: RunningAction, now: nu
 }
 
 function completeWorkCycle(state: GameState, running: RunningAction, now: number): void {
-  const actionId = getWorkActionId(state, running.actionId, now);
-  if (!actionId) {
-    addLog(state, `${getCharacterName(state, running.characterId)} lacks the materials to continue.`, "warning", now, "character");
-    clearRunningAction(state, running.characterId);
+  const workActionId = getWorkActionId(state, running.actionId, now);
+  if (!workActionId) {
+    handleLoopStepBlocked(state, running, now);
     return;
   }
 
-  const cost = getActionCost(actionId);
+  const cost = getActionCost(workActionId);
   if (!hasCost(state, cost)) {
-    addLog(state, `${getCharacterName(state, running.characterId)} lacks the materials to continue.`, "warning", now, "character");
-    clearRunningAction(state, running.characterId);
+    handleLoopStepBlocked(state, running, now);
     return;
   }
 
   payCost(state, cost);
-  if (actionId === "butcherFish") {
+  if (workActionId === "butcherFish") {
     completeFishButchering(state, running.characterId, getCharacterName(state, running.characterId), now);
-    addActionSkillXp(state, actionId, now);
-
-    if (running.repeat && canStartAction(state, actionId, now, running.characterId)) {
-      startWorkingCycle(state, running, now);
-      return;
-    }
-
-    clearRunningAction(state, running.characterId);
+    addActionSkillXp(state, workActionId, now);
+    continueLoopAfterCompletedWork(state, running, workActionId, now);
     return;
   }
 
-  const craftedToolId = getCraftedToolId(actionId);
+  const craftedToolId = getCraftedToolId(workActionId);
   if (craftedToolId) {
     completeToolCraft(state, running.characterId, getCharacterName(state, running.characterId), craftedToolId, now);
-    addActionSkillXp(state, actionId, now);
-    if (running.repeat && canStartAction(state, actionId, now, running.characterId)) {
-      startWorkingCycle(state, running, now);
-      return;
-    }
-
-    clearRunningAction(state, running.characterId);
+    addActionSkillXp(state, workActionId, now);
+    continueLoopAfterCompletedWork(state, running, workActionId, now);
     return;
   }
 
-  const rewards = rollRewards(state, actionId);
-  const gatheredResources = isCarryAction(actionId)
+  const rewards = rollRewards(state, workActionId);
+  const gatheredResources = isCarryAction(workActionId)
     ? addCharacterResources(state, rewards.resources, rewards.resourceCounts, running.characterId)
     : rewards.resources;
-  if (isCarryAction(actionId)) {
-    addCarryLog(state, running.characterId, actionId, gatheredResources, now);
+  if (isCarryAction(workActionId)) {
+    addCarryLog(state, running.characterId, workActionId, gatheredResources, now);
   } else {
     addResources(state, rewards.resources, rewards.resourceCounts);
     addStackedLog(state, {
-      aggregateKey: `action:${running.characterId}:${actionId}`,
-      text: getStackedActionText(actionId, getCharacterName(state, running.characterId)),
+      aggregateKey: `action:${running.characterId}:${workActionId}`,
+      text: getStackedActionText(workActionId, getCharacterName(state, running.characterId)),
       resources: rewards.resources,
       tone: rewards.tone,
       now,
       scope: "character"
     });
   }
-  applyToolWear(state, actionId, now, getCharacterName(state, running.characterId));
-  addActionSkillXp(state, actionId, now);
+  applyToolWear(state, workActionId, now, getCharacterName(state, running.characterId));
+  addActionSkillXp(state, workActionId, now);
+  continueLoopAfterCompletedWork(state, running, workActionId, now, {
+    returnToCamp: isCarryAction(workActionId) && shouldReturnToCamp(rewards.resources, gatheredResources, state, running.characterId)
+  });
+}
 
-  if (isCarryAction(actionId) && shouldReturnToCamp(rewards.resources, gatheredResources, state, running.characterId)) {
-    const nextIndex = getNextLoopIndex(running);
-    if (
-      actionId === "fishRiver" &&
-      getLoopActionId(running, nextIndex) === "butcherFish" &&
-      hasCarriedWholeFish(state, running.characterId)
-    ) {
-      startFollowUpAction(state, running, nextIndex, now);
+function handleLoopStepBlocked(state: GameState, running: RunningAction, now: number): void {
+  const rule = getRunningActionLoopRule(state, running);
+  if (rule.mode === "whenCannotStart" && getRunningActionLoop(running).length > 1) {
+    if (startNextLoopStepAfterWork(state, running, now)) {
+      return;
+    }
+  }
+
+  addLog(state, `${getCharacterName(state, running.characterId)} lacks the materials to continue.`, "warning", now, "character");
+  clearRunningAction(state, running.characterId);
+}
+
+function continueLoopAfterCompletedWork(
+  state: GameState,
+  running: RunningAction,
+  workActionId: ActionId,
+  now: number,
+  options: { returnToCamp?: boolean } = {}
+): void {
+  const shouldAdvance = shouldAdvanceLoopStepAfterCompletion(
+    state,
+    running,
+    workActionId,
+    now,
+    Boolean(options.returnToCamp)
+  );
+
+  if (options.returnToCamp) {
+    const nextIndex = shouldAdvance ? getNextLoopIndexAfterCompletedAction(running) : (running.loopIndex ?? 0);
+    if (shouldAdvance && tryStartFishFollowUp(state, running, workActionId, nextIndex, now)) {
       return;
     }
 
-    startTravelingBackToCamp(state, running, now, getNextLoopIndexAfterCompletedAction(running));
+    startTravelingBackToCamp(state, running, now, nextIndex);
     return;
   }
 
-  if (!isCarryAction(actionId) && getRunningActionLoop(running).length > 1) {
-    startLoopActionAtIndex(state, running, getNextLoopIndexAfterCompletedAction(running), now);
+  if (shouldAdvance && getRunningActionLoop(running).length > 1 && startNextLoopStepAfterWork(state, running, now)) {
     return;
   }
 
-  if (running.repeat && canStartAction(state, actionId, now, running.characterId)) {
+  if (running.repeat && canStartAction(state, running.actionId, now, running.characterId)) {
     startWorkingCycle(state, running, now);
     return;
   }
 
   clearRunningAction(state, running.characterId);
+}
+
+function startNextLoopStepAfterWork(state: GameState, running: RunningAction, now: number): boolean {
+  const nextIndex = getNextLoopIndexAfterCompletedAction(running);
+  if (tryStartFishFollowUp(state, running, running.actionId, nextIndex, now)) {
+    return true;
+  }
+
+  const nextTargetLocationId = getLoopTargetLocationId(running, nextIndex);
+  if (nextTargetLocationId === "camp" && getCharacterLocation(state, running.characterId) !== "camp") {
+    startTravelingBackToCamp(state, running, now, nextIndex);
+    return true;
+  }
+
+  return startLoopActionAtIndex(state, running, nextIndex, now);
+}
+
+function tryStartFishFollowUp(
+  state: GameState,
+  running: RunningAction,
+  workActionId: ActionId,
+  nextIndex: number,
+  now: number
+): boolean {
+  if (
+    workActionId === "fishRiver" &&
+    getLoopActionId(running, nextIndex) === "butcherFish" &&
+    hasCarriedWholeFish(state, running.characterId)
+  ) {
+    startFollowUpAction(state, running, nextIndex, now);
+    return true;
+  }
+
+  return false;
+}
+
+function shouldAdvanceLoopStepAfterCompletion(
+  state: GameState,
+  running: RunningAction,
+  workActionId: ActionId,
+  now: number,
+  returnToCamp: boolean
+): boolean {
+  const rule = getRunningActionLoopRule(state, running);
+  switch (rule.mode) {
+    case "manual":
+      return false;
+    case "afterCompletion":
+      return true;
+    case "whenInventoryFull":
+      return returnToCamp || isCharacterInventoryFull(state, running.characterId);
+    case "whenResourceAtLeast":
+      return hasLoopRuleResourceTarget(state, running, rule, workActionId);
+    case "whenCannotStart":
+      return !canStartAction(state, running.actionId, now, running.characterId);
+    case "smart":
+    default:
+      return isCarryAction(workActionId) ? returnToCamp : true;
+  }
+}
+
+function getRunningActionLoopRule(state: GameState, running: RunningAction, index = running.loopIndex ?? 0): ActionLoopAdvanceRule {
+  const character = state.characters.find((entry) => entry.id === running.characterId);
+  const loop = character?.actionLoopId ? getActionLoop(state, character.actionLoopId) : null;
+  return loop ? getActionLoopAdvanceRule(loop, index) : { mode: "smart" };
+}
+
+function hasLoopRuleResourceTarget(
+  state: GameState,
+  running: RunningAction,
+  rule: ActionLoopAdvanceRule,
+  workActionId: ActionId
+): boolean {
+  const targetAmount = Math.max(1, Math.floor(rule.amount ?? 1));
+  const resourceId = rule.resourceId ?? getDefaultTargetResourceId(workActionId);
+  const source = rule.scope ?? "camp";
+  return getResourceQuantity(state, resourceId, source, running.characterId) >= targetAmount;
+}
+
+function isCharacterInventoryFull(state: GameState, characterId: string): boolean {
+  return getCharacterInventoryWeight(state, characterId) >= getCharacterMaxWeight(state, characterId);
+}
+
+function getDefaultTargetResourceId(actionId: ActionId): ResourceId {
+  if (actionId.startsWith("gatherIngredient:")) {
+    return actionId.slice("gatherIngredient:".length) as ResourceId;
+  }
+
+  switch (actionId) {
+    case "gatherSticks":
+      return "stick";
+    case "gatherStones":
+      return "stone";
+    case "gatherFlaxPlants":
+      return "flaxPlant";
+    case "gatherFlaxFibers":
+      return "flaxFiber";
+    case "gatherSand":
+      return "sand";
+    case "gatherWater":
+      return "water";
+    case "mineCoal":
+      return "coal";
+    case "mineCopper":
+      return "copper";
+    case "mineTin":
+      return "tin";
+    case "chopTrees":
+      return "wood";
+    case "huntSmallAnimals":
+      return "rabbit";
+    case "fishRiver":
+      return "minnow";
+    default:
+      return "stick";
+  }
 }
 
 function startWorkingCycle(state: GameState, running: RunningAction, now: number): void {
@@ -674,17 +808,27 @@ function startFollowUpAction(state: GameState, running: RunningAction, loopIndex
   });
 }
 
-function startLoopActionAtIndex(state: GameState, running: RunningAction, index: number, now: number): boolean {
+function startLoopActionAtIndex(
+  state: GameState,
+  running: RunningAction,
+  index: number,
+  now: number,
+  visitedSteps = 0
+): boolean {
   const loop = getRunningActionLoop(running);
-  if (!loop.length) {
+  if (!loop.length || visitedSteps >= loop.length) {
     return false;
   }
 
   const loopIndex = clampLoopIndex(index, loop);
   const actionId = loop[loopIndex];
-  if (actionId === "butcherFish" || !canStartAction(state, actionId, now, running.characterId)) {
+  if (
+    actionId === "butcherFish" ||
+    shouldSkipLoopStepBeforeStart(state, running, loopIndex, actionId) ||
+    !canStartAction(state, actionId, now, running.characterId)
+  ) {
     const nextIndex = getNextLoopIndexAfterIndex(running, loopIndex);
-    return nextIndex !== loopIndex ? startLoopActionAtIndex(state, running, nextIndex, now) : false;
+    return nextIndex !== loopIndex ? startLoopActionAtIndex(state, running, nextIndex, now, visitedSteps + 1) : false;
   }
 
   const definition = getActionDefinition(actionId);
@@ -714,6 +858,24 @@ function startLoopActionAtIndex(state: GameState, running: RunningAction, index:
     setCharacterLocation(state, running.characterId, targetLocationId);
   }
   return true;
+}
+
+function shouldSkipLoopStepBeforeStart(
+  state: GameState,
+  running: RunningAction,
+  loopIndex: number,
+  actionId: ActionId
+): boolean {
+  const rule = getRunningActionLoopRule(state, running, loopIndex);
+  if (rule.mode === "whenInventoryFull") {
+    return isCharacterInventoryFull(state, running.characterId);
+  }
+
+  if (rule.mode === "whenResourceAtLeast") {
+    return hasLoopRuleResourceTarget(state, running, rule, actionId);
+  }
+
+  return false;
 }
 
 function addCarryLog(state: GameState, characterId: string, actionId: ActionId, resources: Cost, now: number): void {
