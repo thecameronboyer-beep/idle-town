@@ -103,7 +103,7 @@ export function createInitialCookingState(): CookingState {
 
 export function createInitialState(now = Date.now()): GameState {
   return {
-    version: 10,
+    version: 11,
     createdAt: now,
     updatedAt: now,
     lastSimulatedAt: now,
