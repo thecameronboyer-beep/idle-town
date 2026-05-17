@@ -127,12 +127,14 @@ button:disabled {
 .test-reward-controls {
   display: flex;
   flex: 0 0 auto;
-  gap: 0.35rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.28rem;
 }
 
 .test-reward-button {
   flex: 0 0 auto;
-  min-width: 3.2rem;
+  width: 3.2rem;
   padding: 0.34rem 0.48rem;
   border-color: rgba(214, 164, 81, 0.42);
   color: #f0d6a4;
@@ -197,10 +199,11 @@ h3 {
 
 .character-card {
   display: grid;
-  grid-template-columns: 48px 1fr;
+  grid-template-columns: 58px minmax(0, 1fr);
   gap: 0.75rem;
   align-items: center;
   width: 100%;
+  min-height: 92px;
   padding: 0.7rem;
   text-align: left;
   background: rgba(52, 58, 42, 0.7);
@@ -239,6 +242,36 @@ h3 {
   width: 38px;
   height: 38px;
   font-size: 1rem;
+}
+
+.portrait.character-portrait {
+  width: 58px;
+  height: 76px;
+  padding: 2px;
+  overflow: hidden;
+  border-color: rgba(214, 164, 81, 0.62);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(236, 229, 213, 0.22), rgba(43, 31, 20, 0.86)),
+    #221913;
+  box-shadow:
+    inset 0 0 0 1px rgba(236, 229, 213, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.32);
+}
+
+.portrait.character-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.portrait.small.character-portrait {
+  width: 38px;
+  height: 50px;
+  border-radius: 5px;
 }
 
 .sidebar-actions {
@@ -452,6 +485,12 @@ h3 {
   border-bottom: 1px solid var(--line);
 }
 
+.character-detail-heading .portrait.character-portrait {
+  width: 74px;
+  height: 98px;
+  flex: 0 0 auto;
+}
+
 .character-detail-title {
   display: grid;
   gap: 0.1rem;
@@ -603,11 +642,11 @@ h3 {
 
 .character-select-card {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  min-height: 86px;
+  min-height: 100px;
   padding: 0.75rem;
   text-align: left;
   background: rgba(17, 18, 14, 0.66);
@@ -728,6 +767,174 @@ h3 {
   display: grid;
   gap: 0.6rem;
   max-width: 18rem;
+}
+
+.foraging-skill-tree-panel {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.foraging-skill-tree-heading small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.foraging-skill-tree-intro,
+.foraging-skill-tree-lock-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.62rem 0.72rem;
+  border: 1px solid rgba(231, 214, 170, 0.16);
+  border-radius: 8px;
+  background: rgba(14, 15, 12, 0.48);
+}
+
+.foraging-skill-tree-intro strong,
+.foraging-skill-tree-lock-note strong {
+  color: #f4e6c8;
+  font-size: 0.9rem;
+}
+
+.foraging-skill-tree-intro span,
+.foraging-skill-tree-lock-note span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.foraging-skill-tree-intro.available {
+  border-color: rgba(123, 168, 103, 0.38);
+  background:
+    linear-gradient(90deg, rgba(123, 168, 103, 0.12), rgba(214, 164, 81, 0.08)),
+    rgba(14, 15, 12, 0.54);
+}
+
+.foraging-skill-tree-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13.25rem, 1fr));
+  gap: 0.62rem;
+  min-width: 0;
+}
+
+.foraging-skill-tree-grid.compact {
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.foraging-skill-tree-selected {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.foraging-skill-tree-card {
+  display: grid;
+  grid-template-columns: 3.75rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(14, 15, 12, 0.52);
+}
+
+.foraging-skill-tree-card.available {
+  border-color: rgba(123, 168, 103, 0.42);
+}
+
+.foraging-skill-tree-card.selected {
+  border-color: rgba(214, 164, 81, 0.58);
+  background:
+    linear-gradient(90deg, rgba(115, 168, 160, 0.16), rgba(214, 164, 81, 0.12)),
+    rgba(18, 19, 15, 0.72);
+}
+
+.foraging-skill-tree-card.featured {
+  grid-template-columns: 5rem minmax(0, 1fr) auto;
+  padding: 0.65rem;
+}
+
+.foraging-tree-card-art {
+  position: relative;
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(236, 229, 213, 0.16);
+  border-radius: 7px;
+  background:
+    linear-gradient(180deg, rgba(42, 43, 35, 0.62), rgba(14, 15, 12, 0.7)),
+    rgba(17, 18, 14, 0.66);
+}
+
+.foraging-tree-card-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.foraging-tree-card-art > span {
+  color: #ffe3a6;
+  font-size: 1rem;
+  font-weight: 1000;
+}
+
+.foraging-tree-card-copy {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+}
+
+.foraging-tree-card-copy strong {
+  color: #f4e6c8;
+  font-size: 0.86rem;
+}
+
+.foraging-tree-card-copy small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.foraging-tree-card-status {
+  grid-column: 1 / -1;
+  color: #ffe3a6;
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
+.foraging-skill-tree-card.locked:not(.selected) .foraging-tree-card-status {
+  color: var(--muted);
+}
+
+.foraging-tree-select-button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 32px;
+  padding: 0.32rem 0.56rem;
+  color: #ffe3a6;
+  border-color: rgba(214, 164, 81, 0.46);
+  background:
+    linear-gradient(90deg, rgba(123, 168, 103, 0.18), rgba(214, 164, 81, 0.16)),
+    rgba(17, 18, 14, 0.72);
+  font-size: 0.72rem;
+}
+
+.foraging-skill-tree-card.featured .foraging-tree-card-status,
+.foraging-skill-tree-card.featured .foraging-tree-select-button {
+  grid-column: auto;
+  justify-self: end;
 }
 
 .danger-button {
@@ -1028,7 +1235,7 @@ h3 {
 }
 
 .current-action-panel {
-  padding: 1rem;
+  padding: 0.65rem 0.85rem;
   background:
     linear-gradient(90deg, rgba(115, 168, 160, 0.12), rgba(214, 164, 81, 0.08)),
     var(--panel);
@@ -1081,6 +1288,7 @@ h3 {
 }
 
 .current-action-content {
+  --current-action-media-height: 3.625rem;
   display: grid;
   grid-template-columns: minmax(8rem, 0.42fr) minmax(0, 1fr) auto;
   gap: 0.7rem 0.9rem;
@@ -1091,19 +1299,58 @@ h3 {
   grid-template-columns: minmax(8rem, 0.42fr) minmax(0, 1fr) auto;
 }
 
+.current-action-content.with-skill-banner {
+  --current-action-media-height: 6.84rem;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+}
+
+.current-action-skill-banner {
+  display: grid;
+  align-self: center;
+  justify-self: start;
+  place-items: center;
+  min-width: 0;
+  height: var(--current-action-media-height);
+  aspect-ratio: 2136 / 636;
+  overflow: hidden;
+  border-radius: 7px;
+  background: rgba(7, 8, 6, 0.22);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.22),
+    inset 0 0 0 1px rgba(236, 229, 213, 0.12);
+}
+
+.current-action-skill-banner img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 2136 / 636;
+  border-radius: inherit;
+  object-fit: contain;
+}
+
+.current-action-skill-title {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  padding: 0.4rem 1rem;
+  color: #f4e6c8;
+  background:
+    linear-gradient(90deg, rgba(115, 168, 160, 0.2), rgba(214, 164, 81, 0.12)),
+    rgba(17, 18, 14, 0.68);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.28rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+}
+
 .current-action-detail {
   display: grid;
   gap: 0.1rem;
   min-width: 0;
-}
-
-.current-action-detail span {
-  color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 1000;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  text-transform: uppercase;
 }
 
 .current-action-detail strong {
@@ -1116,35 +1363,97 @@ h3 {
 }
 
 .current-action-location {
-  align-self: stretch;
+  position: relative;
+  align-self: center;
+  z-index: 12;
 }
 
-.current-location-image {
+.current-action-location-picker {
   position: relative;
-  width: min(7.25rem, 100%);
+  width: min(7.7rem, 100%);
+}
+
+.current-action-content.with-skill-banner .current-action-location-picker {
+  width: min(13.68rem, 100%);
+}
+
+.current-action-location-button {
+  display: block;
+  width: 100%;
   aspect-ratio: 2 / 1;
+  min-height: 0;
+  padding: 0;
   overflow: hidden;
   border: 1px solid rgba(115, 168, 160, 0.38);
   border-radius: 7px;
   background: rgba(17, 18, 14, 0.72);
+  color: #f4e6c8;
   box-shadow: inset 0 0 0 1px rgba(7, 8, 6, 0.42);
 }
 
-.current-location-image::after {
-  position: absolute;
-  inset: 0;
-  content: "";
-  background:
-    linear-gradient(180deg, rgba(7, 8, 6, 0.02), rgba(7, 8, 6, 0.34)),
-    linear-gradient(90deg, rgba(7, 8, 6, 0.22), transparent 48%, rgba(7, 8, 6, 0.22));
-  pointer-events: none;
+.current-action-location-button:hover,
+.current-action-location-button:focus-visible {
+  border-color: rgba(214, 164, 81, 0.62);
+  box-shadow:
+    inset 0 0 0 1px rgba(7, 8, 6, 0.42),
+    0 0 0 2px rgba(214, 164, 81, 0.16),
+    0 10px 26px rgba(0, 0, 0, 0.24);
 }
 
-.current-location-image img {
+.current-action-location-option-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  border-radius: 5px;
+  background: rgba(7, 8, 6, 0.4);
+}
+
+.current-action-location-banner,
+.current-action-location-option-image img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.current-action-location-menu {
+  position: absolute;
+  top: calc(100% + 0.38rem);
+  left: 0;
+  z-index: 80;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.24rem;
+  width: 100%;
+  padding: 0.28rem;
+  border: 1px solid rgba(236, 229, 213, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(29, 31, 23, 0.98), rgba(15, 16, 12, 0.98)),
+    var(--panel);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.46);
+}
+
+.current-action-location-option {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(236, 229, 213, 0.12);
+  border-radius: 6px;
+  background: rgba(7, 8, 6, 0.28);
+}
+
+.current-action-location-option:hover,
+.current-action-location-option:focus-visible,
+.current-action-location-option.active {
+  border-color: rgba(214, 164, 81, 0.58);
+  background: rgba(75, 62, 36, 0.55);
 }
 
 .progress-track {
@@ -1288,6 +1597,34 @@ h3 {
   color: #766f64;
   background: rgba(42, 43, 35, 0.46);
   transform: none;
+}
+
+.current-action-return-button {
+  position: relative;
+  display: block;
+  align-self: center;
+  justify-self: end;
+  min-width: 0;
+  width: auto;
+  height: var(--current-action-media-height);
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  padding: 0;
+  border-color: rgba(214, 164, 81, 0.5);
+  border-radius: 7px;
+  background: rgba(17, 18, 14, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(7, 8, 6, 0.42);
+}
+
+.current-action-return-button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.current-action-return-button:disabled {
+  opacity: 0.5;
 }
 
 .action-grid {
@@ -1945,16 +2282,6 @@ h3 {
   box-shadow: inset 0 0 0 1px rgba(7, 8, 6, 0.42);
 }
 
-.location-tab::after {
-  position: absolute;
-  inset: 0;
-  content: "";
-  background:
-    linear-gradient(180deg, rgba(7, 8, 6, 0.02), rgba(7, 8, 6, 0.7)),
-    linear-gradient(90deg, rgba(7, 8, 6, 0.4), transparent 42%, rgba(7, 8, 6, 0.32));
-  pointer-events: none;
-}
-
 .location-tab-image {
   display: block;
   width: 100%;
@@ -1962,27 +2289,11 @@ h3 {
   object-fit: cover;
 }
 
-.location-tab-label {
-  position: absolute;
-  left: 0.42rem;
-  bottom: 0.34rem;
-  z-index: 1;
-  color: #f4e6c8;
-  font-size: 0.68rem;
-  font-weight: 1000;
-  line-height: 1;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.82);
-}
-
 .location-tab.active {
   border-color: rgba(214, 164, 81, 0.66);
   box-shadow:
     0 0 0 1px rgba(214, 164, 81, 0.22),
     0 10px 26px rgba(0, 0, 0, 0.28);
-}
-
-.location-tab.active .location-tab-label {
-  color: #ffe3a6;
 }
 
 .action-card,
@@ -2207,8 +2518,9 @@ h3 {
 
 .skills-screen {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(16.75rem, 0.95fr) repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
+  align-items: start;
 }
 
 .skill-group {
@@ -2230,6 +2542,30 @@ h3 {
   gap: 0.38rem;
 }
 
+.skill-group-gather {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.skill-group-other {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.combat-class-group {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.skill-group-process {
+  grid-column: 2 / -1;
+  grid-row: 1 / span 3;
+}
+
+.skill-group-process .skill-group-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .skill-row {
   display: grid;
   gap: 0.45rem;
@@ -2237,6 +2573,24 @@ h3 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(14, 15, 12, 0.52);
+}
+
+.skill-row-actionable {
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.skill-row-actionable:hover,
+.skill-row-actionable:focus-visible {
+  border-color: rgba(214, 164, 81, 0.58);
+  background:
+    linear-gradient(90deg, rgba(115, 168, 160, 0.16), rgba(214, 164, 81, 0.12)),
+    rgba(18, 19, 15, 0.78);
+  box-shadow: 0 0 0 1px rgba(214, 164, 81, 0.12);
+  outline: 0;
 }
 
 .skills-screen .skill-row {
@@ -2267,11 +2621,25 @@ h3 {
   height: 6px;
 }
 
+.character-skill-control-row {
+  min-width: 0;
+  padding: 0.12rem 0 0.12rem 0.45rem;
+}
+
+.character-skill-banner-control {
+  display: grid;
+  grid-template-columns: minmax(0, 3.36fr) minmax(0, 1fr);
+  gap: 0.34rem;
+  align-items: start;
+  min-width: 0;
+}
+
 .character-skill-banner-button {
   position: relative;
   isolation: isolate;
-  display: block;
+  display: grid;
   width: 100%;
+  aspect-ratio: 2136 / 636;
   min-height: 0;
   padding: 0;
   overflow: visible;
@@ -2293,31 +2661,97 @@ h3 {
   outline: 0;
 }
 
-.character-skill-banner-button::after {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  border-radius: inherit;
-  content: "";
-  background:
-    radial-gradient(ellipse at center, rgba(255, 226, 158, 0.42) 0%, rgba(214, 164, 81, 0.3) 54%, rgba(214, 164, 81, 0.14) 72%, transparent 100%),
-    linear-gradient(135deg, rgba(255, 210, 116, 0.28), rgba(214, 164, 81, 0.08) 48%, rgba(255, 235, 176, 0.2));
-  filter: blur(10px);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.character-skill-banner-button:hover:not(:disabled)::after,
-.character-skill-banner-button:focus-visible::after {
-  opacity: 1;
-}
-
 .character-skill-banner-image {
   position: relative;
   z-index: 1;
   display: block;
   width: 100%;
+  height: 100%;
   border-radius: 5px;
+  filter: drop-shadow(0 0 0 transparent);
+  object-fit: contain;
+  transition: filter 140ms ease;
+}
+
+.character-skill-banner-button:hover:not(:disabled) .character-skill-banner-image,
+.character-skill-banner-button:focus-visible .character-skill-banner-image {
+  filter:
+    drop-shadow(0 0 7px rgba(255, 226, 158, 0.46))
+    drop-shadow(0 0 13px rgba(214, 164, 81, 0.3));
+}
+
+.character-skill-tree-button {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(236, 229, 213, 0.18);
+  border-radius: 7px;
+  color: inherit;
+  background:
+    linear-gradient(180deg, rgba(42, 43, 35, 0.62), rgba(14, 15, 12, 0.7)),
+    rgba(17, 18, 14, 0.66);
+  box-shadow:
+    inset 0 0 0 1px rgba(7, 8, 6, 0.36),
+    0 5px 12px rgba(0, 0, 0, 0.18);
+}
+
+.character-skill-tree-button.has-background {
+  border: 0;
+  background: rgba(7, 8, 6, 0.22);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);
+}
+
+.character-skill-tree-button:hover:not(:disabled) {
+  transform: none;
+  border-color: rgba(214, 164, 81, 0.58);
+}
+
+.character-skill-tree-button-art {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.character-skill-tree-button-label {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-width: 0;
+  max-width: 88%;
+  min-height: 1.08rem;
+  padding: 0.07rem 0.08rem 0.08rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 4px;
+  color: #ffe6ae;
+  background: rgba(7, 8, 6, 0.68);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.28);
+  font-size: 0.56rem;
+  font-weight: 1000;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+  text-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.92),
+    0 0 5px rgba(0, 0, 0, 0.82);
+  white-space: nowrap;
+}
+
+.character-skill-tree-button.plain .character-skill-tree-button-label {
+  max-width: 96%;
+  color: #f4e6c8;
+  background: transparent;
+  box-shadow: none;
 }
 
 .skill-row.prestige-ready {
@@ -3344,14 +3778,14 @@ h3 {
   }
 
   .test-reward-button {
-    min-width: 2.75rem;
+    width: 2.75rem;
     padding: 0.35rem 0.42rem;
   }
 
   .character-card {
-    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-columns: 46px minmax(0, 1fr);
     gap: 0.58rem;
-    min-height: 54px;
+    min-height: 68px;
     padding: 0.5rem;
   }
 
@@ -3359,6 +3793,11 @@ h3 {
     width: 38px;
     height: 38px;
     font-size: 1.05rem;
+  }
+
+  .character-card .portrait.character-portrait {
+    width: 46px;
+    height: 60px;
   }
 
   .character-card strong,
@@ -3373,9 +3812,9 @@ h3 {
   }
 
   .character-select-card {
-    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-columns: 46px minmax(0, 1fr);
     gap: 0.58rem;
-    min-height: 74px;
+    min-height: 82px;
     padding: 0.62rem;
   }
 
@@ -3383,6 +3822,11 @@ h3 {
     width: 38px;
     height: 38px;
     font-size: 1.05rem;
+  }
+
+  .character-select-card .portrait.character-portrait {
+    width: 46px;
+    height: 60px;
   }
 
   .character-select-badge {
@@ -3467,6 +3911,16 @@ h3 {
     padding-inline: 0.45rem;
   }
 
+  .foraging-skill-tree-intro,
+  .foraging-skill-tree-lock-note {
+    display: grid;
+  }
+
+  .foraging-skill-tree-intro span,
+  .foraging-skill-tree-lock-note span {
+    text-align: left;
+  }
+
   .work-area,
   .camp-work-area,
   .combat-work-area,
@@ -3476,7 +3930,11 @@ h3 {
   }
 
   .skills-screen {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(16.75rem, 1fr) minmax(0, 1fr);
+  }
+
+  .skill-group-process {
+    grid-column: 2;
   }
 
   .combat-panel,
@@ -3605,14 +4063,37 @@ h3 {
     grid-template-rows: auto auto auto;
   }
 
+  .current-action-content.with-skill-banner {
+    --current-action-media-height: 4.71rem;
+    grid-template-columns: auto auto auto;
+  }
+
   .current-action-copy {
     grid-column: 1 / -1;
+  }
+
+  .current-action-content.with-skill-banner .current-action-copy {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   .current-action-panel .icon-button {
     grid-column: 2;
     grid-row: 1;
     justify-self: end;
+  }
+
+  .current-action-content.with-skill-banner .icon-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .current-action-location-picker {
+    width: min(7.7rem, 100%);
+  }
+
+  .current-action-content.with-skill-banner .current-action-location-picker {
+    width: min(9.42rem, 100%);
   }
 
   .progress-track {
@@ -3622,8 +4103,68 @@ h3 {
 }
 
 @media (max-width: 560px) {
+  .current-action-panel {
+    padding: 0.55rem;
+  }
+
+  .current-action-content.with-skill-banner {
+    --current-action-media-height: 3.99rem;
+    grid-template-columns: auto auto;
+    column-gap: 0.4rem;
+  }
+
+  .current-action-content.with-skill-banner .current-action-copy {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .current-action-content.with-skill-banner .icon-button {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .current-action-location-picker {
+    width: min(7.7rem, 100%);
+  }
+
+  .current-action-content.with-skill-banner .current-action-location-picker {
+    width: min(7.98rem, 100%);
+  }
+
+  .current-action-location-menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
   .skills-screen {
     grid-template-columns: 1fr;
+  }
+
+  .skill-group-gather,
+  .skill-group-process,
+  .skill-group-other,
+  .combat-class-group {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .skill-group-process .skill-group-list {
+    grid-template-columns: 1fr;
+  }
+
+  .foraging-skill-tree-panel {
+    padding: 0.75rem;
+  }
+
+  .foraging-skill-tree-card,
+  .foraging-skill-tree-card.featured {
+    grid-template-columns: 3.6rem minmax(0, 1fr);
+  }
+
+  .foraging-skill-tree-card.featured .foraging-tree-card-status,
+  .foraging-skill-tree-card.featured .foraging-tree-select-button {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .smithing-panel-card.crafting-panel-card {
