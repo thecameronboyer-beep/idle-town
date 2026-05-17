@@ -112,10 +112,10 @@ export const actionDefinitions: ActionDefinition[] = [
   },
   {
     id: "fishRiver",
-    label: "Fishing River",
-    verb: "fishing the river",
+    label: "Fishing",
+    verb: "fishing",
     durationMs: 15000,
-    blurb: "Cast into the shallows for small river fish."
+    blurb: "Cast into river water or beach shallows for small fish."
   },
   {
     id: "gatherWater",
