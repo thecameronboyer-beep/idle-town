@@ -50,9 +50,12 @@ import aloeLeavesIconUrl from "../assets/items/aloe-leaves-icon.png";
 import boneIconUrl from "../assets/items/bone-icon.png";
 import brookSticklebackIconUrl from "../assets/items/brook-stickleback-icon.png";
 import basketEquippedSlotUrl from "../assets/items/basket-background-1-border-1.png";
+import cameronPortraitUrl from "../assets/characters/cameron-portrait.png";
+import beachLocationIconUrl from "../assets/locations/beach-location-icon.png";
 import campLocationIconUrl from "../assets/locations/camp-location-icon.png";
 import campfireLitUrl from "../assets/buildings/campfire-2x2.png";
 import campfireUnlitUrl from "../assets/buildings/campfire-unlit-2x2.png";
+import carrotIconUrl from "../assets/items/carrot-icon.png";
 import chamomileIconUrl from "../assets/items/chamomile-icon.png";
 import cloverIconUrl from "../assets/items/clover-icon.png";
 import coalIconUrl from "../assets/items/coal-icon.png";
@@ -60,16 +63,21 @@ import copperIconUrl from "../assets/items/copper-icon.png";
 import crystalBloomIconUrl from "../assets/items/crystal-bloom-icon.png";
 import craftMaterialsBundleButtonUrl from "../assets/items/craft-materials-bundle-button.png";
 import dandelionIconUrl from "../assets/items/dandelion-icon.png";
+import earthrootIconUrl from "../assets/items/earthroot-icon.png";
 import fireBlossomIconUrl from "../assets/items/fire-blossom-icon.png";
 import fishFiletIconUrl from "../assets/items/fish-filet-icon.png";
 import fishingPoleEquippedSlotUrl from "../assets/items/fishing-pole-background-1-border-1.png";
 import flaxFiberIconUrl from "../assets/items/flax-fiber-icon.png";
+import flaxPlantIconUrl from "../assets/items/flax-plant-icon.png";
 import forestLocationIconUrl from "../assets/locations/forest-location-icon.png";
 import desertLocationIconUrl from "../assets/locations/desert-location-icon.png";
+import fishingSkillBannerUrl from "../assets/skills/fishing-skill-banner.png";
 import foragingSkillBannerUrl from "../assets/skills/foraging-skill-banner.png";
+import miningSkillBannerUrl from "../assets/skills/mining-skill-banner.png";
 import berryIconUrl from "../assets/items/berry-icon.png";
 import blueberryIconUrl from "../assets/items/blueberry-icon.png";
 import elderFlowersIconUrl from "../assets/items/elder-flowers-icon.png";
+import fennelIconUrl from "../assets/items/fennel-icon.png";
 import hearthcapIconUrl from "../assets/items/hearthcap-icon.png";
 import hideIconUrl from "../assets/items/hide-icon.png";
 import leatherBackpackEquippedSlotUrl from "../assets/items/leather-backpack-equipped-slot.png";
@@ -102,6 +110,7 @@ import stoneFurnaceUrl from "../assets/buildings/stone-furnace-2x2.png";
 import shortBowEquippedSlotUrl from "../assets/items/short-bow-background-1-border-1.png";
 import strawberryIconUrl from "../assets/items/strawberry-icon.png";
 import sunbloomPetalsIconUrl from "../assets/items/sunbloom-petals-icon.png";
+import sunheartTuberIconUrl from "../assets/items/sunheart-tuber-icon.png";
 import tinIconUrl from "../assets/items/tin-icon.png";
 import hideTentUrl from "../assets/buildings/hide-tent-2x2.png";
 import tanningRackUrl from "../assets/buildings/tanning-rack-2x2.png";
@@ -177,14 +186,20 @@ import {
   isBuildingVisible
 } from "../systems/progression";
 import {
+  FORAGING_SKILL_TREE_UNLOCK_LEVEL,
+  foragingSkillTreeDefinitions,
   formatSkillXp,
   getActionSkillXp,
   getBuildingSkillXp,
+  getForagingSkillTreeDefinition,
+  getForagingSkillTreeSelectionLockReason,
   getSkillDefinition,
   getSkillIdForAction,
   getSkillProgress,
+  isForagingSkillTreeCategory,
   isSkillId,
   prestigeSkill,
+  selectForagingSkillTree,
   skillDefinitions
 } from "../systems/skills";
 import { getFurnaceFuelStatus, getSmithingRecipeOutputText, isSmeltingAction } from "../systems/smithing";
@@ -222,6 +237,7 @@ import type {
   LogScope,
   ResourceDefinition,
   ResourceId,
+  ForagingSkillTreeCategory,
   SkillId,
   ToolId
 } from "../types";
@@ -244,6 +260,10 @@ type ActionFilter = {
   id: ActionFilterId;
   label: string;
   actionIds?: ActionId[];
+};
+
+const characterPortraitUrls: Partial<Record<string, string>> = {
+  cameron: cameronPortraitUrl
 };
 
 type ActionCategoryId = "gather" | "processing" | "camp";
@@ -297,6 +317,10 @@ type LocationImageDefinition = {
   label: string;
   iconUrl: string;
 };
+type CurrentActionBarVisual = {
+  label: string;
+  bannerUrl?: string;
+};
 type ForageDisplayCategory = GatherableIngredientCategory | "fungal" | "staple";
 type CampInventoryResourceGroup = {
   id: string;
@@ -327,6 +351,34 @@ const forageDisplayCategories: ForageDisplayCategory[] = [
 ];
 
 const stapleForageTags = new Set(["bean", "grain", "nut", "pod", "succulent", "thorn", "tuber"]);
+
+const foragingSkillTreeCategoryFileNames: Record<ForagingSkillTreeCategory, string> = {
+  resources: "resources-background-1-border-1.png",
+  herb: "herb-background-1-border-1.png",
+  flower: "flower-background-1-border-1.png",
+  berries: "berries-background-1-border-1.png",
+  fruit: "fruit-background-1-border-1.png",
+  fungal: "fungal-background-1-border-1.png",
+  roots: "roots-background-1-border-1.png",
+  vegetables: "vegetables-background-1-border-1.png",
+  staples: "staples-background-1-border-1.png",
+  seasonings: "seasonings-background-1-border-1.png"
+};
+
+const foragingSkillTreeCategoryAssets = import.meta.glob(
+  "../assets/items/{resources,herb,flower,berries,fruit,fungal,roots,vegetables,staples,seasonings}-background-1-border-1.png",
+  { eager: true, query: "?url", import: "default" }
+) as Record<string, string>;
+
+const foragingSkillTreeCategoryAssetUrls = new Map(
+  Object.entries(foragingSkillTreeCategoryAssets).map(([path, url]) => [getPathFileName(path), url])
+);
+
+const characterSkillBannerUrls: Partial<Record<SkillId, string>> = {
+  foraging: foragingSkillBannerUrl,
+  mining: miningSkillBannerUrl,
+  fishing: fishingSkillBannerUrl
+};
 
 const actionFilters: ActionFilter[] = [
   {
@@ -557,6 +609,12 @@ const locationDefinitions: LocationDefinition[] = [
     actionIds: ["gatherStones", "gatherFlaxFibers", "gatherWater", ...getForageResourceActionIdsForLocation("river")]
   },
   {
+    id: "beach",
+    label: "Beach",
+    iconUrl: beachLocationIconUrl,
+    actionIds: [...getForageResourceActionIdsForLocation("beach")]
+  },
+  {
     id: "forest",
     label: "Forest",
     iconUrl: forestLocationIconUrl,
@@ -667,12 +725,14 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   pebblePerchFilet: fishFiletIconUrl,
   stoneLoachFilet: fishFiletIconUrl,
   flaxFiber: flaxFiberIconUrl,
+  flaxPlant: flaxPlantIconUrl,
   chamomile: chamomileIconUrl,
   clover: cloverIconUrl,
   dandelionGreens: dandelionIconUrl,
   dirtyBowl: woodIconUrl,
+  earthroot: earthrootIconUrl,
   elderflowers: elderFlowersIconUrl,
-  fennel: flaxFiberIconUrl,
+  fennel: fennelIconUrl,
   fireBlossom: fireBlossomIconUrl,
   hearthcap: hearthcapIconUrl,
   hide: hideIconUrl,
@@ -696,6 +756,7 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   squirrelMeat: squirrelMeatIconUrl,
   strawberries: strawberryIconUrl,
   sunbloomPetals: sunbloomPetalsIconUrl,
+  sunrootTubers: sunheartTuberIconUrl,
   stick: stickIconUrl,
   stone: stoneIconUrl,
   stoneLoach: stoneLoachIconUrl,
@@ -703,7 +764,7 @@ const resourceSlotImages: Partial<Record<ResourceId, string>> = {
   trilliumBlossoms: trilliumBlossomsIconUrl,
   water: riverLocationIconUrl,
   waterLilies: waterLiliesIconUrl,
-  wildCarrot: flaxFiberIconUrl,
+  wildCarrot: carrotIconUrl,
   wildGarlic: wildGarlicIconUrl,
   wildGarlicRabbitStew: rabbitIconUrl,
   wildOnion: wildOnionIconUrl,
@@ -727,8 +788,8 @@ const toolEquipmentStats: Partial<Record<ToolId, EquipmentStat[]>> = {
   ],
   fishingPole: [
     { label: "Slot", value: "Fishing tool" },
-    { label: "Effect", value: "Fishing River unlocked" },
-    { label: "Use", value: "River fishing" }
+    { label: "Effect", value: "Fishing unlocked" },
+    { label: "Use", value: "River and beach fishing" }
   ],
   stoneKnife: [
     { label: "Slot", value: "Butchering weapon" },
@@ -838,12 +899,14 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
   let partyPanelVisible = false;
   let characterPanelVisible = false;
   let characterDetailsVisible = false;
+  let foragingSkillTreePanelVisible = false;
   let combatPanelVisible = false;
   let settingsPanelVisible = false;
   let actionLoopsPanelVisible = false;
   let actionLoopTarget: ActionLoopTarget = null;
   let actionLoopLocationMenu: ActionLoopLocationMenu = null;
   let actionLoopSkillMenu: ActionLoopSkillMenu = null;
+  let currentActionLocationMenuOpen = false;
   let selectedLoopId: string | null = null;
   let selectedLoopIndex = 0;
   let currentState: GameState | null = null;
@@ -904,10 +967,29 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
   });
 
+  root.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    const target = event.target as HTMLElement;
+    if (target.closest("button")) {
+      return;
+    }
+
+    const commandTarget = target.closest<HTMLElement>('[role="button"][data-command]');
+    if (!commandTarget) {
+      return;
+    }
+
+    event.preventDefault();
+    commandTarget.click();
+  });
+
   root.addEventListener("click", (event) => {
     const target = event.target as HTMLElement;
-    const button = target.closest<HTMLButtonElement>("[data-command]");
-    if (!button || button.disabled || button.dataset.disabled === "true") {
+    const button = target.closest<HTMLElement>("[data-command]");
+    if (!button || (button instanceof HTMLButtonElement && button.disabled) || button.dataset.disabled === "true") {
       if (
         (actionLoopLocationMenu || actionLoopSkillMenu) &&
         !target.closest(".loop-location-picker") &&
@@ -915,6 +997,10 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       ) {
         actionLoopLocationMenu = null;
         actionLoopSkillMenu = null;
+        handlers.requestRender();
+      }
+      if (currentActionLocationMenuOpen && !target.closest(".current-action-location-picker")) {
+        currentActionLocationMenuOpen = false;
         handlers.requestRender();
       }
       return;
@@ -928,11 +1014,16 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
     }
     const isLoopLocationCommand = command === "toggle-loop-location-menu" || command === "set-loop-step-location";
     const isLoopSkillCommand = command === "toggle-loop-skill-menu" || command === "set-loop-step-skill";
+    const isCurrentActionLocationCommand =
+      command === "toggle-current-action-location-menu" || command === "set-current-action-location";
     if (!isLoopLocationCommand) {
       actionLoopLocationMenu = null;
     }
     if (!isLoopSkillCommand) {
       actionLoopSkillMenu = null;
+    }
+    if (!isCurrentActionLocationCommand) {
+      currentActionLocationMenuOpen = false;
     }
 
     if (command === "set-test-reward-multiplier" && (id === "10" || id === "100")) {
@@ -945,6 +1036,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
@@ -961,6 +1053,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
@@ -993,10 +1086,44 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       handlers.requestRender();
+      return;
+    }
+
+    if (command === "toggle-current-action-location-menu") {
+      currentActionLocationMenuOpen = !currentActionLocationMenuOpen;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "set-current-action-location") {
+      currentActionLocationMenuOpen = false;
+      partyPanelVisible = false;
+      characterPanelVisible = false;
+      characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
+      combatPanelVisible = false;
+      settingsPanelVisible = false;
+      actionLoopsPanelVisible = false;
+
+      if (id === "camp") {
+        activeActionCategory = "camp";
+        handlers.requestRender();
+        return;
+      }
+
+      if (isLocationId(id)) {
+        activeLocation = id;
+        activeActionCategory = "gather";
+        if (!getLocationsForFilter(activeActionFilter).some((location) => location.id === id)) {
+          activeActionFilter = "foraging";
+        }
+        handlers.requestRender();
+      }
       return;
     }
 
@@ -1006,6 +1133,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = true;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
@@ -1018,6 +1146,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
@@ -1030,6 +1159,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = true;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
@@ -1042,6 +1172,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = true;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
@@ -1054,6 +1185,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = true;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
@@ -1061,16 +1193,44 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       return;
     }
 
-    if (command === "open-character-skill-panel" && id === "foraging") {
-      activeActionCategory = "gather";
-      activeActionFilter = "foraging";
+    if (command === "open-character-skill-panel" && isSkillId(id)) {
+      const filterId = getActionFilterIdForSkill(id);
+      if (!filterId) {
+        return;
+      }
+
+      activeActionCategory = getActionCategoryIdForFilter(filterId) ?? activeActionCategory;
+      activeActionFilter = filterId;
       campLogVisible = false;
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "open-foraging-skill-tree") {
+      campLogVisible = false;
+      partyPanelVisible = false;
+      characterPanelVisible = false;
+      characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = true;
+      combatPanelVisible = false;
+      settingsPanelVisible = false;
+      actionLoopsPanelVisible = false;
+      handlers.requestRender();
+      return;
+    }
+
+    if (command === "select-foraging-skill-tree" && isForagingSkillTreeCategory(id)) {
+      if (selectForagingSkillTree(state, id, handlers.getNow())) {
+        handlers.persist();
+      }
+      foragingSkillTreePanelVisible = true;
       handlers.requestRender();
       return;
     }
@@ -1080,6 +1240,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       actionLoopsPanelVisible = false;
       settingsPanelVisible = true;
@@ -1092,6 +1253,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = true;
@@ -1104,6 +1266,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       combatPanelVisible = true;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
@@ -1119,6 +1282,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       campLogVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       handlers.persist();
@@ -1134,6 +1298,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       campLogVisible = false;
       characterPanelVisible = false;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       settingsPanelVisible = false;
       actionLoopsPanelVisible = false;
       handlers.persist();
@@ -1147,6 +1312,7 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible = false;
       characterPanelVisible = true;
       characterDetailsVisible = false;
+      foragingSkillTreePanelVisible = false;
       handlers.persist();
       handlers.requestRender();
       return;
@@ -1460,12 +1626,14 @@ export function createRenderer(root: HTMLElement, handlers: RenderHandlers): (st
       partyPanelVisible,
       characterPanelVisible,
       characterDetailsVisible,
+      foragingSkillTreePanelVisible,
       combatPanelVisible,
       settingsPanelVisible,
       actionLoopsPanelVisible,
       actionLoopTarget,
       actionLoopLocationMenu,
       actionLoopSkillMenu,
+      currentActionLocationMenuOpen,
       selectedLoopId,
       selectedLoopIndex,
       now,
@@ -1489,17 +1657,21 @@ function renderApp(
   partyPanelVisible: boolean,
   characterPanelVisible: boolean,
   characterDetailsVisible: boolean,
+  foragingSkillTreePanelVisible: boolean,
   combatPanelVisible: boolean,
   settingsPanelVisible: boolean,
   actionLoopsPanelVisible: boolean,
   actionLoopTarget: ActionLoopTarget,
   actionLoopLocationMenu: ActionLoopLocationMenu,
   actionLoopSkillMenu: ActionLoopSkillMenu,
+  currentActionLocationMenuOpen: boolean,
   selectedLoopId: string | null,
   selectedLoopIndex: number,
   now: number,
   testRewardMultiplier: 1 | 10 | 100
 ): string {
+  const currentActionBarVisual = getCurrentActionBarVisual(activeActionCategory, activeActionFilter);
+
   return `
     <div class="game-shell" data-editor-id="game-shell" data-editor-label="Game shell" data-editor-files="src/ui/render.ts, src/style.css">
       ${renderCharacterSidebar(
@@ -1515,10 +1687,12 @@ function renderApp(
         testRewardMultiplier
       )}
       <main class="main-panel" data-editor-id="main-panel" data-editor-label="Main game panel" data-editor-files="src/ui/render.ts, src/style.css">
-        ${renderCurrentActionPanel(state, now)}
+        ${renderCurrentActionPanel(state, currentActionBarVisual, currentActionLocationMenuOpen, now)}
         ${
           characterDetailsVisible
             ? renderCharacterDetailsPanel(state, activeCharacterDetailTab)
+            : foragingSkillTreePanelVisible
+            ? renderForagingSkillTreePanel(state)
             : actionLoopsPanelVisible
             ? renderActionLoopsPanel(
                 state,
@@ -1594,7 +1768,7 @@ function renderCharacterSidebar(
         data-command="open-character-details"
         aria-expanded="${characterDetailsVisible}"
       >
-        <span class="portrait" aria-hidden="true">${getCharacterInitials(selectedCharacter.name)}</span>
+        ${renderCharacterPortrait(selectedCharacter)}
         <span>
           <strong>${selectedCharacter.name}</strong>
           <small>${condition}</small>
@@ -1632,6 +1806,96 @@ function renderSettingsPanel(): string {
         </div>
       </section>
     </div>
+  `;
+}
+
+function renderForagingSkillTreePanel(state: GameState): string {
+  const foragingSkill = state.skills.foraging;
+  const selectedCategory = getSelectedForagingSkillTreeCategory(state);
+  const unlocked = foragingSkill.level >= FORAGING_SKILL_TREE_UNLOCK_LEVEL;
+  const selectedDefinition = selectedCategory ? getForagingSkillTreeDefinition(selectedCategory) : null;
+
+  return `
+    <div class="work-area single-panel">
+      <section class="panel foraging-skill-tree-panel" aria-label="Foraging skill tree" data-editor-id="foraging-skill-tree-panel" data-editor-label="Foraging skill tree panel" data-editor-files="src/ui/render.ts, src/style.css">
+        <div class="section-heading foraging-skill-tree-heading">
+          <span>Foraging Skill Tree</span>
+          <small>${selectedDefinition ? `${selectedDefinition.label} chosen` : `Lv ${foragingSkill.level} / ${FORAGING_SKILL_TREE_UNLOCK_LEVEL}`}</small>
+        </div>
+        ${
+          selectedDefinition
+            ? renderSelectedForagingSkillTree(state, selectedDefinition)
+            : `
+              <div class="foraging-skill-tree-intro ${unlocked ? "available" : "locked"}">
+                <strong>${unlocked ? "Choose one Foraging tree" : `Unlocks at Foraging Lv ${FORAGING_SKILL_TREE_UNLOCK_LEVEL}`}</strong>
+                <span>${
+                  unlocked
+                    ? "The chosen tree remains active until the next Foraging prestige."
+                    : `Reach Lv ${FORAGING_SKILL_TREE_UNLOCK_LEVEL} to select one category path.`
+                }</span>
+              </div>
+              <div class="foraging-skill-tree-grid">
+                ${foragingSkillTreeDefinitions
+                  .map((definition) => renderForagingSkillTreeOption(state, definition.id))
+                  .join("")}
+              </div>
+            `
+        }
+      </section>
+    </div>
+  `;
+}
+
+function renderSelectedForagingSkillTree(
+  state: GameState,
+  selectedDefinition: (typeof foragingSkillTreeDefinitions)[number]
+): string {
+  return `
+    <div class="foraging-skill-tree-selected">
+      ${renderForagingSkillTreeOption(state, selectedDefinition.id, true)}
+      <div class="foraging-skill-tree-lock-note">
+        <strong>${selectedDefinition.label} is active</strong>
+        <span>Other Foraging trees are unavailable until Foraging prestige.</span>
+      </div>
+      <div class="foraging-skill-tree-grid compact">
+        ${foragingSkillTreeDefinitions
+          .filter((definition) => definition.id !== selectedDefinition.id)
+          .map((definition) => renderForagingSkillTreeOption(state, definition.id))
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderForagingSkillTreeOption(
+  state: GameState,
+  category: ForagingSkillTreeCategory,
+  featured = false
+): string {
+  const definition = getForagingSkillTreeDefinition(category);
+  const selectedCategory = getSelectedForagingSkillTreeCategory(state);
+  const selected = selectedCategory === category;
+  const lockReason = getForagingSkillTreeSelectionLockReason(state, category);
+  const canSelect = !selected && !lockReason;
+  const backgroundUrl = getForagingSkillTreeCategoryAssetUrl(category);
+  const statusLabel = selected ? "Selected" : lockReason ?? "Available";
+
+  return `
+    <article class="foraging-skill-tree-card ${selected ? "selected" : ""} ${canSelect ? "available" : "locked"} ${featured ? "featured" : ""}">
+      <span class="foraging-tree-card-art ${backgroundUrl ? "has-background" : "plain"}" aria-hidden="true">
+        ${backgroundUrl ? `<img src="${backgroundUrl}" alt="" />` : `<span>${definition.label.slice(0, 2)}</span>`}
+      </span>
+      <span class="foraging-tree-card-copy">
+        <strong>${definition.label}</strong>
+        <small>${definition.description}</small>
+      </span>
+      <span class="foraging-tree-card-status">${statusLabel}</span>
+      ${
+        canSelect
+          ? `<button class="foraging-tree-select-button" type="button" data-command="select-foraging-skill-tree" data-id="${definition.id}">Select</button>`
+          : ""
+      }
+    </article>
   `;
 }
 
@@ -1690,7 +1954,7 @@ function renderCharacterSelectCard(state: GameState, character: GameState["chara
       data-id="${character.id}"
       aria-pressed="${selected}"
     >
-      <span class="portrait" aria-hidden="true">${getCharacterInitials(character.name)}</span>
+      ${renderCharacterPortrait(character)}
       <span class="character-select-copy">
         <strong>${character.name}</strong>
         <small>${character.epithet}</small>
@@ -1801,7 +2065,7 @@ function renderPartyMember(state: GameState, character: GameState["characters"][
   return `
     <article class="party-member ${dispatched ? "dispatched" : ""}">
       <div class="party-member-topline">
-        <span class="portrait small" aria-hidden="true">${getCharacterInitials(character.name)}</span>
+        ${renderCharacterPortrait(character, "small")}
         <span>
           <strong>${character.name}</strong>
           <small>${loadout.classLabel} - ${status}</small>
@@ -2013,7 +2277,6 @@ function renderWorkArea(
 
   return `
     <div class="work-area">
-      ${renderFocusedActionPanelBanner(getActionFilter(activeActionFilter))}
       ${renderActionStack(
         state,
         activeActionFilter,
@@ -2082,6 +2345,25 @@ function getCharacterInitials(name: string): string {
   return (initials || "?").slice(0, 2).toUpperCase();
 }
 
+function getCharacterPortraitUrl(character: GameState["characters"][number]): string | null {
+  return characterPortraitUrls[character.id] ?? null;
+}
+
+function renderCharacterPortrait(character: GameState["characters"][number], sizeClass = ""): string {
+  const portraitUrl = getCharacterPortraitUrl(character);
+  const classes = ["portrait", portraitUrl ? "character-portrait" : "", sizeClass].filter(Boolean).join(" ");
+
+  if (!portraitUrl) {
+    return `<span class="${classes}" aria-hidden="true">${getCharacterInitials(character.name)}</span>`;
+  }
+
+  return `
+    <span class="${classes}" aria-hidden="true">
+      <img src="${portraitUrl}" alt="" />
+    </span>
+  `;
+}
+
 function renderActionStack(
   state: GameState,
   activeActionFilter: ActionFilterId,
@@ -2108,22 +2390,6 @@ function renderActionStack(
         now
       )}
     </div>
-  `;
-}
-
-function renderFocusedActionPanelBanner(filter: ActionFilter): string {
-  const bannerUrl = filter.id === "foraging" ? foragingSkillBannerUrl : null;
-
-  return `
-    <section class="panel focused-skill-panel" aria-label="${filter.label} panel" data-editor-id="focused-action-panel-${filter.id}" data-editor-label="${filter.label} focused action panel" data-editor-files="src/ui/render.ts, src/style.css">
-      ${
-        bannerUrl
-          ? `<div class="focused-skill-banner" aria-label="${filter.label}">
-              <img class="focused-skill-banner-image" src="${bannerUrl}" alt="" aria-hidden="true" />
-            </div>`
-          : `<div class="focused-skill-title">${filter.label}</div>`
-      }
-    </section>
   `;
 }
 
@@ -3564,23 +3830,28 @@ function getTextileNeedleStatus(state: GameState): string {
   return "None";
 }
 
-function renderCurrentActionPanel(state: GameState, now: number): string {
+function renderCurrentActionPanel(
+  state: GameState,
+  barVisual: CurrentActionBarVisual,
+  locationMenuOpen: boolean,
+  now: number
+): string {
   const running = getCurrentAction(state);
   const selectedCharacter = getSelectedCharacter(state);
+  const actionBanner = renderCurrentActionSkillBanner(barVisual);
 
   if (!running) {
     return `
       <section class="current-action-panel panel idle" data-editor-id="current-action-panel" data-editor-label="Current action panel" data-editor-files="src/ui/render.ts, src/style.css">
-        <div class="current-action-content idle">
+        <div class="current-action-content idle with-skill-banner">
+          ${actionBanner}
           <div class="current-action-detail current-action-location">
-            <span>Location</span>
-            ${renderCurrentActionLocation(selectedCharacter.locationId)}
+            ${renderCurrentActionLocationDropdown(selectedCharacter.locationId, locationMenuOpen)}
           </div>
           <div class="current-action-detail current-action-copy">
-            <span>Current action</span>
             <strong>No active work</strong>
           </div>
-          <button class="icon-button" type="button" data-command="stop-action" title="Stop action" disabled>Stop</button>
+          ${renderReturnToCampButton(true)}
           <div class="progress-track idle">
             <span data-action-progress style="transform: scaleX(0)"></span>
             <em data-action-remaining>Idle</em>
@@ -3597,16 +3868,15 @@ function renderCurrentActionPanel(state: GameState, now: number): string {
 
   return `
     <section class="current-action-panel panel" data-editor-id="current-action-panel" data-editor-label="Current action panel" data-editor-files="src/ui/render.ts, src/style.css">
-      <div class="current-action-content">
+      <div class="current-action-content with-skill-banner">
+        ${actionBanner}
         <div class="current-action-detail current-action-location">
-          <span>Location</span>
-          ${renderCurrentActionLocation(locationId)}
+          ${renderCurrentActionLocationDropdown(locationId, locationMenuOpen)}
         </div>
         <div class="current-action-detail current-action-copy">
-          <span>Current action</span>
           <strong>${actionTitle}</strong>
         </div>
-        <button class="icon-button" type="button" data-command="stop-action" title="Stop action">Stop</button>
+        ${renderReturnToCampButton(false)}
         <div class="progress-track">
           <span data-action-progress style="transform: scaleX(${progress.toFixed(4)})"></span>
           <em data-action-remaining>${remaining}</em>
@@ -3636,6 +3906,37 @@ function renderActionLoopControls(
           renderActionLoopStep(state, loop, actionId, index, safeSelectedIndex, actionLoopTarget)
         )
         .join("")}
+    </div>
+  `;
+}
+
+function renderReturnToCampButton(disabled: boolean): string {
+  return `
+    <button
+      class="icon-button current-action-return-button"
+      type="button"
+      data-command="stop-action"
+      title="Stop and return to camp"
+      aria-label="Stop action and return to camp"
+      ${disabled ? "disabled" : ""}
+    >
+      <img src="${campLocationDefinition.iconUrl}" alt="" aria-hidden="true" />
+    </button>
+  `;
+}
+
+function renderCurrentActionSkillBanner(visual: CurrentActionBarVisual): string {
+  if (!visual.bannerUrl && !visual.label) {
+    return "";
+  }
+
+  return `
+    <div class="current-action-skill-banner ${visual.bannerUrl ? "has-image" : "has-title"}" aria-label="${visual.label}">
+      ${
+        visual.bannerUrl
+          ? `<img src="${visual.bannerUrl}" alt="" aria-hidden="true" />`
+          : `<span class="current-action-skill-title">${visual.label}</span>`
+      }
     </div>
   `;
 }
@@ -3679,7 +3980,7 @@ function renderActionLoopStep(
 
 function getActionLoopLabel(actionId: ActionId): string {
   if (actionId === "fishRiver") {
-    return "Fish River";
+    return "Fishing";
   }
 
   return getActionDefinition(actionId)?.label ?? "Action";
@@ -3692,12 +3993,59 @@ function getActionLoopStepSummary(state: GameState, loop: ActionLoop, index: num
   return `${locationLabel} - ${getActionLoopAdvanceRuleLabel(state, rule, actionId)}`;
 }
 
-function renderCurrentActionLocation(locationId: CharacterLocationId): string {
+function renderCurrentActionLocationDropdown(locationId: CharacterLocationId, open: boolean): string {
   const location = getLocationImageDefinition(locationId);
 
   return `
-    <div class="current-location-image" aria-label="${location.label} location">
-      <img src="${location.iconUrl}" alt="" aria-hidden="true" />
+    <div class="current-action-location-picker">
+      <button
+        class="current-action-location-button"
+        type="button"
+        data-command="toggle-current-action-location-menu"
+        aria-expanded="${open}"
+        aria-haspopup="menu"
+        aria-label="Choose location, current ${location.label}"
+      >
+        <img class="current-action-location-banner" src="${location.iconUrl}" alt="" aria-hidden="true" />
+      </button>
+      ${open ? renderCurrentActionLocationMenu(locationId) : ""}
+    </div>
+  `;
+}
+
+function renderCurrentActionLocationMenu(activeLocationId: CharacterLocationId): string {
+  const options: Array<{ id: CharacterLocationId; label: string; iconUrl: string }> = [
+    { id: "camp", ...campLocationDefinition },
+    ...locationDefinitions.map((location) => ({
+      id: location.id,
+      label: location.label,
+      iconUrl: location.iconUrl
+    }))
+  ];
+
+  return `
+    <div class="current-action-location-menu" role="menu" aria-label="Locations">
+      ${options
+        .map((location) => {
+          const active = location.id === activeLocationId;
+          return `
+            <button
+              class="current-action-location-option ${active ? "active" : ""}"
+              type="button"
+              role="menuitemradio"
+              aria-checked="${active}"
+              aria-label="${location.label}"
+              title="${location.label}"
+              data-command="set-current-action-location"
+              data-id="${location.id}"
+            >
+              <span class="current-action-location-option-image" aria-hidden="true">
+                <img src="${location.iconUrl}" alt="" />
+              </span>
+            </button>
+          `;
+        })
+        .join("")}
     </div>
   `;
 }
@@ -3808,6 +4156,26 @@ function getActionCategoryIdForFilter(filterId: ActionFilterId): ActionCategoryI
   return actionCategories.find((category) => category.filterIds.includes(filterId))?.id ?? null;
 }
 
+function getCurrentActionBarVisual(
+  activeActionCategory: ActionCategoryId,
+  activeActionFilter: ActionFilterId
+): CurrentActionBarVisual {
+  if (activeActionCategory === "camp") {
+    return { label: "" };
+  }
+
+  const filter = getActionFilter(activeActionFilter);
+  const skillId = filterSkillIds[filter.id];
+  return {
+    label: getSkillDefinition(skillId).label,
+    bannerUrl: characterSkillBannerUrls[skillId]
+  };
+}
+
+function getActionFilterIdForSkill(skillId: SkillId): ActionFilterId | null {
+  return actionFilters.find((filter) => filterSkillIds[filter.id] === skillId)?.id ?? null;
+}
+
 function isActionCategoryId(id: string | undefined): id is ActionCategoryId {
   return actionCategories.some((category) => category.id === id);
 }
@@ -3833,7 +4201,7 @@ function getLoopIndex(id: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : fallback;
 }
 
-function getLoopCommandId(button: HTMLButtonElement, state: GameState, fallback: string | null): string | null {
+function getLoopCommandId(button: HTMLElement, state: GameState, fallback: string | null): string | null {
   return getActionLoop(state, button.dataset.loopId ?? fallback)?.id ?? null;
 }
 
@@ -3984,10 +4352,18 @@ function getActionLoopStepLocationLabel(actionId: ActionId, locationId: Location
 }
 
 function getActionLoopStepLocationId(actionId: ActionId, locationId: LocationId | null): LocationId {
+  if (actionId === "fishRiver") {
+    return getFishingLocation(locationId ?? "river");
+  }
+
   return locationId ?? getActionStartLocation(actionId, "meadow");
 }
 
 function getActionLoopLocationOptions(actionId: ActionId): typeof locationDefinitions {
+  if (actionId === "fishRiver") {
+    return getLocationsForFilter("fishing");
+  }
+
   return isCarryAction(actionId) ? locationDefinitions : [getLocation(getActionStartLocation(actionId, "meadow"))];
 }
 
@@ -4002,6 +4378,18 @@ function renderSkillTileContent(skillId: SkillId, label: string): string {
 function getSkillTileStyle(skillId: SkillId): string {
   const visual = skillTileVisuals[skillId];
   return `--skill-accent: ${visual.accent}; --skill-shade: ${visual.shade};`;
+}
+
+function getSelectedForagingSkillTreeCategory(state: GameState): ForagingSkillTreeCategory | null {
+  return state.skills.foraging.selectedForagingTreeCategory;
+}
+
+function getForagingSkillTreeCategoryAssetUrl(category: ForagingSkillTreeCategory): string | null {
+  return foragingSkillTreeCategoryAssetUrls.get(foragingSkillTreeCategoryFileNames[category]) ?? null;
+}
+
+function getPathFileName(path: string): string {
+  return path.split(/[\\/]/u).pop() ?? path;
 }
 
 function isActionLoopAdvanceMode(value: string): value is ActionLoopAdvanceMode {
@@ -4068,7 +4456,7 @@ function getLocationsForFilter(filterId: ActionFilterId): typeof locationDefinit
     case "mining":
       return locationDefinitions.filter((location) => location.id === "mine");
     case "fishing":
-      return locationDefinitions.filter((location) => location.id === "river");
+      return locationDefinitions.filter((location) => location.id === "river" || location.id === "beach");
     case "hunting":
       return locationDefinitions.filter((location) => location.id === "meadow");
     case "woodcutting":
@@ -4090,7 +4478,7 @@ function getActiveLocationForFilter(filterId: ActionFilterId, activeLocation: Lo
   }
 
   if (filterId === "fishing") {
-    return "river";
+    return isFishingLocation(activeLocation) ? activeLocation : "river";
   }
 
   if (filterId === "woodcutting") {
@@ -4123,7 +4511,11 @@ function getActionStartLocation(actionId: ActionId, activeLocation: LocationId):
     return "meadow";
   }
 
-  if (actionId === "fishRiver" || actionId === "gatherWater") {
+  if (actionId === "fishRiver") {
+    return getFishingLocation(activeLocation);
+  }
+
+  if (actionId === "gatherWater") {
     return "river";
   }
 
@@ -4154,6 +4546,14 @@ function isMiningAction(actionId: ActionId): boolean {
   return actionId === "mineCoal" || actionId === "mineCopper" || actionId === "mineTin";
 }
 
+function isFishingLocation(locationId: LocationId): boolean {
+  return locationId === "river" || locationId === "beach";
+}
+
+function getFishingLocation(locationId: LocationId): LocationId {
+  return isFishingLocation(locationId) ? locationId : "river";
+}
+
 function renderLocationPanel(filter: ActionFilter, activeLocation: LocationId): string {
   return `
     <section class="panel location-panel" data-editor-id="location-panel" data-editor-label="Location tabs panel" data-editor-files="src/ui/render.ts, src/style.css">
@@ -4177,7 +4577,6 @@ function renderProcessingLocationPanel(filter: ActionFilter): string {
           data-editor-files="src/ui/render.ts, src/style.css"
         >
           <img class="location-tab-image" src="${campLocationDefinition.iconUrl}" alt="" aria-hidden="true" />
-          <span class="location-tab-label">Camp</span>
         </button>
       </div>
     </section>
@@ -4208,7 +4607,6 @@ function renderLocationTabs(
               data-editor-files="src/ui/render.ts, src/style.css"
             >
               <img class="location-tab-image" src="${location.iconUrl}" alt="" aria-hidden="true" />
-              <span class="location-tab-label">${location.label}</span>
             </button>
           `;
         })
@@ -4401,7 +4799,7 @@ function getActionIconUrls(actionId: ActionId): string[] {
     case "gatherStones":
       return [stoneIconUrl];
     case "gatherFlaxPlants":
-      return [flaxFiberIconUrl];
+      return [flaxPlantIconUrl];
     case "gatherFlaxFibers":
       return [flaxFiberIconUrl];
     case "gatherMeadowIngredients":
@@ -4793,11 +5191,8 @@ function renderBuildingPanel(state: GameState, now: number): string {
 }
 
 function renderCampInventoryPanel(state: GameState): string {
-  const visible = resourceOrder.filter((resourceId) => {
-    return state.inventory[resourceId] > 0 || getResourceQuantity(state, resourceId) > 0;
-  });
-  const groups = getCampInventoryResourceGroups(visible);
-  const hasTools = toolDefinitions.some((tool) => state.tools[tool.id].quantity > 0);
+  const campResourceIds = resourceOrder;
+  const groups = getCampInventoryResourceGroups(campResourceIds);
 
   return `
     <div class="camp-panel-section camp-inventory-section" data-editor-id="camp-inventory-section" data-editor-label="Camp inventory section" data-editor-files="src/ui/render.ts, src/style.css">
@@ -4805,7 +5200,7 @@ function renderCampInventoryPanel(state: GameState): string {
         <span>Camp Inventory</span>
       </div>
       ${
-        visible.length || hasTools
+        campResourceIds.length
           ? `
             <div class="camp-inventory-content">
               ${groups.map((group) => renderResourceGroup(state, group)).join("")}
@@ -5071,7 +5466,7 @@ function renderCharacterDetailsPanel(
     <div class="work-area single-panel">
       <section class="panel character-detail-panel" aria-label="${selectedCharacter.name} details" data-active-tab="${activeTab}" data-editor-id="character-detail-panel" data-editor-label="Character detail panel" data-editor-files="src/ui/render.ts, src/style.css">
         <div class="character-detail-heading">
-          <span class="portrait" aria-hidden="true">${getCharacterInitials(selectedCharacter.name)}</span>
+          ${renderCharacterPortrait(selectedCharacter)}
           <span class="character-detail-title">
             <strong>${selectedCharacter.name}</strong>
             <small>${getCharacterStatusText(state, selectedCharacter)}</small>
@@ -5173,7 +5568,7 @@ function renderSkillGroup(state: GameState, group: SkillGroup): string {
     .join("");
 
   return `
-    <section class="skill-group" aria-label="${group.label} skills">
+    <section class="skill-group skill-group-${group.label.toLowerCase()}" aria-label="${group.label} skills">
       <h4>${group.label}</h4>
       <div class="skill-group-list">
         ${skillRows || `<div class="empty-line">No skills yet.</div>`}
@@ -5185,6 +5580,16 @@ function renderSkillGroup(state: GameState, group: SkillGroup): string {
 function renderSkillRow(state: GameState, skillId: SkillId): string {
   const definition = getSkillDefinition(skillId);
   const skill = state.skills[skillId];
+  const bannerUrl = characterSkillBannerUrls[skillId];
+
+  if (bannerUrl) {
+    return `
+      <div class="character-skill-control-row" data-editor-id="skill-row-${skillId}" data-editor-label="Skill row: ${definition.label}" data-editor-files="src/ui/render.ts, src/style.css">
+        ${renderCharacterSkillBanner(state, skillId, definition.label, skill.level, bannerUrl)}
+      </div>
+    `;
+  }
+
   const progress = getSkillProgress(skill);
   const progressLabel = progress.atCap
     ? progress.canPrestige
@@ -5192,10 +5597,16 @@ function renderSkillRow(state: GameState, skillId: SkillId): string {
       : "Max level"
     : `${formatSkillXp(progress.xpIntoLevel)} / ${formatSkillXp(progress.xpForLevel)} XP`;
   const prestigeLabel = skill.prestige > 0 ? `P${skill.prestige}` : "P0";
+  const skillPanelFilterId = getActionFilterIdForSkill(skillId);
+  const exposeSkillPanelButton = Boolean(skillPanelFilterId && !progress.canPrestige);
+  const skillPanelAttributes = skillPanelFilterId
+    ? `data-command="open-character-skill-panel" data-id="${skillId}"${
+        exposeSkillPanelButton ? ` role="button" tabindex="0" aria-label="Open ${definition.label} skill panel"` : ""
+      }`
+    : "";
 
   return `
-    <article class="skill-row ${progress.canPrestige ? "prestige-ready" : ""}" data-editor-id="skill-row-${skillId}" data-editor-label="Skill row: ${definition.label}" data-editor-files="src/ui/render.ts, src/style.css">
-      ${skillId === "foraging" ? renderCharacterForagingSkillBanner() : ""}
+    <article class="skill-row ${progress.canPrestige ? "prestige-ready" : ""} ${skillPanelFilterId ? "skill-row-actionable" : ""}" ${skillPanelAttributes} data-editor-id="skill-row-${skillId}" data-editor-label="Skill row: ${definition.label}" data-editor-files="src/ui/render.ts, src/style.css">
       <div class="skill-row-heading">
         <span>
           <strong>${definition.label}</strong>
@@ -5219,16 +5630,68 @@ function renderSkillRow(state: GameState, skillId: SkillId): string {
   `;
 }
 
-function renderCharacterForagingSkillBanner(): string {
+function renderCharacterSkillBanner(
+  state: GameState,
+  skillId: SkillId,
+  label: string,
+  level: number,
+  bannerUrl: string
+): string {
+  const filterId = getActionFilterIdForSkill(skillId);
+  const actionLabel = filterId ? getActionFilter(filterId).label : label;
+
+  return `
+    <div class="character-skill-banner-control">
+      <button
+        class="character-skill-banner-button"
+        type="button"
+        data-command="open-character-skill-panel"
+        data-id="${skillId}"
+        aria-label="Go to ${actionLabel} actions"
+      >
+        <img class="character-skill-banner-image" src="${bannerUrl}" alt="" aria-hidden="true" />
+      </button>
+      ${renderCharacterSkillTreeButton(state, skillId, label, level)}
+    </div>
+  `;
+}
+
+function renderCharacterSkillTreeButton(state: GameState, skillId: SkillId, label: string, level: number): string {
+  if (skillId === "foraging") {
+    return renderForagingSkillTreeButton(level, getSelectedForagingSkillTreeCategory(state));
+  }
+
   return `
     <button
-      class="character-skill-banner-button"
+      class="character-skill-tree-button plain"
       type="button"
       data-command="open-character-skill-panel"
-      data-id="foraging"
-      aria-label="Go to Gather Foraging actions"
+      data-id="${skillId}"
+      aria-label="${label} level ${level}"
+      title="Open ${label} actions"
     >
-      <img class="character-skill-banner-image" src="${foragingSkillBannerUrl}" alt="" aria-hidden="true" />
+      <span class="character-skill-tree-button-label">LvL ${level}</span>
+    </button>
+  `;
+}
+
+function renderForagingSkillTreeButton(level: number, selectedCategory: ForagingSkillTreeCategory | null): string {
+  const backgroundUrl = selectedCategory ? getForagingSkillTreeCategoryAssetUrl(selectedCategory) : null;
+  const label = `LvL ${level}`;
+  const categoryLabel = selectedCategory ? getForagingSkillTreeDefinition(selectedCategory).label : "None";
+
+  return `
+    <button
+      class="character-skill-tree-button ${backgroundUrl ? "has-background" : "plain"}"
+      type="button"
+      data-command="open-foraging-skill-tree"
+      data-foraging-level-badge
+      data-foraging-tree-category="${selectedCategory ?? "none"}"
+      aria-label="Foraging level ${level}${selectedCategory ? `, ${categoryLabel} tree` : ""}"
+      title="Open Foraging skill tree"
+    >
+      ${backgroundUrl ? `<img class="character-skill-tree-button-art" src="${backgroundUrl}" alt="" aria-hidden="true" />` : ""}
+      <span class="character-skill-tree-button-label">${label}</span>
     </button>
   `;
 }
@@ -5243,7 +5706,7 @@ function renderCombatClassProgressPanel(state: GameState): string {
 
   return `
     <section class="skill-group combat-class-group" aria-label="Combat class experience">
-      <h4>Combat Classes</h4>
+      <h4>Combat</h4>
       <div class="skill-group-list">
         ${rows.map((definition) => renderCombatClassRow(state, definition.id)).join("")}
       </div>
