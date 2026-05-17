@@ -14,7 +14,7 @@ import {
   getResourceLabel,
   normalizeResourceAmount
 } from "../data/resources";
-import type { ActionId, Cost, GameState, ResourceCountDelta, ResourceId, ToolId } from "../types";
+import type { ActionId, Cost, GameState, LocationId, ResourceCountDelta, ResourceId, ToolId } from "../types";
 import {
   consumeOneWholeResource,
   getCharacterInventory,
@@ -398,7 +398,7 @@ export function getStackedActionText(actionId: ActionId, characterName = "Camero
     case "mineTin":
       return `${characterName} mined tin`;
     case "fishRiver":
-      return `${characterName} caught river fish`;
+      return `${characterName} caught fish`;
     case "craftLowestTool":
       return `${characterName} balanced tool stock`;
     case "craftWoodenSpoon":
@@ -474,7 +474,7 @@ function applyRewardMultiplier(rewards: ActionRewards): ActionRewards {
 }
 
 function gatherIngredients(
-  locationId: "meadow" | "forest" | "river" | "mine" | "desert",
+  locationId: LocationId,
   category?: GatherableIngredientCategory
 ): ActionRewards {
   const gathered = rollGatheringTable(locationId, category);
@@ -486,7 +486,7 @@ function gatherIngredients(
 }
 
 function gatherIngredientResource(
-  locationId: "meadow" | "forest" | "river" | "mine" | "desert",
+  locationId: LocationId,
   resourceId: ResourceId
 ): ActionRewards {
   const gathered = rollGatherableResource(locationId, resourceId);
