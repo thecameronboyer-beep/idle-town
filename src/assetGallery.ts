@@ -60,6 +60,7 @@ const assetUrlsByFileName = new Map(
 
 const activeAssetFileNames = new Set([
   "basket-background-1-border-1.png",
+  "beach-location-icon.png",
   "berry-icon.png",
   "bone-icon.png",
   "brook-stickleback-icon.png",
@@ -186,6 +187,7 @@ const toolTerms = [
 const locationLabels: Record<LocationId, string> = {
   meadow: "Meadow",
   river: "River",
+  beach: "Beach",
   forest: "Forest",
   mine: "Mine",
   desert: "Desert"
@@ -220,9 +222,11 @@ const ingredientIconFileNames: Partial<Record<GatherableDefinition["id"], string
   roseHips: "rose-hips-icon.png",
   sorrel: "sorrel-icon.png",
   strawberries: "strawberry-icon.png",
+  sunrootTubers: "sunheart-tuber-icon.png",
   sunbloomPetals: "sunbloom-petals-icon.png",
   trilliumBlossoms: "trillium-blossoms-icon.png",
   waterLilies: "water-lilies-icon.png",
+  wildCarrot: "carrot-icon.png",
   wildGarlic: "wild-garlic-icon.png",
   wildOnion: "wild-onion-icon.png",
   woodViolets: "wood-violets-icon.png",
